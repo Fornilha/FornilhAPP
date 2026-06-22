@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<!-- saved from url=(0050)file:///C:/Users/vinic/Downloads/fornilhapp_2.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FornilhApp</title>
+<style>
+:root{
+  --verm:#8B1A1A;--verm-d:#6B1212;--verm-m:#A02020;
+  --ouro:#D4941A;--ouro-l:#F0B830;--ouro-p:#FDF3DC;
+  --fogo:#E8650A;--tijolo:#A0431A;
+  --bg:#F7F3EE;--surf:#FFFFFF;--surf2:#FDF8F2;
+  --bord:rgba(139,26,26,0.12);--bord2:rgba(139,26,26,0.2);
+  --txt:#1A0A0A;--txt2:#7A5A5A;--txt3:#B09090;
+  --ok:#1D9E75;--ok-l:#E1F5EE;
+  --av:#BA7517;--av-l:#FAEEDA;
+  --er:#A32D2D;--er-l:#FCEBEB;
+  --info:#185FA5;--info-l:#E6F1FB;
+  --r:12px;--rl:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+.shell{max-width:430px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* LOGIN */
+#scr-login{background:linear-gradient(160deg,var(--verm-d) 0%,var(--verm) 50%,var(--tijolo) 100%);align-items:center;justify-content:center;padding:40px 24px}
+.logo-mark{width:88px;height:88px;border-radius:22px;background:rgba(255,255,255,0.1);border:2px solid rgba(212,148,26,0.35);display:flex;align-items:center;justify-content:center;margin:0 auto 13px;font-size:36px}
+.logo-nome{font-size:30px;font-weight:700;color:var(--ouro-l);font-style:italic;text-align:center}
+.logo-sub{font-size:11px;color:rgba(255,255,255,0.45);text-align:center;margin-top:3px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:26px}
+.login-card{background:var(--surf);border-radius:var(--rl);padding:24px 20px;width:100%;box-shadow:0 8px 32px rgba(139,26,26,.18)}
+.login-card h2{font-size:17px;font-weight:600;color:var(--verm);margin-bottom:4px}
+.login-card p{font-size:13px;color:var(--txt2);margin-bottom:18px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.fld input,.fld select{width:100%;padding:11px 13px;border:1.5px solid var(--bord);border-radius:10px;font-size:14px;color:var(--txt);background:var(--surf2);outline:none;transition:border-color .15s}
+.fld input:focus,.fld select:focus{border-color:var(--ouro)}
+.btn-p{width:100%;padding:13px;background:linear-gradient(135deg,var(--verm),var(--verm-m));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.btn-p:hover{opacity:.92}
+.login-ft{text-align:center;margin-top:14px;font-size:11px;color:rgba(255,255,255,.38)}
+
+/* TOPBAR */
+.topbar{background:linear-gradient(135deg,var(--verm-d),var(--verm));padding:0 15px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(139,26,26,.3)}
+.tb-l{display:flex;align-items:center;gap:9px}
+.tb-logo{font-size:19px;font-weight:700;color:var(--ouro-l);font-style:italic}
+.tb-pg{font-size:12px;color:rgba(255,255,255,.6)}
+.tb-r{display:flex;align-items:center;gap:9px}
+.ntf-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;position:relative}
+.ntf-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;background:var(--ouro-l);border-radius:50%;border:1.5px solid var(--verm)}
+.av-sm{width:32px;height:32px;border-radius:50%;background:var(--ouro);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--verm-d);cursor:pointer;border:2px solid rgba(255,255,255,.25)}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surf);border-top:1px solid var(--bord);display:flex;padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:100;box-shadow:0 -4px 20px rgba(139,26,26,.08)}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;cursor:pointer;border:none;background:none;transition:all .15s}
+.ni-ico{font-size:20px;line-height:1}
+.ni-lbl{font-size:10px;font-weight:500;color:var(--txt3)}
+.ni.active .ni-lbl{color:var(--verm);font-weight:700}
+.ni.active .ni-ico{transform:scale(1.1)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:14px 14px 88px}
+
+/* UTILS */
+.card{background:var(--surf);border-radius:var(--r);border:1px solid var(--bord);margin-bottom:11px;overflow:hidden}
+.cb{padding:13px 15px}
+.slbl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt2);margin-bottom:9px;padding-left:2px}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;flex-shrink:0}
+.tag-r{background:var(--er-l);color:var(--er)} .tag-a{background:var(--av-l);color:var(--av)} .tag-g{background:var(--ok-l);color:var(--ok)} .tag-i{background:var(--info-l);color:var(--info)}
+
+/* KPI */
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}
+.kpi{background:var(--surf);border-radius:var(--r);border:1px solid var(--bord);padding:13px}
+.kpi-l{font-size:11px;color:var(--txt2);font-weight:500;margin-bottom:3px}
+.kpi-v{font-size:20px;font-weight:700;color:var(--txt);line-height:1}
+.kpi-v.g{color:var(--ok)} .kpi-v.a{color:var(--ouro)} .kpi-v.r{color:var(--verm)}
+.kpi-s{font-size:11px;color:var(--txt3);margin-top:2px}
+.kpi.dest{background:linear-gradient(135deg,var(--verm-d),var(--verm));border:none}
+.kpi.dest .kpi-l{color:rgba(255,255,255,.6)} .kpi.dest .kpi-v{color:var(--ouro-l)} .kpi.dest .kpi-s{color:rgba(255,255,255,.45)}
+
+/* AI */
+.ai-card{background:linear-gradient(135deg,var(--verm-d),#4A0808);border-radius:var(--r);padding:15px;margin-bottom:13px;border:1px solid rgba(212,148,26,.25)}
+.ai-hd{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.ai-badge{background:var(--ouro);color:var(--verm-d);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.ai-title{font-size:13px;font-weight:600;color:var(--ouro-l)}
+.ai-card p{font-size:13px;color:rgba(255,255,255,.82);line-height:1.6;min-height:40px}
+.ai-inp{display:flex;gap:7px;margin-top:11px}
+.ai-inp input{flex:1;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:13px;outline:none}
+.ai-inp input::placeholder{color:rgba(255,255,255,.35)}
+.ai-inp button{padding:9px 14px;background:var(--ouro);color:var(--verm-d);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.ai-loading{display:none;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:rgba(255,255,255,.5)}
+.ai-dot{width:5px;height:5px;border-radius:50%;background:var(--ouro);animation:pulse .8s ease-in-out infinite}
+.ai-dot:nth-child(2){animation-delay:.15s}.ai-dot:nth-child(3){animation-delay:.3s}
+@keyframes pulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* ALERT */
+.alrt{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--bord)}
+.alrt:last-child{border-bottom:none}
+.alrt-ico{font-size:17px;flex-shrink:0}
+.alrt-txt{font-size:13px;color:var(--txt);flex:1;line-height:1.4}
+
+/* POST */
+.post{background:var(--surf);border-radius:var(--r);border:1px solid var(--bord);margin-bottom:11px;overflow:hidden}
+.ph{display:flex;align-items:center;gap:9px;padding:11px 13px 0}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.pa{font-size:13px;font-weight:600;color:var(--txt)} .pt{font-size:11px;color:var(--txt3)}
+.ptb{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.pb{padding:9px 13px 13px;font-size:13px;color:var(--txt);line-height:1.6}
+.phl{background:var(--ouro-p);border-radius:8px;padding:9px 11px;margin-top:7px;font-size:13px;border-left:3px solid var(--ouro)}
+.pacts{display:flex;border-top:1px solid var(--bord)}
+.pact{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;font-size:12px;color:var(--txt2);cursor:pointer;border:none;background:none;border-right:1px solid var(--bord)}
+.pact:last-child{border-right:none}
+
+/* TAREFA */
+.tar{background:var(--surf);border-radius:var(--r);border:1px solid var(--bord);margin-bottom:9px;overflow:hidden}
+.tar-h{display:flex;align-items:center;gap:9px;padding:11px 13px}
+.pdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.tar-i{flex:1;min-width:0}
+.tar-t{font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tar-m{font-size:11px;color:var(--txt2);margin-top:1px}
+.sbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;flex-shrink:0}
+.sp{background:var(--av-l);color:var(--av)} .sa{background:var(--info-l);color:var(--info)}
+.sc{background:var(--ok-l);color:var(--ok)} .sat{background:var(--er-l);color:var(--er)}
+.tar-f{border-top:1px solid var(--bord);padding:9px 13px;display:flex;align-items:center;justify-content:space-between}
+.tar-r{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2)}
+.btn-tar{background:var(--verm);color:#fff;border:none;padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
+.fab{position:fixed;bottom:84px;right:calc(50% - 215px + 14px);width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--verm),var(--verm-m));color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(139,26,26,.4);display:flex;align-items:center;justify-content:center;z-index:50}
+
+/* ESTOQUE / TABS */
+.stabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:13px;padding-bottom:2px}
+.stabs::-webkit-scrollbar{display:none}
+.stab{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--bord);background:var(--surf);color:var(--txt2);cursor:pointer;transition:all .15s}
+.stab.active{background:var(--verm);color:#fff;border-color:var(--verm)}
+.prow{display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--bord)}
+.prow:last-child{border-bottom:none}
+.pdotS{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pi{flex:1;min-width:0}
+.pn{font-size:13px;font-weight:500;color:var(--txt)}
+.pm2{font-size:11px;color:var(--txt2)}
+.pbar{height:3px;background:#EEE;border-radius:2px;margin-top:3px;overflow:hidden;width:70px}
+.pbf{height:100%;border-radius:2px}
+.pq{font-size:15px;font-weight:700;text-align:right}
+.pq.baixo{color:var(--ouro)} .pq.zero{color:var(--verm)}
+
+/* VENDAS */
+.mcard{background:linear-gradient(135deg,var(--verm-d),var(--verm));border-radius:var(--r);padding:17px;margin-bottom:13px}
+.ml{font-size:12px;color:rgba(255,255,255,.6);font-weight:500;margin-bottom:3px}
+.mv{font-size:26px;font-weight:700;color:var(--ouro-l)}
+.ms{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
+.mp{height:5px;background:rgba(255,255,255,.18);border-radius:3px;margin-top:13px;overflow:hidden}
+.mpf{height:100%;background:var(--ouro-l);border-radius:3px}
+.mes-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)}
+.mes-row:last-child{border-bottom:none}
+.mes-nome{font-size:13px;font-weight:600;color:var(--txt);width:40px}
+.mes-bar-wrap{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.mes-bar{height:100%;border-radius:3px}
+.mes-val{font-size:12px;font-weight:600;color:var(--txt);text-align:right;width:80px}
+.mes-var{font-size:10px;width:44px;text-align:right;font-weight:600}
+.rk{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--bord)}
+.rk:last-child{border-bottom:none}
+.rp{width:22px;height:22px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--txt2);flex-shrink:0}
+.rp.g{background:var(--ouro-p);color:var(--ouro)}
+.ri{flex:1} .rn{font-size:13px;font-weight:600;color:var(--txt)} .rv{font-size:12px;color:var(--txt2)}
+.rval{font-size:14px;font-weight:700;color:var(--verm)}
+
+/* MSGS */
+.ci{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--bord);cursor:pointer}
+.ci:last-child{border-bottom:none}
+.cav{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+.cn{font-size:14px;font-weight:600;color:var(--txt)}
+.cpv{font-size:12px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.ct{font-size:11px;color:var(--txt3)} .cbadge{width:17px;height:17px;background:var(--verm);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+
+/* NOTIF */
+.ni2{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--bord)}
+.ni2:last-child{border-bottom:none}
+.ni2.unread{background:var(--ouro-p);margin:0 -14px;padding:11px 14px}
+.ni-ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.ni-txt{font-size:13px;color:var(--txt);line-height:1.5} .ni-tm{font-size:11px;color:var(--txt3);margin-top:2px}
+.ni-ud{width:7px;height:7px;border-radius:50%;background:var(--verm);flex-shrink:0;margin-top:5px}
+
+/* PERFIL */
+.ph2{background:linear-gradient(160deg,var(--verm-d),var(--verm));padding:26px 18px 22px;text-align:center}
+.av-lg{width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--verm-d);margin:0 auto 11px;border:3px solid rgba(255,255,255,.25)}
+.pnome{font-size:19px;font-weight:700;color:#fff} .pcargo{font-size:12px;color:var(--ouro-l);margin-top:2px}
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bord);border-radius:var(--r);overflow:hidden;margin-bottom:13px}
+.pst{background:var(--surf);padding:13px 7px;text-align:center}
+.psv{font-size:18px;font-weight:700;color:var(--verm)} .psl{font-size:10px;color:var(--txt2);font-weight:500;margin-top:1px}
+.mi{display:flex;align-items:center;gap:11px;padding:13px;border-bottom:1px solid var(--bord);cursor:pointer}
+.mi:last-child{border-bottom:none}
+.mi-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.mi-txt{flex:1;font-size:14px;font-weight:500;color:var(--txt)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surf);border-radius:var(--rl);padding:22px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.modal p{font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.5}
+.modal input,.modal select,.modal textarea{width:100%;padding:10px 12px;border:1px solid var(--bord);border-radius:8px;font-size:14px;margin-bottom:9px;color:var(--txt);background:var(--bg);outline:none;font-family:inherit}
+.modal textarea{resize:none;height:75px}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--ouro)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mbtns{display:flex;gap:8px;margin-top:3px}
+.btn-cancel{flex:1;padding:10px;border:1px solid var(--bord);background:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--txt)}
+.btn-ok{flex:2;padding:10px;background:var(--verm);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-wpp{flex:2;padding:10px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--txt);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* INDICADOR BAR */
+.ind-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)}
+.ind-row:last-child{border-bottom:none}
+.ind-lbl{font-size:12px;color:var(--txt2);width:130px;flex-shrink:0}
+.ind-bar-w{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.ind-bar{height:100%;border-radius:3px}
+.ind-val{font-size:12px;font-weight:700;width:48px;text-align:right;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- LOGIN -->
+<div class="screen active" id="scr-login">
+  <div class="logo-mark">🔥</div>
+  <div class="logo-nome">Fornilha</div>
+  <div class="logo-sub">Gestão interna · Ilha Grande/RJ</div>
+  <div class="login-card">
+    <h2>Bem-vindo de volta</h2>
+    <p>Acesse com seu perfil para continuar.</p>
+    <div class="fld"><label>Colaborador</label>
+      <select id="l-user" onchange="preencherPerfil()">
+        <option value="0">Vinicius Querino — Administrador</option>
+        <option value="1">Patricia Jesus — Caixa</option>
+        <option value="2">Amado Alexandre — Barman</option>
+        <option value="3">Douglas da Silva — Garçom</option>
+        <option value="4">Joelson Santos — Pizzaiolo</option>
+        <option value="5">Tiago Brito — Cozinheiro</option>
+        <option value="6">Rosenilda Campos — Cozinheiro</option>
+      </select>
+    </div>
+    <div class="fld"><label>Senha</label><input type="password" placeholder="••••••••" value="12345"></div>
+    <button class="btn-p" onclick="entrar()">Entrar no FornilhApp</button>
+  </div>
+  <div class="login-ft">Fornilha Restaurante &amp; Pizzaria · Ilha Grande · RJ</div>
+</div>
+
+<!-- APP -->
+<div class="screen" id="scr-app">
+  <div class="topbar">
+    <div class="tb-l">
+      <div class="tb-logo">Fornilha</div>
+      <div class="tb-pg" id="tb-pg">Início</div>
+    </div>
+    <div class="tb-r">
+      <button class="ntf-btn" onclick="goTo(&#39;notif&#39;)">🔔<span class="ntf-dot"></span></button>
+      <div class="av-sm" id="usr-av" onclick="goTo(&#39;perfil&#39;)">VQ</div>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+  <nav class="bnav">
+    <button class="ni active" id="ni-inicio" onclick="goTo(&#39;inicio&#39;)"><span class="ni-ico">🏠</span><span class="ni-lbl">Início</span></button>
+    <button class="ni" id="ni-feed" onclick="goTo(&#39;feed&#39;)"><span class="ni-ico">📢</span><span class="ni-lbl">Posts</span></button>
+    <button class="ni" id="ni-tarefas" onclick="goTo(&#39;tarefas&#39;)"><span class="ni-ico">✅</span><span class="ni-lbl">Tarefas</span></button>
+    <button class="ni" id="ni-estoque" onclick="goTo(&#39;estoque&#39;)"><span class="ni-ico">📦</span><span class="ni-lbl">Estoque</span></button>
+    <button class="ni" id="ni-vendas" onclick="goTo(&#39;vendas&#39;)"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
+  </nav>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-bg">
+  <div class="modal" id="modal-inner"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DADOS REAIS DO FORNILHA ────────────────────────────
+const EQUIPE = [
+  {nome:'Vinicius Querino',cargo:'Gerente Geral',perfil:'admin',cor:'#8B1A1A',tel:'5521991409144'},
+  {nome:'Patricia Jesus',cargo:'Caixa',perfil:'caixa',cor:'#3C3489',tel:'5575988541932'},
+  {nome:'Amado Alexandre',cargo:'Barman',perfil:'bar',cor:'#0F6E56',tel:'5524993226538'},
+  {nome:'Douglas da Silva',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:'5524981150965'},
+  {nome:'Joelson Santos',cargo:'Pizzaiolo',perfil:'pizzaria',cor:'#993C1D',tel:'5524999237441'},
+  {nome:'Tiago Brito',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524999684094'},
+  {nome:'Rosenilda Campos',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524998722460'},
+];
+
+const DADOS_2026 = [
+  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,imp_pct:15,pax:14,fat25:403269},
+  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,imp_pct:15,pax:14,fat25:315257},
+  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,imp_pct:15,pax:13,fat25:307996},
+  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,imp_pct:15,pax:13,fat25:178040},
+  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,imp_pct:10,pax:12,fat25:131001},
+];
+
+const FAT_MAI = {1:7045.77,2:9753.24,3:4506.20,4:8539.20,5:5398.35,6:3623.88,7:4733.50,8:6564.72,9:4574.36,10:5976.85,11:4513.45,12:5170.35,13:4037.20,14:3941.60,15:11807.39,16:14720.30,17:4779.50,18:4093.40,19:5270.00,20:3370.35,21:5052.00,22:6082.95,23:2700.84,24:3824.69,25:4219.63,26:3999.00,27:1452.55,28:3904.05,29:7330.56,30:3237.60};
+
+const ESTOQUE = {
+  Pizzaria:[
+    {n:'Muçarela',q:2,min:20,max:40,un:'kg'},{n:'Farinha de trigo',q:18,min:35,max:70,un:'kg'},
+    {n:'Catupiry',q:4,min:3,max:6,un:'kg'},{n:'Molho de tomate',q:6,min:14,max:28,un:'un'},
+    {n:'Calabresa',q:5,min:3,max:6,un:'kg'},{n:'Azeitona s/ caroço',q:2,min:2,max:4,un:'kg'},
+    {n:'Palmito',q:3,min:1,max:2,un:'kg'},{n:'Carne seca (pizza)',q:3,min:2,max:4,un:'kg'},
+    {n:'Rúcula',q:4,min:3,max:6,un:'un'},{n:'Manjericão',q:2,min:2,max:4,un:'un'},
+    {n:'Parmesão',q:2,min:2,max:4,un:'kg'},{n:'Gorgonzola',q:1,min:1,max:2,un:'kg'},
+    {n:'Provolone',q:2,min:1,max:2,un:'kg'},{n:'Presunto',q:2,min:1,max:2,un:'kg'},
+  ],
+  Cozinha:[
+    {n:'Camarão',q:3,min:2,max:4,un:'kg'},{n:'Carne seca',q:1,min:2,max:4,un:'kg'},
+    {n:'Frango',q:6,min:3,max:6,un:'kg'},{n:'Carne moída',q:3,min:2,max:4,un:'kg'},
+    {n:'Polvo',q:2,min:1,max:2,un:'kg'},{n:'Lula',q:1,min:1,max:2,un:'kg'},
+    {n:'Mexilhão',q:2,min:1,max:2,un:'kg'},{n:'Bacon manta',q:4,min:2,max:4,un:'kg'},
+    {n:'Ovos',q:1,min:1,max:2,un:'cx'},{n:'Leite integral',q:4,min:3,max:6,un:'L'},
+    {n:'Creme de leite',q:2,min:1,max:2,un:'kg'},{n:'Parmesão (massas)',q:2,min:2,max:4,un:'kg'},
+    {n:'Farinha de trigo (massas)',q:8,min:5,max:10,un:'kg'},{n:'Alho',q:1,min:1,max:2,un:'cx'},
+    {n:'Cebola',q:1,min:1,max:2,un:'sc'},{n:'Tomate',q:1,min:1,max:2,un:'cx'},
+    {n:'Batata Asterix',q:1,min:1,max:2,un:'sc'},{n:'Óleo de cozinha',q:3,min:2,max:4,un:'un'},
+  ],
+  Bar:[
+    {n:'Coca-Cola lata',q:24,min:30,max:80,un:'un'},{n:'Coca-Cola Zero',q:18,min:25,max:60,un:'un'},
+    {n:'Guaraná',q:12,min:15,max:40,un:'un'},{n:'Fanta Uva',q:8,min:8,max:20,un:'un'},
+    {n:'Sprite / Citrus',q:8,min:8,max:20,un:'un'},{n:'Heineken long',q:30,min:20,max:50,un:'un'},
+    {n:'Stella long',q:24,min:20,max:50,un:'un'},{n:'Corona long',q:12,min:10,max:25,un:'un'},
+    {n:'Brahma long',q:18,min:15,max:35,un:'un'},{n:'Vodka',q:2,min:1,max:2,un:'L'},
+    {n:'Cachaça 51',q:2,min:1,max:2,un:'L'},{n:'Vinho nacional',q:4,min:3,max:6,un:'un'},
+    {n:'Vinho importado',q:2,min:1,max:2,un:'un'},{n:'Água s/ gás',q:30,min:25,max:60,un:'un'},
+    {n:'Água c/ gás',q:12,min:10,max:25,un:'un'},{n:'Água tônica',q:8,min:8,max:20,un:'un'},
+    {n:'Limão',q:1,min:1,max:2,un:'sc'},{n:'Maracujá',q:1,min:1,max:1,un:'cx'},
+  ],
+  Salão:[
+    {n:'Guardanapo',q:4,min:3,max:6,un:'pct'},{n:'Papel higiênico',q:8,min:6,max:12,un:'rolo'},
+    {n:'Vela de mesa',q:20,min:14,max:28,un:'un'},{n:'Detergente',q:3,min:2,max:4,un:'un'},
+    {n:'Desengordurante',q:2,min:2,max:4,un:'un'},{n:'Álcool 70%',q:3,min:2,max:4,un:'un'},
+    {n:'Saco de lixo grande',q:10,min:8,max:16,un:'un'},{n:'Papel toalha',q:4,min:4,max:8,un:'rolo'},
+    {n:'Sabonete líquido',q:2,min:2,max:4,un:'un'},{n:'Desodorizador',q:2,min:2,max:4,un:'un'},
+  ],
+};
+
+let posts=[
+  {autor:'Sistema',cargo:'FornilhApp',cor:'#3C3489',badge:'tag-g',bl:'Resultado',txt:'Janeiro 2026: melhor mês da história do Fornilha. Faturamento de R$ 443.285 com margem de 38%. Parabéns à toda a equipe! 🏆',extra:'',time:'Jan 2026'},
+  {autor:'Vinicius',cargo:'Gestor',cor:'#8B1A1A',badge:'tag-r',bl:'Alerta',txt:'Atenção equipe: estamos em baixa temporada (jun-out). Foco total em eficiência operacional, controle de estoque e redução de desperdício. Contamos com cada um de vocês.',extra:'',time:'Hoje'},
+  {autor:'Amado',cargo:'Barman',cor:'#0F6E56',badge:'tag-g',bl:'Concluída',txt:'Contagem de estoque do Bar concluída para esta semana.',extra:'🍺 Heineken: 30un · 🥃 Vodka: 2L · 💧 Água s/gás: 30un',time:'Hoje'},
+  {autor:'Sistema',cargo:'FornilhApp',cor:'#993C1D',badge:'tag-a',bl:'Atenção',txt:'Fevereiro 2026 vs 2025: crescimento de 20,3% no faturamento. O Fornilha está no caminho certo para bater R$ 2,8M em 2026.',extra:'',time:'Mar 2026'},
+];
+
+let tarefas=[
+  {id:1,titulo:'Contagem semanal — Cozinha',setor:'Cozinha',resp:'Tiago',tel:'5524999684094',prazo:'Seg 18:00',status:'atrasada',prio:'#E24B4A',desc:'Contar todos os insumos da cozinha: proteínas, laticínios e hortifruti.'},
+  {id:2,titulo:'Checklist abertura do salão',setor:'Salão',resp:'Patricia',tel:'5575988541932',prazo:'Hoje 17:00',status:'andamento',prio:'#EF9F27',desc:'Verificar mise en place, velas, talheres e cardápios.'},
+  {id:3,titulo:'Pré-preparo frios pizzaria',setor:'Pizzaria',resp:'Joelson',tel:'5524999237441',prazo:'Hoje 16:00',status:'concluida',prio:'#1D9E75',desc:'Ralar queijo, cortar tomate, cebola e preparar azeitona.'},
+  {id:4,titulo:'Conferência de caixa',setor:'Caixa',resp:'Patricia',tel:'5575988541932',prazo:'Hoje 23:00',status:'pendente',prio:'#185FA5',desc:'Fechar e conferir valores do caixa do dia.'},
+  {id:5,titulo:'Pedido semanal — Nutrymax',setor:'Gestão',resp:'Vinicius',tel:'5521991409144',prazo:'Seg 10:00',status:'pendente',prio:'#8B1A1A',desc:'Fazer pedido semanal de insumos principais: muçarela, farinha, camarão.'},
+];
+
+let userIdx=0, perfil='admin', nome='Vinicius Querino';
+
+function preencherPerfil(){
+  userIdx=parseInt(document.getElementById('l-user').value);
+}
+
+function entrar(){
+  const u=EQUIPE[userIdx];
+  perfil=u.perfil; nome=u.nome;
+  document.getElementById('scr-login').classList.remove('active');
+  document.getElementById('scr-app').classList.add('active');
+  const ini=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  const av=document.getElementById('usr-av');
+  av.textContent=ini; av.style.background=u.cor;
+  goTo('inicio');
+}
+
+function goTo(tela){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const nav=document.getElementById('ni-'+tela);
+  if(nav) nav.classList.add('active');
+  const pgs={inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
+  document.getElementById('tb-pg').textContent=pgs[tela]||'';
+  document.querySelectorAll('.fab').forEach(f=>f.remove());
+  renders[tela]&&renders[tela](document.getElementById('content'));
+}
+
+const fmt=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+const renders={
+
+inicio(a){
+  const dt=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const ultimo=DADOS_2026[DADOS_2026.length-1];
+  const projecao=2802439;
+  a.innerHTML=`
+  <div style="padding:16px 0 4px"><p style="font-size:21px;font-weight:700">Olá, ${nome.split(' ')[0]} 👋</p><p style="font-size:13px;color:var(--txt2);margin-top:2px">${dt} · Baixa temporada</p></div>
+  <div class="kgrid">
+    <div class="kpi dest"><div class="kpi-l">Acumulado 2026</div><div class="kpi-v">R$ 1,6M</div><div class="kpi-s">Jan–Mai · +25% vs 2025</div></div>
+    <div class="kpi"><div class="kpi-l">Margem Mai/26</div><div class="kpi-v a">15,7%</div><div class="kpi-s">Meta: 42%</div></div>
+    <div class="kpi"><div class="kpi-l">Folha Mai/26</div><div class="kpi-v r">28%</div><div class="kpi-s">Crítico &gt;19%</div></div>
+    <div class="kpi"><div class="kpi-l">Projeção 2026</div><div class="kpi-v g">R$ 2,8M</div><div class="kpi-s">56% da meta 2030</div></div>
+  </div>
+  <div class="ai-card">
+    <div class="ai-hd"><span class="ai-badge">IA</span><span class="ai-title">Assistente Fornilha</span></div>
+    <p id="ai-resp">Analisando dados reais de jan–mai/2026... O Fornilha cresceu 25% vs 2025 no período. Maior preocupação: folha em 28% em maio (crítico). Recomendo redução de 1-2 colaboradores na baixa temporada para proteger caixa nos próximos 4 meses.</p>
+    <div class="ai-inp">
+      <input id="ai-q" placeholder="Pergunte sobre o Fornilha..." onkeydown="if(event.key==='Enter')askAI()">
+      <button onclick="askAI()">→</button>
+    </div>
+    <div class="ai-loading" id="ai-load"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Analisando...</span></div>
+  </div>
+  <div class="slbl">Indicadores mai/26 vs metas</div>
+  <div class="card"><div class="cb" style="padding-top:13px">
+    <div class="ind-row"><span class="ind-lbl">Folha de pagamento</span><div class="ind-bar-w"><div class="ind-bar" style="width:100%;background:#E24B4A"></div></div><span class="ind-val" style="color:#E24B4A">28% 🔴</span></div>
+    <div class="ind-row"><span class="ind-lbl">CMV / Variáveis</span><div class="ind-bar-w"><div class="ind-bar" style="width:100%;background:#E24B4A"></div></div><span class="ind-val" style="color:#E24B4A">34% 🔴</span></div>
+    <div class="ind-row"><span class="ind-lbl">Despesas fixas</span><div class="ind-bar-w"><div class="ind-bar" style="width:80%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">13% 🟡</span></div>
+    <div class="ind-row"><span class="ind-lbl">Margem líquida</span><div class="ind-bar-w"><div class="ind-bar" style="width:37%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">15,7%🟡</span></div>
+    <div class="ind-row"><span class="ind-lbl">Impostos</span><div class="ind-bar-w"><div class="ind-bar" style="width:65%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">10% 🟡</span></div>
+  </div></div>
+  <div class="slbl">Alertas operacionais</div>
+  <div class="card"><div class="cb" style="padding-top:13px">
+    <div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha de maio em 28% — acima do limite crítico de 19%</span><span class="tag tag-r">Urgente</span></div>
+    <div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">CMV em 34% — acima do limite crítico de 32%</span><span class="tag tag-r">Crítico</span></div>
+    <div class="alrt"><span class="alrt-ico">🟡</span><span class="alrt-txt">Tarefa de contagem da Cozinha em atraso</span><span class="tag tag-a">Atenção</span></div>
+    <div class="alrt"><span class="alrt-ico">✅</span><span class="alrt-txt">Contagem do Bar concluída por Amado</span><span class="tag tag-g">OK</span></div>
+    <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">2026 cresce 25% vs 2025 nos primeiros 5 meses</span><span class="tag tag-i">Info</span></div>
+  </div></div>`;
+},
+
+feed(a){
+  a.innerHTML=posts.map(p=>`
+  <div class="post">
+    <div class="ph"><div class="av" style="background:${p.cor}">${p.autor.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1"><div class="pa">${p.autor} <span style="font-weight:400;color:var(--txt2)">· ${p.cargo}</span></div><div class="pt">${p.time}</div></div>
+      <span class="ptb ${p.badge}">${p.bl}</span>
+    </div>
+    <div class="pb">${p.txt}${p.extra?`<div class="phl">${p.extra}</div>`:''}</div>
+    <div class="pacts">
+      <button class="pact" onclick="showT('👍 Curtido!')">👍 Curtir</button>
+      <button class="pact" onclick="goTo('msgs')">💬 Comentar</button>
+      <button class="pact" onclick="showT('↗ Compartilhado!')">↗</button>
+    </div>
+  </div>`).join('')+
+  (perfil==='admin'?`<button class="btn-p" style="margin-top:4px" onclick="abrirNovoPost()">+ Novo comunicado</button>`:'');
+},
+
+tarefas(a){
+  const sl={pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída',atrasada:'Atrasada'};
+  const cs={pendente:'sp',andamento:'sa',concluida:'sc',atrasada:'sat'};
+  let filtro='todas';
+  function rList(){
+    const lista=filtro==='todas'?tarefas:tarefas.filter(t=>t.status===filtro);
+    document.getElementById('tar-list').innerHTML=lista.map(t=>`
+    <div class="tar">
+      <div class="tar-h"><div class="pdot" style="background:${t.prio}"></div>
+        <div class="tar-i"><div class="tar-t">${t.titulo}</div><div class="tar-m">${t.setor} · Prazo: ${t.prazo}</div></div>
+        <span class="sbadge ${cs[t.status]}">${sl[t.status]}</span>
+      </div>
+      <div class="tar-f">
+        <div class="tar-r"><div class="av" style="width:22px;height:22px;font-size:9px;background:${EQUIPE.find(e=>e.nome.startsWith(t.resp.split(' ')[0]))?.cor||'#888'}">${t.resp.slice(0,2).toUpperCase()}</div>${t.resp}</div>
+        <button class="btn-tar" onclick="abrirTarefa(${t.id})">${t.status==='concluida'?'Ver':'Atualizar'}</button>
+      </div>
+    </div>`).join('')||'<div style="text-align:center;padding:24px;color:var(--txt2);font-size:13px">Nenhuma tarefa neste filtro.</div>';
+  }
+  a.innerHTML=`
+  <div class="stabs">
+    <button class="stab active" onclick="setF('todas',this)">Todas (${tarefas.length})</button>
+    <button class="stab" onclick="setF('pendente',this)">Pendentes</button>
+    <button class="stab" onclick="setF('atrasada',this)">Atrasadas</button>
+    <button class="stab" onclick="setF('concluida',this)">Concluídas</button>
+  </div>
+  <div id="tar-list"></div>`;
+  window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
+  window.abrirTarefa=(id)=>{
+    const t=tarefas.find(x=>x.id===id); if(!t)return;
+    const slMap={pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída'};
+    document.getElementById('modal-inner').innerHTML=`
+    <h3>${t.titulo}</h3><p>${t.desc}<br><br><strong>Responsável:</strong> ${t.resp} · <strong>Setor:</strong> ${t.setor} · <strong>Prazo:</strong> ${t.prazo}</p>
+    <div class="fld"><label>Atualizar status</label>
+      <select id="m-status">${['pendente','andamento','concluida'].map(s=>`<option value="${s}"${t.status===s?' selected':''}>${slMap[s]}</option>`).join('')}</select>
+    </div>
+    <div class="fld"><label>Observação</label><textarea placeholder="Adicionar observação..."></textarea></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-ok" onclick="salvarTar(${id})">Salvar</button>
+    </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+  };
+  window.salvarTar=(id)=>{
+    const t=tarefas.find(x=>x.id===id);
+    t.status=document.getElementById('m-status').value;
+    if(t.status==='concluida') posts.unshift({autor:nome,cargo:'Equipe',cor:EQUIPE.find(e=>e.nome===nome)?.cor||'#888',badge:'tag-g',bl:'Concluída',txt:`${nome.split(' ')[0]} concluiu: "${t.titulo}"`,extra:'',time:'Agora'});
+    fecharModal(); rList(); showT('✅ Tarefa atualizada!');
+  };
+  rList();
+  if(perfil==='admin'){
+    const fab=document.createElement('button');
+    fab.className='fab';fab.textContent='+';fab.onclick=abrirNovaTarefa;
+    document.querySelector('.shell').appendChild(fab);
+  }
+},
+
+estoque(a){
+  let sel='Pizzaria';
+  function rEst(){
+    const prods=ESTOQUE[sel];
+    const cr=v=>v===0?'#E24B4A':v<=1?'#EF9F27':'#1D9E75';
+    document.getElementById('est-lista').innerHTML=prods.map(p=>{
+      const pct=Math.min(100,Math.round(p.q/p.max*100));
+      const c=cr(p.q===0?0:p.q<=p.min?1:2);
+      return `<div class="prow">
+        <div class="pdotS" style="background:${c}"></div>
+        <div class="pi"><div class="pn">${p.n}</div><div class="pm2">Mín:${p.min} · Máx:${p.max} ${p.un}</div>
+          <div class="pbar"><div class="pbf" style="width:${pct}%;background:${c}"></div></div>
+        </div>
+        <div><div class="pq${p.q===0?' zero':p.q<=p.min?' baixo':''}">${p.q}<span style="font-size:10px;font-weight:400;color:var(--txt2)"> ${p.un}</span></div></div>
+        <span style="font-size:14px">${p.q===0?'🔴':p.q<=p.min?'🟡':'✅'}</span>
+      </div>`;
+    }).join('');
+    const crit=prods.filter(p=>p.q<=p.min).length;
+    document.getElementById('est-alerta').textContent=crit>0?`⚠️ ${crit} iten${crit>1?'s':'s'} abaixo do mínimo no ${sel}`:'✅ Todos os itens dentro do esperado';
+    document.getElementById('est-alerta').style.color=crit>0?'var(--er)':'var(--ok)';
+  }
+  a.innerHTML=`
+  <div class="stabs">${Object.keys(ESTOQUE).map(s=>`<button class="stab${s===sel?' active':''}" onclick="selSet('${s}',this)">${s}</button>`).join('')}</div>
+  <div style="font-size:12px;padding:0 2px 10px;font-weight:600" id="est-alerta"></div>
+  <div class="card"><div class="cb" id="est-lista"></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px">
+    <button class="btn-p" style="background:linear-gradient(135deg,#25D366,#1aad53)" onclick="envWpp()">📱 Enviar resumo</button>
+    <button class="btn-p" onclick="showT('✅ Contagem salva!')">✓ Salvar contagem</button>
+  </div>`;
+  window.selSet=(s,el)=>{sel=s;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');rEst()};
+  window.envWpp=()=>{
+    const p=ESTOQUE[sel],zero=p.filter(x=>x.q===0).map(x=>x.n),baixo=p.filter(x=>x.q>0&&x.q<=x.min).map(x=>x.n);
+    let msg=`📦 *ESTOQUE ${sel.toUpperCase()} — FORNILHA*\n📅 ${new Date().toLocaleDateString('pt-BR')}\n\n✅ OK: ${p.filter(x=>x.q>x.min).length}\n🟡 Baixo: ${baixo.length}\n🔴 Zero: ${zero.length}`;
+    if(zero.length) msg+=`\n\n🔴 SEM ESTOQUE:\n${zero.map(i=>'• '+i).join('\n')}`;
+    if(baixo.length) msg+=`\n\n🟡 ESTOQUE BAIXO:\n${baixo.map(i=>'• '+i).join('\n')}`;
+    msg+=`\n\n_FornilhApp · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}_`;
+    window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`,'_blank');
+  };
+  rEst();
+},
+
+vendas(a){
+  const maxFat=Math.max(...DADOS_2026.map(d=>d.fat));
+  const mesesRows=DADOS_2026.map(d=>{
+    const pct=Math.round(d.fat/maxFat*100);
+    const var_=Math.round((d.fat/d.fat25-1)*100);
+    const cor=d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A';
+    return `<div class="mes-row">
+      <span class="mes-nome" style="font-weight:600;color:var(--txt)">${d.mes}</span>
+      <div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div>
+      <span class="mes-val">${fmt(d.fat)}</span>
+      <span class="mes-var" style="color:${var_>0?'var(--ok)':'var(--er)'}">${var_>0?'▲':'▼'}${Math.abs(var_)}%</span>
+    </div>`;
+  }).join('');
+  a.innerHTML=`
+  <div class="mcard">
+    <div class="ml">Faturamento acumulado 2026</div>
+    <div class="mv">R$ 1.609.559</div>
+    <div class="ms">Jan–Mai · Projeção anual: R$ 2,8M · Meta 2030: R$ 5M</div>
+    <div class="mp"><div class="mpf" style="width:56%"></div></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">56% da meta de R$ 5M até 2030</div>
+  </div>
+  <div class="slbl">Desempenho mensal 2026 vs 2025</div>
+  <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>
+  <div class="slbl">Indicadores por mês</div>
+  <div class="card"><div class="cb" style="padding-top:13px">
+    ${DADOS_2026.map(d=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)">
+      <span style="font-size:12px;font-weight:700;width:32px">${d.mes}</span>
+      <span class="tag ${d.folha_pct<=17?'tag-g':d.folha_pct<=19?'tag-a':'tag-r'}">Folha ${d.folha_pct}%</span>
+      <span class="tag ${d.cmv_pct<=28?'tag-g':d.cmv_pct<=32?'tag-a':'tag-r'}">CMV ${d.cmv_pct}%</span>
+      <span class="tag ${d.margem>=30?'tag-g':d.margem>=15?'tag-a':'tag-r'}">${d.margem.toFixed(1)}%</span>
+      <span style="font-size:11px;color:var(--txt2);margin-left:auto">${d.pax} pax</span>
+    </div>`).join('')}
+  </div></div>
+  <button class="btn-p" style="margin-top:4px" onclick="abrirLanc()">+ Lançar faturamento do dia</button>`,
+
+  window.abrirLanc=()=>{
+    document.getElementById('modal-inner').innerHTML=`
+    <h3>Lançar faturamento</h3><p>Registre o faturamento do dia para atualizar o dashboard.</p>
+    <div class="fld"><label>Data</label><input type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="fld"><label>Faturamento bruto (R$)</label><input type="number" id="m-fat" placeholder="0,00"></div>
+    <div class="fld"><label>Taxa de serviço 10% (R$)</label><input type="number" id="m-taxa" placeholder="0,00"></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-ok" onclick="fecharModal();showT('✅ Faturamento lançado!')">Lançar</button>
+    </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+  };
+},
+
+msgs(a){
+  const cs=EQUIPE.filter(e=>e.nome!==nome);
+  a.innerHTML=`<div class="card"><div class="cb" style="padding-top:13px">`+
+  cs.map(c=>`<div class="ci" onclick="abrirMsg('${c.nome}','${c.cor}','${c.tel}')">
+    <div class="cav" style="background:${c.cor}">${c.nome.slice(0,2).toUpperCase()}</div>
+    <div style="flex:1;min-width:0"><div class="cn">${c.nome} <span style="font-weight:400;font-size:12px;color:var(--txt2)">· ${c.cargo}</span></div>
+    <div class="cpv">Toque para enviar mensagem</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <span style="font-size:18px;cursor:pointer" onclick="event.stopPropagation();window.open('https://wa.me/${c.tel}','_blank')">📱</span>
+    </div>
+  </div>`).join('')+`</div></div>`;
+  window.abrirMsg=(n,cor,tel)=>{
+    document.getElementById('modal-inner').innerHTML=`
+    <h3 style="color:${cor}">${n}</h3>
+    <div class="fld"><label>Mensagem</label><textarea id="m-msg" placeholder="Escreva a mensagem..."></textarea></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-wpp" onclick="enviarMsg('${tel}')">📱 WhatsApp</button>
+    </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+  };
+  window.enviarMsg=(tel)=>{
+    const msg=document.getElementById('m-msg').value.trim();
+    if(!msg){showT('⚠️ Escreva uma mensagem');return}
+    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`,'_blank');
+    fecharModal();
+  };
+},
+
+notif(a){
+  const ns=[
+    {ic:'🔴',bg:'#FCEBEB',txt:'Folha de maio em 28% — acima do limite crítico de 19%. Avalie redução de equipe.',tm:'Hoje',u:true},
+    {ic:'🔴',bg:'#FCEBEB',txt:'CMV em 34% — acima do limite crítico de 32%. Revisar compras e desperdício.',tm:'Hoje',u:true},
+    {ic:'⚠️',bg:'#FAEEDA',txt:'Tarefa "Contagem semanal — Cozinha" está atrasada. Tiago não respondeu.',tm:'1h',u:true},
+    {ic:'✅',bg:'#EAF3DE',txt:'Amado concluiu a contagem de estoque do Bar com sucesso.',tm:'2h',u:false},
+    {ic:'📈',bg:'#E6F1FB',txt:'Abril/26 cresceu 65,3% vs Abril/25. Melhor comparativo do ano!',tm:'Mai/26',u:false},
+    {ic:'🏆',bg:'#FDF3DC',txt:'Janeiro/26: R$ 443.285 — recorde histórico do Fornilha.',tm:'Jan/26',u:false},
+  ];
+  a.innerHTML=`<div class="card"><div class="cb" style="padding:0">`+
+  ns.map(n=>`<div class="ni2${n.u?' unread':''}">
+    <div class="ni-ic" style="background:${n.bg}">${n.ic}</div>
+    <div style="flex:1"><div class="ni-txt">${n.txt}</div><div class="ni-tm">${n.tm}</div></div>
+    ${n.u?'<div class="ni-ud"></div>':''}
+  </div>`).join('')+`</div></div>`;
+},
+
+perfil(a){
+  const u=EQUIPE.find(e=>e.nome===nome)||EQUIPE[0];
+  const ini=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  const totalFat=DADOS_2026.reduce((s,d)=>s+d.fat,0);
+  const cargos={admin:'Administrador · Diretor Executivo',caixa:'Caixa',garcom:'Garçom',bar:'Barman',pizzaria:'Pizzaiolo',cozinha:'Cozinheiro'};
+  a.innerHTML=`
+  <div style="margin:-14px -14px 0">
+    <div class="ph2">
+      <div class="av-lg" style="background:var(--ouro)">${ini}</div>
+      <div class="pnome">${nome}</div>
+      <div class="pcargo">${cargos[perfil]||perfil}</div>
+    </div>
+  </div>
+  <div style="padding-top:14px">
+    <div class="pstats">
+      <div class="pst"><div class="psv">${tarefas.filter(t=>t.status!=='concluida').length}</div><div class="psl">Tarefas</div></div>
+      <div class="pst"><div class="psv">${EQUIPE.length}</div><div class="psl">Equipe</div></div>
+      <div class="pst"><div class="psv">2030</div><div class="psl">Meta</div></div>
+    </div>
+    ${perfil==='admin'?`
+    <div class="card"><div class="cb" style="padding:0">
+      <div class="mi" onclick="abrirEquipe()"><div class="mi-ic" style="background:#FCEBEB">👥</div><span class="mi-txt">Gerenciar equipe</span><span style="color:var(--txt3)">›</span></div>
+      <div class="mi" onclick="showT('📊 Em breve: relatórios em PDF!')"><div class="mi-ic" style="background:#E6F1FB">📊</div><span class="mi-txt">Relatórios e exportações</span><span style="color:var(--txt3)">›</span></div>
+      <div class="mi" onclick="showT('🎯 Meta: R$ 5M até 2030 — 56% concluído!')"><div class="mi-ic" style="background:var(--ouro-p)">🎯</div><span class="mi-txt">Metas estratégicas</span><span style="color:var(--txt3)">›</span></div>
+      <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
+    </div></div>`:''}
+    <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:14px;margin-top:4px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt2);margin-bottom:10px">Fornilha em números</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:2">
+        📍 Vila do Abraão · Ilha Grande · RJ<br>
+        🍕 Restaurante & Pizzaria · 100 lugares · 28 mesas<br>
+        📅 365 dias/ano · 17h–23h<br>
+        💰 Acumulado 2026: <strong style="color:var(--verm)">R$ 1,6M</strong><br>
+        🏆 Melhor mês: <strong>Jan/26 — R$ 443.285</strong><br>
+        📈 Crescimento vs 2025: <strong style="color:var(--ok)">+25%</strong><br>
+        🎯 Projeção 2026: <strong>R$ 2,8M</strong>
+      </div>
+    </div>
+  </div>`;
+}
+
+};
+
+// ─── MODALS ─────────────────────────────────────────────
+function fecharModal(){document.getElementById('modal-bg').classList.remove('open')}
+document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')fecharModal()});
+function showT(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+function sair(){document.getElementById('scr-app').classList.remove('active');document.getElementById('scr-login').classList.add('active')}
+
+function abrirNovoPost(){
+  document.getElementById('modal-inner').innerHTML=`
+  <h3>Novo comunicado</h3><p>Publicado no feed para toda a equipe.</p>
+  <div class="fld"><label>Tipo</label>
+    <select id="m-tipo"><option value="tag-r">📢 Comunicado</option><option value="tag-a">⚠️ Alerta</option><option value="tag-g">✅ Resultado positivo</option><option value="tag-i">📊 Informativo</option></select>
+  </div>
+  <div class="fld"><label>Mensagem</label><textarea id="m-post" placeholder="Escreva o comunicado..."></textarea></div>
+  <div class="mbtns">
+    <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+    <button class="btn-ok" onclick="pubPost()">Publicar</button>
+  </div>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+window.pubPost=()=>{
+  const txt=document.getElementById('m-post').value.trim();
+  const tipo=document.getElementById('m-tipo').value;
+  if(!txt){showT('⚠️ Escreva a mensagem');return}
+  const labels={'tag-r':'Comunicado','tag-a':'Alerta','tag-g':'Resultado','tag-i':'Info'};
+  posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE.find(e=>e.nome===nome)?.cor||'#888',badge:tipo,bl:labels[tipo],txt,extra:'',time:'Agora'});
+  fecharModal();goTo('feed');showT('✅ Comunicado publicado!');
+};
+
+function abrirNovaTarefa(){
+  document.getElementById('modal-inner').innerHTML=`
+  <h3>Nova tarefa</h3>
+  <div class="fld"><label>Título</label><input id="m-tit" placeholder="Ex: Contagem de estoque"></div>
+  <div class="row2">
+    <div class="fld"><label>Setor</label>
+      <select id="m-setor"><option>Cozinha</option><option>Pizzaria</option><option>Bar</option><option>Salão</option><option>Gestão</option></select>
+    </div>
+    <div class="fld"><label>Responsável</label>
+      <select id="m-resp">${EQUIPE.map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('')}</select>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="fld"><label>Prazo</label><input type="date" id="m-prazo" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="fld"><label>Prioridade</label>
+      <select id="m-prio"><option value="#E24B4A">🔴 Urgente</option><option value="#EF9F27">🟡 Alta</option><option value="#1D9E75">🟢 Normal</option><option value="#185FA5">🔵 Baixa</option></select>
+    </div>
+  </div>
+  <div class="fld"><label>Descrição</label><textarea id="m-desc" placeholder="Detalhes..."></textarea></div>
+  <div class="mbtns">
+    <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+    <button class="btn-ok" onclick="criarTar()">Criar e notificar</button>
+  </div>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+window.criarTar=()=>{
+  const tit=document.getElementById('m-tit').value.trim();
+  if(!tit){showT('⚠️ Informe o título');return}
+  const rv=document.getElementById('m-resp').value.split('|');
+  const novo={id:Date.now(),titulo:tit,setor:document.getElementById('m-setor').value,resp:rv[0],tel:rv[1],prazo:document.getElementById('m-prazo').value,status:'pendente',prio:document.getElementById('m-prio').value,desc:document.getElementById('m-desc').value||'—'};
+  tarefas.unshift(novo);
+  const msg=`🔔 *Nova tarefa — FornilhApp*\n\n*${tit}*\nSetor: ${novo.setor}\nPrazo: ${novo.prazo}\n\nAcesse o app para ver os detalhes.\n_Fornilha · ${nome.split(' ')[0]}_`;
+  window.open(`https://wa.me/${rv[1]}?text=${encodeURIComponent(msg)}`,'_blank');
+  fecharModal();goTo('tarefas');showT('✅ Tarefa criada!');
+};
+
+function abrirEquipe(){
+  document.getElementById('modal-inner').innerHTML=`
+  <h3>Equipe Fornilha</h3><p>${EQUIPE.length} colaboradores ativos · Baixa temporada</p>
+  ${EQUIPE.map(e=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">
+    <div class="av" style="background:${e.cor};width:34px;height:34px;font-size:12px">${e.nome.slice(0,2).toUpperCase()}</div>
+    <div style="flex:1"><div style="font-size:13px;font-weight:600">${e.nome}</div><div style="font-size:11px;color:var(--txt2)">${e.cargo}</div></div>
+    ${e.tel?`<a href="https://wa.me/${e.tel}" target="_blank" style="text-decoration:none;font-size:19px">📱</a>`:'<span style="font-size:12px;color:var(--txt3)">sem tel</span>'}
+  </div>`).join('')}
+  <button class="btn-cancel" style="width:100%;margin-top:12px" onclick="fecharModal()">Fechar</button>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+// ─── IA REAL ─────────────────────────────────────────────
+const CTX_FORNILHA=`Você é o assistente de gestão do Restaurante e Pizzaria Fornilha, Ilha Grande/RJ. Responda em português, de forma direta e objetiva, como um diretor financeiro e operacional experiente.
+
+DADOS REAIS 2026:
+- Jan: R$443.285 | Lucro R$168.515 | Margem 38% | Folha 15% | CMV 28% | 14 pax
+- Fev: R$379.204 | Lucro R$151.814 | Margem 40% | Folha 16% | CMV 24% | 14 pax  
+- Mar: R$319.406 | Lucro R$108.343 | Margem 34% | Folha 15% | CMV 29% | 13 pax
+- Abr: R$294.335 | Lucro R$77.578 | Margem 26% | Folha 20% | CMV 32% | 13 pax
+- Mai: R$164.223 | Lucro R$25.840 | Margem 15,7% | Folha 28% | CMV 34% | 12 pax
+- Acumulado jan-mai: R$1.609.559 | Projeção anual 2026: R$2,8M
+- Crescimento vs 2025: +25%
+- Meta 2030: R$5.000.000
+
+CONTEXTO: 100 lugares, 28 mesas, 365 dias/ano, 17h-23h. Alta temporada: nov-mar. Baixa: abr-out. Atual: baixa temporada (junho/2026). Despesas fixas: R$21.230/mês. Simples Nacional: ~10-15% fat.
+
+EQUIPE ATUAL (9 pax baixa): Vinicius(Gestor), Patricia(Caixa), Amado(Barman), Douglas(Garçom), Joelson(Pizzaiolo), Bruno(Aj.Pizzaiolo), Rosenilda(Cozinheira), Tiago(Cozinheiro).
+
+METAS: Margem ideal 42%, Folha ideal 15-17% (crítico >19%), CMV ideal até 28% (crítico >32%).
+
+Pergunta do gestor Vinicius:`;
+
+async function askAI(){
+  const q=document.getElementById('ai-q')?.value?.trim();
+  if(!q)return;
+  const resp=document.getElementById('ai-resp');
+  const load=document.getElementById('ai-load');
+  if(!resp||!load)return;
+  document.getElementById('ai-q').value='';
+  resp.style.opacity='0.5';
+  load.style.display='flex';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:CTX_FORNILHA+' '+q}]})
+    });
+    const d=await r.json();
+    load.style.display='none';
+    resp.style.opacity='1';
+    resp.textContent=d.content?.[0]?.text||'Não foi possível obter resposta.';
+  }catch(e){
+    load.style.display='none';
+    resp.style.opacity='1';
+    resp.textContent='Erro de conexão. Tente novamente.';
+  }
+}
+</script>
+
+
+</body></html>
