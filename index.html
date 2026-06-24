@@ -338,7 +338,7 @@ const DADOS_2026 = [
   {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996},
   {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040},
   {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001},
-  {mes:'Jun',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:0,pax:0,fat25:114788},
+  {mes:'Jun',fat:74398.21,lucro:9681.62,margem:13.01,folha_pct:4,cmv_pct:45,fix_pct:29,desp_var_pct:45,imp_pct:10,pax:9,fat25:114788},
 ];
 
 const ESTOQUE = {
@@ -677,9 +677,11 @@ inicio(a) {
 
   <div class="slbl">Alertas operacionais</div>
   <div class="card"><div class="cb" style="padding-top:13px">
-    <div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha de maio em 28% — acima do limite crítico de 19%</span><span class="tag tag-r">Urgente</span></div>
-    <div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">CMV em 34% — acima do limite crítico de 32%</span><span class="tag tag-r">Crítico</span></div>
-    <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">2026 cresce 25% vs 2025 nos primeiros 5 meses</span><span class="tag tag-i">Info</span></div>
+    ${ref.cmv_pct > META_CMV ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas variáveis em ${ref.cmv_pct}% em ${mesLabel} — limite crítico: ${META_CMV}%</span><span class="tag tag-r">Crítico</span></div>` : ''}
+    ${ref.fix_pct > META_FIX ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas fixas em ${ref.fix_pct}% em ${mesLabel} — acima da meta de ${META_FIX}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
+    ${ref.folha_pct > META_FOLHA ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha em ${ref.folha_pct}% em ${mesLabel} — limite crítico: ${META_FOLHA}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
+    ${ref.margem < 20 ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Margem em ${ref.margem.toFixed(1)}% em ${mesLabel} — abaixo do mínimo de 20%</span><span class="tag tag-r">Crítico</span></div>` : ''}
+    <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 },
 
@@ -1064,15 +1066,16 @@ DADOS REAIS 2026:
 - Fev: R$379.204 | Lucro R$151.814 | Margem 40% | Folha 16% | CMV 24% | 14 pax
 - Mar: R$319.406 | Lucro R$108.343 | Margem 34% | Folha 15% | CMV 29% | 13 pax
 - Abr: R$294.335 | Lucro R$77.578 | Margem 26% | Folha 20% | CMV 32% | 13 pax
-- Mai: R$164.223 | Lucro R$25.840 | Margem 15,7% | Folha 28% | CMV 34% | 12 pax
-- Acumulado jan-mai: R$1.609.559 | Projeção anual 2026: R$2,8M | Crescimento vs 2025: +25%
+- Mai: R$164.223 | Lucro R$25.840 | Margem 15,7% | Folha 28% | Desp.Var 34% | Fix 13% | Imp 10% | 12 pax
+- Jun: R$74.398 | Lucro R$9.682 | Margem 13% | Folha 4% | Desp.Var 45% | Fix 29% | Imp 10% | 9 pax
+- Acumulado jan-jun: R$1.683.957 | Crescimento vs mesmo período 2025: +25%
 - Meta 2030: R$5.000.000
 
-CONTEXTO: 100 lugares, 28 mesas, 365 dias/ano, 17h-23h. Alta temporada: nov-mar. Baixa: abr-out. Atual: baixa temporada (junho/2026).
+CONTEXTO: 100 lugares, 28 mesas, 365 dias/ano, 17h-23h. Alta temporada: nov-mar. Baixa: abr-out. Atual: baixa temporada (junho/2026). Junho quase fechado — faturamento baixo (R$74k), despesas variáveis críticas em 45% e despesas fixas em 29%. Margem de apenas 13%.
 
-EQUIPE (9 pax baixa): Vinicius(Gestor/Admin), Patricia(Caixa), Amado(Barman), Douglas(Garçom), Antonio(Garçom), Joelson(Pizzaiolo), Bruno(Aj.Pizzaiolo), Rosenilda(Cozinheira), Tiago(Cozinheiro).
+EQUIPE (9 pax baixa temporada): Vinicius(Gestor/Admin), Patricia(Caixa), Amado(Barman), Douglas(Garçom), Antonio(Garçom), Joelson(Pizzaiolo), Bruno(Aj.Pizzaiolo), Rosenilda(Cozinheira), Tiago(Cozinheiro).
 
-METAS: Margem ideal 42%, Folha ideal 15-17% (crítico >19%), CMV ideal até 28% (crítico >32%).
+METAS: Margem ideal 42%, Folha ideal 15-17% (crítico >19%), Desp.Variáveis ideal ≤28% (crítico >32%), Despesas Fixas meta ≤10%, Impostos ~10%.
 
 Pergunta:`;
 
