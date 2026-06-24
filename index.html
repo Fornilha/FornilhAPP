@@ -246,8 +246,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="logo-sub">Gestão interna · Ilha Grande/RJ</div>
   <div class="login-card">
     <h2>Bem-vindo de volta</h2>
-    <p>Digite seu usuário e senha para entrar.</p>
-    <div class="fld"><label>Usuário</label><input type="text" id="l-codigo" placeholder="Ex: U1, U8, U14..." autocomplete="username" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')document.getElementById('l-senha').focus()"></div>
+    <p>Selecione seu usuário e digite sua senha.</p>
+    <div class="fld"><label>Usuário</label>
+      <select id="l-codigo" autocomplete="username">
+        <option value="">— Selecione seu usuário —</option>
+        <option value="U1">Usuário 1 - Administrador</option>
+        <option value="U2">Usuário 2 - Caixa</option>
+        <option value="U3">Usuário 3 - Bar</option>
+        <option value="U4">Usuário 4 - Vendedor</option>
+        <option value="U5">Usuário 5 - Vendedor</option>
+        <option value="U6">Usuário 6 - Vendedor</option>
+        <option value="U7">Usuário 7 - Vendedor</option>
+        <option value="U8">Usuário 8 - Pizzaria</option>
+        <option value="U9">Usuário 9 - Pizzaria</option>
+        <option value="U10">Usuário 10 - Pizzaria</option>
+        <option value="U11">Usuário 11 - Cozinha</option>
+        <option value="U12">Usuário 12 - Cozinha</option>
+        <option value="U13">Usuário 13 - Cozinha</option>
+        <option value="U14">Usuário 14 - Cozinha</option>
+      </select>
+    </div>
     <div class="fld"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
     <div class="login-err" id="login-err"></div>
     <button class="btn-p" id="btn-entrar" onclick="entrar()">Entrar no FornilhApp</button>
