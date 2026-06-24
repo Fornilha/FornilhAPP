@@ -268,11 +268,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="fld"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
     <!-- Campos para criação de nova senha (primeiro acesso) -->
-    <div class="fld" id="fld-nova-senha" style="display:none"><label>Nova senha (mínimo 6 caracteres)</label><input type="password" id="l-nova-senha" placeholder="Crie sua senha"></div>
-    <div class="fld" id="fld-conf-senha" style="display:none"><label>Confirmar nova senha</label><input type="password" id="l-conf-senha" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')criarSenha()"></div>
+    <div class="fld" id="fld-apelido" style="display:none"><label>Como quer ser chamado?</label><input type="text" id="l-apelido" placeholder="Ex: João, Maria, Tiago…" autocomplete="off"></div>
+    <div class="fld" id="fld-nova-senha" style="display:none"><label>Crie sua senha (mínimo 6 caracteres)</label><input type="password" id="l-nova-senha" placeholder="Nova senha"></div>
+    <div class="fld" id="fld-conf-senha" style="display:none"><label>Confirmar senha</label><input type="password" id="l-conf-senha" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')criarSenha()"></div>
     <div class="login-err" id="login-err"></div>
     <button class="btn-p" id="btn-entrar" onclick="entrar()">Entrar no FornilhApp</button>
-    <button class="btn-p" id="btn-criar-senha" style="display:none;background:linear-gradient(135deg,var(--ok),#16855f)" onclick="criarSenha()">Criar minha senha</button>
+    <button class="btn-p" id="btn-criar-senha" style="display:none;background:linear-gradient(135deg,var(--ok),#16855f)" onclick="criarSenha()">Salvar e entrar</button>
   </div>
   <div class="login-ft">Fornilha Restaurante &amp; Pizzaria · Ilha Grande · RJ</div>
 </div>
@@ -455,17 +456,16 @@ async function entrar() {
   }
   // Login OK — verifica se é primeiro acesso (senha padrão)
   if (senha === SENHA_PADRAO) {
-    // Mostra tela de criar nova senha
-    document.getElementById('login-titulo').textContent = 'Crie sua senha';
-    document.getElementById('login-sub').textContent = 'É seu primeiro acesso. Crie uma senha pessoal para continuar.';
-    document.getElementById('l-senha').style.display = 'none';
+    document.getElementById('login-titulo').textContent = 'Bem-vindo!';
+    document.getElementById('login-sub').textContent = 'Primeiro acesso: diga como quer ser chamado e crie sua senha.';
+    document.getElementById('l-senha').closest('.fld').style.display = 'none';
+    document.getElementById('fld-apelido').style.display = 'block';
     document.getElementById('fld-nova-senha').style.display = 'block';
     document.getElementById('fld-conf-senha').style.display = 'block';
     document.getElementById('btn-entrar').style.display = 'none';
     document.getElementById('btn-criar-senha').style.display = 'block';
     document.getElementById('fld-usuario').style.display = 'none';
     document.getElementById('login-err').style.display = 'none';
-    // Guarda sessão temporária para atualizar senha
     window._sessaoTemp = data.session;
     btn.disabled = false;
     return;
@@ -477,27 +477,30 @@ async function entrar() {
 }
 
 async function criarSenha() {
+  const apelido = document.getElementById('l-apelido').value.trim();
   const nova = document.getElementById('l-nova-senha').value;
   const conf = document.getElementById('l-conf-senha').value;
+  if (!apelido) { mostrarErroLogin('Informe como quer ser chamado.'); return; }
   if (!nova || nova.length < 6) { mostrarErroLogin('A senha precisa ter pelo menos 6 caracteres.'); return; }
   if (nova !== conf) { mostrarErroLogin('As senhas não coincidem.'); return; }
   if (nova === SENHA_PADRAO) { mostrarErroLogin('Escolha uma senha diferente da padrão.'); return; }
   const btn = document.getElementById('btn-criar-senha');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
-  const { error } = await db.auth.updateUser({ password: nova });
+  const { error } = await db.auth.updateUser({ password: nova, data: { nome: apelido } });
   if (error) {
-    mostrarErroLogin('Erro ao salvar senha. Tente novamente.');
+    mostrarErroLogin('Erro ao salvar. Tente novamente.');
     btn.disabled = false;
-    btn.textContent = 'Criar minha senha';
+    btn.textContent = 'Salvar e entrar';
     return;
   }
-  // Senha criada — entra no app
+  // Salva nome no perfil
   const { data: { session } } = await db.auth.getSession();
+  await db.from('profiles').upsert({ id: session.user.id, nome: apelido }, { onConflict: 'id' });
   userSession = session;
   await carregarPerfil(session.user.id, session.user.email);
   mostrarApp();
-  showT('✅ Senha criada com sucesso!');
+  showT('✅ Bem-vindo, ' + apelido + '!');
 }
 
 function mostrarErroLogin(msg) {
@@ -526,6 +529,28 @@ function mostrarApp() {
 
 async function sair() {
   await db.auth.signOut();
+}
+
+function modalAlterarSenha() {
+  abrirModal(`
+    <h3>🔑 Alterar senha</h3>
+    <p>Escolha uma nova senha para sua conta.</p>
+    <div class="fld"><label>Nova senha (mínimo 6 caracteres)</label><input type="password" id="as-nova" placeholder="Nova senha"></div>
+    <div class="fld"><label>Confirmar nova senha</label><input type="password" id="as-conf" placeholder="Repita a senha"></div>
+    <button class="btn-p" onclick="salvarNovaSenha()">Salvar nova senha</button>
+  `);
+}
+
+async function salvarNovaSenha() {
+  const nova = document.getElementById('as-nova').value;
+  const conf = document.getElementById('as-conf').value;
+  if (!nova || nova.length < 6) { showT('⚠️ Mínimo 6 caracteres'); return; }
+  if (nova !== conf) { showT('⚠️ As senhas não coincidem'); return; }
+  if (nova === SENHA_PADRAO) { showT('⚠️ Escolha uma senha diferente da padrão'); return; }
+  const { error } = await db.auth.updateUser({ password: nova });
+  if (error) { showT('❌ Erro ao alterar senha'); return; }
+  fecharModal();
+  showT('✅ Senha alterada com sucesso!');
 }
 
 // ─── NAVEGAÇÃO ───────────────────────────────────────────
@@ -828,6 +853,7 @@ perfil(a) {
     <div id="lista-usuarios">${renderUsuarios()}</div>
     ` : `
     <div class="card"><div class="cb" style="padding:0">
+      <div class="mi" onclick="modalAlterarSenha()"><div class="mi-ic" style="background:#EEF2FF">🔑</div><span class="mi-txt">Alterar minha senha</span><span style="color:var(--txt3)">›</span></div>
       <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
     </div></div>
     <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:14px;margin-top:4px">
