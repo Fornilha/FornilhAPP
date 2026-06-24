@@ -246,8 +246,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="logo-sub">Gestão interna · Ilha Grande/RJ</div>
   <div class="login-card">
     <h2>Bem-vindo de volta</h2>
-    <p>Acesse com seu email e senha.</p>
-    <div class="fld"><label>Email</label><input type="email" id="l-email" placeholder="seu@email.com" autocomplete="username"></div>
+    <p>Digite seu usuário e senha para entrar.</p>
+    <div class="fld"><label>Usuário</label><input type="text" id="l-codigo" placeholder="Ex: U1, U8, U14..." autocomplete="username" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')document.getElementById('l-senha').focus()"></div>
     <div class="fld"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
     <div class="login-err" id="login-err"></div>
     <button class="btn-p" id="btn-entrar" onclick="entrar()">Entrar no FornilhApp</button>
@@ -407,17 +407,24 @@ async function carregarPerfil(userId, email) {
 }
 
 async function entrar() {
-  const email = document.getElementById('l-email').value.trim();
+  const codigo = document.getElementById('l-codigo').value.trim().toUpperCase();
   const senha = document.getElementById('l-senha').value;
-  const err = document.getElementById('login-err');
   const btn = document.getElementById('btn-entrar');
-  err.style.display = 'none';
-  if (!email || !senha) { mostrarErroLogin('Preencha email e senha.'); return; }
+  if (!codigo || !senha) { mostrarErroLogin('Preencha o usuário e a senha.'); return; }
+  // Usuário admin especial
+  let email;
+  if (codigo === 'ADMIN' || codigo === 'U0') {
+    email = 'financeiro.fornilha@gmail.com';
+  } else {
+    // Converte U1 → u1@fornilha.app
+    const num = codigo.replace('U','').replace('u','');
+    email = `u${num}@fornilha.app`;
+  }
   btn.disabled = true;
   btn.textContent = 'Entrando...';
   const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
   if (error) {
-    mostrarErroLogin('Email ou senha incorretos.');
+    mostrarErroLogin('Usuário ou senha incorretos.');
     btn.disabled = false;
     btn.textContent = 'Entrar no FornilhApp';
   }
@@ -683,44 +690,110 @@ notif(a) {
 },
 
 perfil(a) {
-  const u = EQUIPE_LOCAL.find(e=>e.nome===nome)||EQUIPE_LOCAL[0];
   const ini = nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
-  const cargos={admin:'Administrador · Diretor Executivo',caixa:'Caixa',garcom:'Garçom',bar:'Barman',pizzaria:'Pizzaiolo',cozinha:'Cozinheiro'};
+  const cargos={admin:'Administrador',caixa:'Caixa',garcom:'Garçom / Vendedor',bar:'Bar',pizzaria:'Pizzaria',cozinha:'Cozinha'};
+  const cores={admin:'#8B1A1A',caixa:'#3C3489',bar:'#0F6E56',garcom:'#185FA5',pizzaria:'#993C1D',cozinha:'#BA7517'};
+
+  const USUARIOS = [
+    {num:1, perfil:'admin', label:'Administrador', cor:'#8B1A1A'},
+    {num:2, perfil:'caixa', label:'Caixa', cor:'#3C3489'},
+    {num:3, perfil:'bar', label:'Bar', cor:'#0F6E56'},
+    {num:4, perfil:'garcom', label:'Vendedor', cor:'#185FA5'},
+    {num:5, perfil:'garcom', label:'Vendedor', cor:'#185FA5'},
+    {num:6, perfil:'garcom', label:'Vendedor', cor:'#185FA5'},
+    {num:7, perfil:'garcom', label:'Vendedor', cor:'#185FA5'},
+    {num:8, perfil:'pizzaria', label:'Pizzaria', cor:'#993C1D'},
+    {num:9, perfil:'pizzaria', label:'Pizzaria', cor:'#993C1D'},
+    {num:10, perfil:'pizzaria', label:'Pizzaria', cor:'#993C1D'},
+    {num:11, perfil:'cozinha', label:'Cozinha', cor:'#BA7517'},
+    {num:12, perfil:'cozinha', label:'Cozinha', cor:'#BA7517'},
+    {num:13, perfil:'cozinha', label:'Cozinha', cor:'#BA7517'},
+    {num:14, perfil:'cozinha', label:'Cozinha', cor:'#BA7517'},
+  ];
+
+  const setores = ['admin','caixa','bar','garcom','pizzaria','cozinha'];
+  const setorNomes = {admin:'Administração',caixa:'Caixa',bar:'Bar',garcom:'Vendedores / Garçons',pizzaria:'Pizzaria',cozinha:'Cozinha'};
+
+  const vinculados = window._vinculados || {};
+
+  function renderUsuarios() {
+    return setores.map(s => {
+      const us = USUARIOS.filter(u=>u.perfil===s);
+      return `
+      <div style="margin-bottom:14px">
+        <div class="slbl">${setorNomes[s]}</div>
+        ${us.map(u => {
+          const v = vinculados[u.num];
+          return `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);margin-bottom:6px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${u.cor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">U${u.num}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:var(--txt2)">Usuário ${u.num} · ${u.label}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--txt);margin-top:1px">${v ? v.nome : '<span style="color:var(--txt3);font-weight:400;font-style:italic">Vago</span>'}</div>
+              ${v && v.tel ? `<div style="font-size:11px;color:var(--txt2)">${v.tel}</div>` : ''}
+            </div>
+            ${perfil==='admin' ? `<button onclick="vincularUsuario(${u.num},'${u.label}')" style="background:${v?'var(--bg)':'var(--verm)'};color:${v?'var(--txt2)':'#fff'};border:1px solid var(--bord);padding:5px 11px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">${v?'Editar':'Vincular'}</button>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  }
+
   a.innerHTML=`
   <div style="margin:-14px -14px 0">
     <div class="ph2">
-      <div class="av-lg" style="background:var(--ouro)">${ini}</div>
+      <div class="av-lg" style="background:${cores[perfil]||'var(--ouro)'}">${ini}</div>
       <div class="pnome">${nome}</div>
       <div class="pcargo">${cargos[perfil]||perfil}</div>
     </div>
   </div>
   <div style="padding-top:14px">
-    <div class="pstats">
-      <div class="pst"><div class="psv">${tarefas.filter(t=>t.status!=='concluida').length}</div><div class="psl">Tarefas</div></div>
-      <div class="pst"><div class="psv">${EQUIPE_LOCAL.length}</div><div class="psl">Equipe</div></div>
-      <div class="pst"><div class="psv">2030</div><div class="psl">Meta</div></div>
-    </div>
-    ${perfil==='admin'?`
-    <div class="card"><div class="cb" style="padding:0">
-      <div class="mi" onclick="abrirEquipe()"><div class="mi-ic" style="background:#FCEBEB">👥</div><span class="mi-txt">Gerenciar equipe</span><span style="color:var(--txt3)">›</span></div>
+    ${perfil==='admin' ? `
+    <div class="slbl">Menu do administrador</div>
+    <div class="card" style="margin-bottom:14px"><div class="cb" style="padding:0">
       <div class="mi" onclick="showT('📊 Em breve: relatórios em PDF!')"><div class="mi-ic" style="background:#E6F1FB">📊</div><span class="mi-txt">Relatórios e exportações</span><span style="color:var(--txt3)">›</span></div>
       <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
-    </div></div>`:`
+    </div></div>
+    <div class="slbl">Usuários do sistema (${USUARIOS.length})</div>
+    <div id="lista-usuarios">${renderUsuarios()}</div>
+    ` : `
     <div class="card"><div class="cb" style="padding:0">
       <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
-    </div></div>`}
+    </div></div>
     <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:14px;margin-top:4px">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt2);margin-bottom:10px">Fornilha em números</div>
       <div style="font-size:13px;color:var(--txt2);line-height:2">
         📍 Vila do Abraão · Ilha Grande · RJ<br>
         🍕 Restaurante & Pizzaria · 100 lugares · 28 mesas<br>
-        📅 365 dias/ano · 17h–23h<br>
-        💰 Acumulado 2026: <strong style="color:var(--verm)">R$ 1,6M</strong><br>
-        🏆 Melhor mês: <strong>Jan/26 — R$ 443.285</strong><br>
-        📈 Crescimento vs 2025: <strong style="color:var(--ok)">+25%</strong>
+        📅 365 dias/ano · 17h–23h
       </div>
-    </div>
+    </div>`}
   </div>`;
+
+  window.vincularUsuario = (num, label) => {
+    const v = (window._vinculados||{})[num] || {};
+    document.getElementById('modal-inner').innerHTML=`
+    <h3>Usuário ${num} · ${label}</h3>
+    <p>Vincule este usuário a um colaborador do Fornilha.</p>
+    <div class="fld"><label>Nome completo</label><input id="v-nome" placeholder="Ex: Joelson Santos da Silva" value="${v.nome||''}"></div>
+    <div class="fld"><label>Telefone (WhatsApp)</label><input id="v-tel" placeholder="Ex: 24 99923-7441" value="${v.tel||''}"></div>
+    <div class="fld"><label>Senha do usuário U${num}</label><input type="password" id="v-senha" placeholder="Nova senha (deixe vazio para não alterar)"></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-ok" onclick="salvarVinculo(${num})">Salvar</button>
+    </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+  };
+
+  window.salvarVinculo = (num) => {
+    const nome_v = document.getElementById('v-nome').value.trim();
+    const tel = document.getElementById('v-tel').value.trim();
+    if (!nome_v) { showT('⚠️ Informe o nome'); return; }
+    if (!window._vinculados) window._vinculados = {};
+    window._vinculados[num] = { nome: nome_v, tel };
+    fecharModal();
+    document.getElementById('lista-usuarios').innerHTML = renderUsuarios();
+    showT(`✅ Usuário ${num} vinculado a ${nome_v.split(' ')[0]}!`);
+  };
 }
 
 };
