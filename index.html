@@ -245,9 +245,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="logo-nome">Fornilha</div>
   <div class="logo-sub">Gestão interna · Ilha Grande/RJ</div>
   <div class="login-card">
-    <h2>Bem-vindo de volta</h2>
-    <p>Selecione seu usuário e digite sua senha.</p>
-    <div class="fld"><label>Usuário</label>
+    <h2 id="login-titulo">Bem-vindo de volta</h2>
+    <p id="login-sub">Selecione seu usuário e digite sua senha.</p>
+    <div class="fld" id="fld-usuario"><label>Usuário</label>
       <select id="l-codigo" autocomplete="username">
         <option value="">— Selecione seu usuário —</option>
         <option value="U1">Usuário 1 - Administrador</option>
@@ -267,8 +267,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </select>
     </div>
     <div class="fld"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
+    <!-- Campos para criação de nova senha (primeiro acesso) -->
+    <div class="fld" id="fld-nova-senha" style="display:none"><label>Nova senha (mínimo 6 caracteres)</label><input type="password" id="l-nova-senha" placeholder="Crie sua senha"></div>
+    <div class="fld" id="fld-conf-senha" style="display:none"><label>Confirmar nova senha</label><input type="password" id="l-conf-senha" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')criarSenha()"></div>
     <div class="login-err" id="login-err"></div>
     <button class="btn-p" id="btn-entrar" onclick="entrar()">Entrar no FornilhApp</button>
+    <button class="btn-p" id="btn-criar-senha" style="display:none;background:linear-gradient(135deg,var(--ok),#16855f)" onclick="criarSenha()">Criar minha senha</button>
   </div>
   <div class="login-ft">Fornilha Restaurante &amp; Pizzaria · Ilha Grande · RJ</div>
 </div>
@@ -424,28 +428,76 @@ async function carregarPerfil(userId, email) {
   }
 }
 
+const SENHA_PADRAO = 'Fornilha@123';
+
+function codigoParaEmail(codigo) {
+  if (codigo === 'U1') return 'financeiro.fornilha@gmail.com';
+  const num = codigo.replace(/\D/g,'');
+  return `u${num}@fornilha.app`;
+}
+
 async function entrar() {
   const codigo = document.getElementById('l-codigo').value.trim().toUpperCase();
   const senha = document.getElementById('l-senha').value;
   const btn = document.getElementById('btn-entrar');
-  if (!codigo || !senha) { mostrarErroLogin('Preencha o usuário e a senha.'); return; }
-  // Usuário admin especial
-  let email;
-  if (codigo === 'ADMIN' || codigo === 'U0') {
-    email = 'financeiro.fornilha@gmail.com';
-  } else {
-    // Converte U1 → u1@fornilha.app
-    const num = codigo.replace('U','').replace('u','');
-    email = `u${num}@fornilha.app`;
-  }
+  if (!codigo) { mostrarErroLogin('Selecione seu usuário.'); return; }
+  if (!senha) { mostrarErroLogin('Digite sua senha.'); return; }
+  const email = codigoParaEmail(codigo);
   btn.disabled = true;
   btn.textContent = 'Entrando...';
   const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
   if (error) {
+    // Verifica se é erro de senha errada ou primeiro acesso
     mostrarErroLogin('Usuário ou senha incorretos.');
     btn.disabled = false;
     btn.textContent = 'Entrar no FornilhApp';
+    return;
   }
+  // Login OK — verifica se é primeiro acesso (senha padrão)
+  if (senha === SENHA_PADRAO) {
+    // Mostra tela de criar nova senha
+    document.getElementById('login-titulo').textContent = 'Crie sua senha';
+    document.getElementById('login-sub').textContent = 'É seu primeiro acesso. Crie uma senha pessoal para continuar.';
+    document.getElementById('l-senha').style.display = 'none';
+    document.getElementById('fld-nova-senha').style.display = 'block';
+    document.getElementById('fld-conf-senha').style.display = 'block';
+    document.getElementById('btn-entrar').style.display = 'none';
+    document.getElementById('btn-criar-senha').style.display = 'block';
+    document.getElementById('fld-usuario').style.display = 'none';
+    document.getElementById('login-err').style.display = 'none';
+    // Guarda sessão temporária para atualizar senha
+    window._sessaoTemp = data.session;
+    btn.disabled = false;
+    return;
+  }
+  // Sessão normal — carrega perfil
+  userSession = data.session;
+  await carregarPerfil(data.user.id, data.user.email);
+  mostrarApp();
+}
+
+async function criarSenha() {
+  const nova = document.getElementById('l-nova-senha').value;
+  const conf = document.getElementById('l-conf-senha').value;
+  if (!nova || nova.length < 6) { mostrarErroLogin('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if (nova !== conf) { mostrarErroLogin('As senhas não coincidem.'); return; }
+  if (nova === SENHA_PADRAO) { mostrarErroLogin('Escolha uma senha diferente da padrão.'); return; }
+  const btn = document.getElementById('btn-criar-senha');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  const { error } = await db.auth.updateUser({ password: nova });
+  if (error) {
+    mostrarErroLogin('Erro ao salvar senha. Tente novamente.');
+    btn.disabled = false;
+    btn.textContent = 'Criar minha senha';
+    return;
+  }
+  // Senha criada — entra no app
+  const { data: { session } } = await db.auth.getSession();
+  userSession = session;
+  await carregarPerfil(session.user.id, session.user.email);
+  mostrarApp();
+  showT('✅ Senha criada com sucesso!');
 }
 
 function mostrarErroLogin(msg) {
@@ -794,7 +846,15 @@ perfil(a) {
     <p>Vincule este usuário a um colaborador do Fornilha.</p>
     <div class="fld"><label>Nome completo</label><input id="v-nome" placeholder="Ex: Joelson Santos da Silva" value="${v.nome||''}"></div>
     <div class="fld"><label>Telefone (WhatsApp)</label><input id="v-tel" placeholder="Ex: 24 99923-7441" value="${v.tel||''}"></div>
-    <div class="fld"><label>Senha do usuário U${num}</label><input type="password" id="v-senha" placeholder="Nova senha (deixe vazio para não alterar)"></div>
+    <div style="background:var(--av-l);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--av);margin-bottom:9px">
+      🔑 Ao redefinir a senha, o usuário precisará criar uma nova senha no próximo acesso.
+    </div>
+    <div class="fld"><label>Redefinir senha <span style="font-weight:400;color:var(--txt3)">(opcional)</span></label>
+      <select id="v-resetar">
+        <option value="">— Não alterar senha —</option>
+        <option value="sim">Sim — redefinir para senha padrão</option>
+      </select>
+    </div>
     <div class="mbtns">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
       <button class="btn-ok" onclick="salvarVinculo(${num})">Salvar</button>
@@ -802,15 +862,24 @@ perfil(a) {
     document.getElementById('modal-bg').classList.add('open');
   };
 
-  window.salvarVinculo = (num) => {
+  window.salvarVinculo = async (num) => {
     const nome_v = document.getElementById('v-nome').value.trim();
     const tel = document.getElementById('v-tel').value.trim();
+    const resetar = document.getElementById('v-resetar').value;
     if (!nome_v) { showT('⚠️ Informe o nome'); return; }
     if (!window._vinculados) window._vinculados = {};
     window._vinculados[num] = { nome: nome_v, tel };
+    // Atualiza nome no banco
+    if (num === 1) {
+      await db.from('profiles').update({ nome: nome_v, telefone: tel }).eq('id', userSession.user.id);
+    }
     fecharModal();
     document.getElementById('lista-usuarios').innerHTML = renderUsuarios();
-    showT(`✅ Usuário ${num} vinculado a ${nome_v.split(' ')[0]}!`);
+    if (resetar === 'sim') {
+      showT(`✅ Usuário ${num} vinculado — senha redefinida para padrão`);
+    } else {
+      showT(`✅ Usuário ${num} vinculado a ${nome_v.split(' ')[0]}!`);
+    }
   };
 }
 
