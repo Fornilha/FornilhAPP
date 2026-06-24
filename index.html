@@ -333,12 +333,12 @@ const EQUIPE_LOCAL = [
 ];
 
 const DADOS_2026 = [
-  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,imp_pct:15,pax:14,fat25:403269},
-  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,imp_pct:15,pax:14,fat25:315257},
-  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,imp_pct:15,pax:13,fat25:307996},
-  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,imp_pct:15,pax:13,fat25:178040},
-  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,imp_pct:10,pax:12,fat25:131001},
-  {mes:'Jun',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,imp_pct:0,pax:0,fat25:114788},
+  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:403269},
+  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:315257},
+  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996},
+  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040},
+  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001},
+  {mes:'Jun',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:0,pax:0,fat25:114788},
 ];
 
 const ESTOQUE = {
@@ -571,16 +571,66 @@ const renders = {
 
 inicio(a) {
   const dt = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  const acumulado = DADOS_2026.reduce((s,d)=>s+d.fat,0);
-  const ultimo = DADOS_2026.filter(d=>d.fat>0).slice(-1)[0];
+  const dadosFechados = DADOS_2026.filter(d=>d.fat>0);
+  const acumuladoAno = dadosFechados.reduce((s,d)=>s+d.fat,0);
+  const ref = dadosFechados.slice(-1)[0]; // último mês fechado
+  const mesLabel = ref.mes + '/26';
+  const var25 = dadosFechados.reduce((s,d)=>s+d.fat25,0);
+  const varAno = Math.round((acumuladoAno/var25-1)*100);
+  const varSinal = varAno>=0?'+':'';
+
+  function indCor(val,meta,inv=false){
+    // inv=true: menor é melhor (custos)
+    if(inv) return val<=meta*0.9?'#1D9E75':val<=meta?'#EF9F27':'#E24B4A';
+    return val>=meta*0.9?'#1D9E75':val>=meta*0.7?'#EF9F27':'#E24B4A';
+  }
+  function indIcon(val,meta,inv=false){
+    const ok=inv?val<=meta:val>=meta;
+    const warn=inv?val<=meta*1.15:val>=meta*0.7;
+    return ok?'🟢':warn?'🟡':'🔴';
+  }
+  function barW(val,meta,inv=false){
+    // barra relativa à meta
+    const pct = inv ? Math.min(val/meta*100,100) : Math.min(val/meta*100,100);
+    return Math.round(pct)+'%';
+  }
+
+  // Metas definidas
+  const META_CMV=28, META_FIX=10, META_FOLHA=19, META_MARGEM=42, META_IMP=10, META_VAR=5;
+
+  const corMargem  = indCor(ref.margem,META_MARGEM);
+  const corFolha   = indCor(ref.folha_pct,META_FOLHA,true);
+  const corCMV     = indCor(ref.cmv_pct,META_CMV,true);
+  const corFix     = indCor(ref.fix_pct,META_FIX,true);
+  const corImp     = indCor(ref.imp_pct,META_IMP,true);
+  const corVar     = indCor(ref.desp_var_pct,META_VAR,true);
+
   a.innerHTML=`
   <div style="padding:16px 0 4px"><p style="font-size:21px;font-weight:700">Olá, ${nome.split(' ')[0]} 👋</p><p style="font-size:13px;color:var(--txt2);margin-top:2px">${dt} · Baixa temporada</p></div>
+
   <div class="kgrid">
-    <div class="kpi dest"><div class="kpi-l">Acumulado 2026</div><div class="kpi-v">R$ 1,6M</div><div class="kpi-s">Jan–Mai · +25% vs 2025</div></div>
-    <div class="kpi"><div class="kpi-l">Margem ${ultimo.mes}/26</div><div class="kpi-v a">${ultimo.margem.toFixed(1)}%</div><div class="kpi-s">Meta: 42%</div></div>
-    <div class="kpi"><div class="kpi-l">Folha ${ultimo.mes}/26</div><div class="kpi-v r">${ultimo.folha_pct}%</div><div class="kpi-s">Crítico &gt;19%</div></div>
-    <div class="kpi"><div class="kpi-l">Projeção 2026</div><div class="kpi-v g">R$ 2,8M</div><div class="kpi-s">56% da meta 2030</div></div>
+    <div class="kpi dest">
+      <div class="kpi-l">Acumulado ${mesLabel}</div>
+      <div class="kpi-v">${fmt(ref.fat)}</div>
+      <div class="kpi-s">Ref.: mês anterior fechado</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Margem ${mesLabel}</div>
+      <div class="kpi-v" style="color:${corMargem}">${ref.margem.toFixed(1)}%</div>
+      <div class="kpi-s">Meta: ${META_MARGEM}%</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Folha ${mesLabel}</div>
+      <div class="kpi-v" style="color:${corFolha}">${ref.folha_pct}%</div>
+      <div class="kpi-s">Limite: ${META_FOLHA}%</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
+      <div class="kpi-v" style="color:${corVar}">${ref.desp_var_pct}%</div>
+      <div class="kpi-s">Meta: ≤${META_VAR}%</div>
+    </div>
   </div>
+
   <div class="ai-card">
     <div class="ai-hd"><span class="ai-badge">IA</span><span class="ai-title">Assistente Fornilha</span></div>
     <p id="ai-resp">Analisando dados reais de jan–mai/2026... O Fornilha cresceu 25% vs 2025 no período. Maior preocupação: folha em 28% em maio (crítico). Recomendo redução de 1-2 colaboradores na baixa temporada para proteger caixa nos próximos 4 meses.</p>
@@ -590,14 +640,41 @@ inicio(a) {
     </div>
     <div class="ai-loading" id="ai-load"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Analisando...</span></div>
   </div>
-  <div class="slbl">Indicadores mai/26 vs metas</div>
+
+  <div class="slbl">Indicadores ${mesLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
-    <div class="ind-row"><span class="ind-lbl">Folha de pagamento</span><div class="ind-bar-w"><div class="ind-bar" style="width:100%;background:#E24B4A"></div></div><span class="ind-val" style="color:#E24B4A">28% 🔴</span></div>
-    <div class="ind-row"><span class="ind-lbl">CMV / Variáveis</span><div class="ind-bar-w"><div class="ind-bar" style="width:100%;background:#E24B4A"></div></div><span class="ind-val" style="color:#E24B4A">34% 🔴</span></div>
-    <div class="ind-row"><span class="ind-lbl">Despesas fixas</span><div class="ind-bar-w"><div class="ind-bar" style="width:80%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">13% 🟡</span></div>
-    <div class="ind-row"><span class="ind-lbl">Margem líquida</span><div class="ind-bar-w"><div class="ind-bar" style="width:37%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">15,7%🟡</span></div>
-    <div class="ind-row"><span class="ind-lbl">Impostos</span><div class="ind-bar-w"><div class="ind-bar" style="width:65%;background:#EF9F27"></div></div><span class="ind-val" style="color:#EF9F27">10% 🟡</span></div>
+    <div class="ind-row">
+      <span class="ind-lbl">Acumulado ano</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(acumuladoAno/2800000*100),100)}%;background:#1D9E75"></div></div>
+      <span class="ind-val" style="color:#1D9E75">${varSinal}${varAno}% 🟢</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Acumulado mês</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(ref.fat/ref.fat25*100),100)}%;background:${corMargem}"></div></div>
+      <span class="ind-val" style="color:${corMargem}">${fmt(ref.fat)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">CMV / Variáveis</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.cmv_pct/META_CMV*100,100)}%;background:${corCMV}"></div></div>
+      <span class="ind-val" style="color:${corCMV}">${ref.cmv_pct}% ${indIcon(ref.cmv_pct,META_CMV,true)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Despesas fixas</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.fix_pct/META_FIX*100,100)}%;background:${corFix}"></div></div>
+      <span class="ind-val" style="color:${corFix}">${ref.fix_pct}% ${indIcon(ref.fix_pct,META_FIX,true)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Margem líquida</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.margem/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
+      <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Impostos</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
+      <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
+    </div>
   </div></div>
+
   <div class="slbl">Alertas operacionais</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha de maio em 28% — acima do limite crítico de 19%</span><span class="tag tag-r">Urgente</span></div>
