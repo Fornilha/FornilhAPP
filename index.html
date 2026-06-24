@@ -1041,9 +1041,20 @@ window.criarTar=()=>{
   const tit=document.getElementById('m-tit').value.trim();
   if(!tit){showT('⚠️ Informe o título');return}
   const rv=document.getElementById('m-resp').value.split('|');
-  const novo={id:Date.now(),titulo:tit,setor:document.getElementById('m-setor').value,resp:rv[0],tel:rv[1],prazo:document.getElementById('m-prazo').value,status:'pendente',prio:'#185FA5',desc:document.getElementById('m-desc').value||'—'};
+  const setor=document.getElementById('m-setor').value;
+  const prazo=document.getElementById('m-prazo').value;
+  const desc=document.getElementById('m-desc').value||'—';
+  const novo={id:Date.now(),titulo:tit,setor,resp:rv[0],tel:rv[1],prazo,status:'pendente',prio:'#185FA5',desc};
   tarefas.unshift(novo);
-  fecharModal();goTo('tarefas');showT('✅ Tarefa criada!');
+  // Publica automaticamente no feed
+  const prazoFmt = prazo ? new Date(prazo+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+  posts.unshift({
+    autor:nome, cargo:'Gestão', cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
+    badge:'tag-a', bl:'Tarefa',
+    txt:`📋 <strong>${tit}</strong><br>Responsável: ${rv[0]} · Setor: ${setor} · Prazo: ${prazoFmt}${desc!=='—'?`<br><em>${desc}</em>`:''}`,
+    extra:'', time:'Agora'
+  });
+  fecharModal();goTo('tarefas');showT('✅ Tarefa criada e publicada no feed!');
 };
 
 function abrirEquipe(){
