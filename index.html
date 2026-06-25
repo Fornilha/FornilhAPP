@@ -1093,6 +1093,7 @@ vendas(a) {
     return d.getMonth()===mesIdx&&d.getFullYear()===anoAtual;
   });
   const dias=caixaMes.length;
+  const semDados=dias===0;
   const diasNoMes=new Date(anoAtual,mesIdx+1,0).getDate();
 
   // Acumulados
@@ -1127,7 +1128,6 @@ vendas(a) {
   const totalMesas=caixaMes.reduce((s,t)=>s+(t.dados?.mesas||0),0);
   const tmMedio=totalMesas>0?acumMesTasks/totalMesas:0;
 
-  const semDados=dias===0;
   const aviso=semDados?`<div style="font-size:12px;color:var(--txt3);text-align:center;padding:18px 0">Nenhuma Conferência de Caixa lançada em ${mesNome} ainda.<br>Os dados aparecerão aqui conforme as tarefas forem concluídas.</div>`:'';
 
   // Histórico mensal
