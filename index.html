@@ -458,6 +458,39 @@ function loadEstoqueState(){
 }
 loadEstoqueState();
 
+// ─── MENSAGENS & LEMBRETES ────────────────────────────────
+let mensagens=[];
+let lembretes=[];
+let notifDisparadas=[];
+
+function saveMsgs(){ try{localStorage.setItem('fornilh_msgs',JSON.stringify(mensagens));}catch(e){} }
+function saveLembretes(){ try{localStorage.setItem('fornilh_lembretes',JSON.stringify(lembretes));}catch(e){} }
+
+(function loadComms(){
+  try{ mensagens=JSON.parse(localStorage.getItem('fornilh_msgs')||'[]'); }catch(e){ mensagens=[]; }
+  try{ lembretes=JSON.parse(localStorage.getItem('fornilh_lembretes')||'[]'); }catch(e){ lembretes=[]; }
+})();
+
+function checkLembretes(){
+  const hoje=new Date();
+  const diaS=hoje.getDay(); // 0=Dom
+  const dataHoje=hoje.toISOString().slice(0,10);
+  notifDisparadas=[];
+  lembretes.forEach(l=>{
+    if(!l.ativo)return;
+    const jaDeu=l.ultimoDisparo===dataHoje;
+    const deveDisparar=l.diasSemana.includes(diaS);
+    if(deveDisparar&&!jaDeu){
+      l.ultimoDisparo=dataHoje;
+      notifDisparadas.push(l);
+    }
+  });
+  if(notifDisparadas.length) saveLembretes();
+  // atualiza badge
+  const dot=document.querySelector('.ntf-dot');
+  if(dot) dot.style.display=notifDisparadas.length>0?'block':'none';
+}
+
 // ─── AUTH ────────────────────────────────────────────────
 async function init() {
   const { data: { session } } = await db.auth.getSession();
@@ -588,6 +621,7 @@ function mostrarApp() {
   av.textContent = ini;
   const cor = EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor || '#8B1A1A';
   av.style.background = cor;
+  checkLembretes();
   goTo('inicio');
 }
 
@@ -1173,18 +1207,181 @@ vendas(a) {
   <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>`;
 },
 
+msgs(a) {
+  const DIAS_PT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  function fmtMsgTime(iso){
+    if(!iso)return'';
+    const d=new Date(iso),hoje=new Date();
+    const isHoje=d.toDateString()===hoje.toDateString();
+    return isHoje?d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  }
+  function rMsgs(){
+    const visíveis=perfil==='admin'?mensagens:mensagens.filter(m=>m.para==='todos'||m.para===nome);
+    if(!visíveis.length){
+      a.querySelector('#msgs-lista').innerHTML=`<div style="text-align:center;color:var(--txt3);padding:32px 0;font-size:13px">Nenhuma mensagem ainda.</div>`;
+      return;
+    }
+    a.querySelector('#msgs-lista').innerHTML=visíveis.slice().reverse().map(m=>{
+      const minha=m.de===nome;
+      const ini=m.de.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+      const cor=EQUIPE_LOCAL.find(e=>e.nome===m.de)?.cor||'#888';
+      const naoLida=!m.lido&&m.para!=='todos'&&m.para===nome;
+      return`<div style="display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--bord);align-items:flex-start${naoLida?';background:var(--surf);border-radius:10px;padding:10px':''}" onclick="marcarLida('${m.id}')">
+        <div style="width:38px;height:38px;border-radius:50%;background:${cor};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${ini}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:12px;font-weight:700">${m.de.split(' ')[0]}</span>
+            <span style="font-size:10px;color:var(--txt3)">${fmtMsgTime(m.time)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--txt3);margin-bottom:4px">Para: <strong>${m.para==='todos'?'Toda a equipe':m.para.split(' ')[0]}</strong></div>
+          <div style="font-size:13px;color:var(--txt);line-height:1.4">${m.texto}</div>
+        </div>
+        ${naoLida?`<div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;margin-top:6px"></div>`:''}
+      </div>`;
+    }).join('');
+  }
+  a.innerHTML=`
+    <div class="card"><div class="cb" style="padding:0 4px" id="msgs-lista"></div></div>`;
+  rMsgs();
+  window.marcarLida=(id)=>{ const m=mensagens.find(x=>x.id===id); if(m)m.lido=true; saveMsgs(); };
+  if(perfil==='admin'){
+    const fab=document.createElement('button');
+    fab.className='fab';fab.textContent='+';
+    fab.onclick=()=>{
+      const destOpts=`<option value="todos">Toda a equipe</option>`+
+        EQUIPE_LOCAL.filter(e=>e.nome!==nome).map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
+      document.getElementById('modal-inner').innerHTML=`
+        <h3>💬 Nova mensagem</h3>
+        <div class="fld"><label>Para</label><select id="msg-para">${destOpts}</select></div>
+        <div class="fld"><label>Mensagem</label><textarea id="msg-txt" rows="4" placeholder="Digite sua mensagem…" style="width:100%;padding:10px;border:1px solid var(--bord);border-radius:8px;background:var(--surf);color:var(--txt);font-size:14px;resize:vertical"></textarea></div>
+        <div class="mbtns">
+          <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+          <button class="btn-ok" onclick="enviarMsg()">Enviar</button>
+        </div>`;
+      document.getElementById('modal-bg').classList.add('open');
+    };
+    document.querySelector('.shell').appendChild(fab);
+  }
+  window.enviarMsg=()=>{
+    const para=document.getElementById('msg-para').value;
+    const txt=document.getElementById('msg-txt').value.trim();
+    if(!txt){showT('Digite a mensagem');return;}
+    mensagens.push({id:'msg_'+Date.now(),de:nome,para,texto:txt,time:new Date().toISOString(),lido:false});
+    saveMsgs();fecharModal();rMsgs();showT('✅ Mensagem enviada!');
+  };
+},
+
 notif(a) {
-  const ns=[
-    {ic:'🔴',bg:'#FCEBEB',txt:'Folha de maio em 28% — acima do limite crítico de 19%. Avalie redução de equipe.',tm:'Hoje',u:true},
-    {ic:'🔴',bg:'#FCEBEB',txt:'CMV em 34% — acima do limite crítico de 32%. Revisar compras e desperdício.',tm:'Hoje',u:true},
-    {ic:'🏆',bg:'#FDF3DC',txt:'Janeiro/26: R$ 443.285 — recorde histórico do Fornilha.',tm:'Jan/26',u:false},
-  ];
-  a.innerHTML=`<div class="card"><div class="cb" style="padding:0">`+
-  ns.map(n=>`<div class="ni2${n.u?' unread':''}">
-    <div class="ni-ic" style="background:${n.bg}">${n.ic}</div>
-    <div style="flex:1"><div class="ni-txt">${n.txt}</div><div class="ni-tm">${n.tm}</div></div>
-    ${n.u?'<div class="ni-ud"></div>':''}
-  </div>`).join('')+`</div></div>`;
+  const DIAS_PT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const DIAS_CORES=['#EF9F27','#185FA5','#185FA5','#185FA5','#185FA5','#185FA5','#1D9E75'];
+
+  // Alertas automáticos do sistema
+  const ref=DADOS_2026.filter(d=>d.fat>0).slice(-1)[0];
+  const alertas=[];
+  if(ref){
+    if(ref.folha_pct>19) alertas.push({ic:'🔴',bg:'#FCEBEB',txt:`Folha ${ref.mes}: ${ref.folha_pct}% — acima do limite crítico de 19%. Avalie a equipe.`});
+    if(ref.cmv_pct>32)   alertas.push({ic:'🔴',bg:'#FCEBEB',txt:`CMV ${ref.mes}: ${ref.cmv_pct}% — acima do limite de 32%. Revise compras.`});
+    if(ref.margem<15)    alertas.push({ic:'🟡',bg:'#FDF3DC',txt:`Margem ${ref.mes}: ${ref.margem.toFixed(1)}% — abaixo da meta de 15%.`});
+    if(alertas.length===0) alertas.push({ic:'✅',bg:'#EAF7F0',txt:`Indicadores de ${ref.mes} dentro das metas.`});
+  }
+
+  function rNotif(){
+    const dispHtml=notifDisparadas.length?`
+      <div class="slbl">Lembretes de hoje</div>
+      <div class="card" style="margin-bottom:12px"><div class="cb" style="padding:0">
+        ${notifDisparadas.map(l=>`<div class="ni2 unread">
+          <div class="ni-ic" style="background:#E8F4FF">⏰</div>
+          <div style="flex:1"><div class="ni-txt">${l.titulo}</div><div class="ni-tm">${l.texto||''}</div></div>
+        </div>`).join('')}
+      </div></div>`:'';
+
+    const lembretesHtml=perfil==='admin'?`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px">
+        <div class="slbl" style="margin:0">Lembretes agendados</div>
+        <button style="font-size:12px;padding:4px 12px;border:1px solid var(--acc);color:var(--acc);background:transparent;border-radius:20px;cursor:pointer" onclick="criarLembrete()">+ Novo</button>
+      </div>
+      <div id="lembretes-lista"></div>`:'';
+
+    a.innerHTML=`
+      <div class="slbl">Alertas do sistema</div>
+      <div class="card" style="margin-bottom:12px"><div class="cb" style="padding:0">
+        ${alertas.map(n=>`<div class="ni2">
+          <div class="ni-ic" style="background:${n.bg}">${n.ic}</div>
+          <div style="flex:1"><div class="ni-txt">${n.txt}</div></div>
+        </div>`).join('')}
+      </div></div>
+      ${dispHtml}
+      ${lembretesHtml}`;
+
+    if(perfil==='admin') renderLembretes();
+  }
+
+  function renderLembretes(){
+    const el=document.getElementById('lembretes-lista');
+    if(!el)return;
+    if(!lembretes.length){
+      el.innerHTML=`<div style="text-align:center;color:var(--txt3);padding:20px 0;font-size:13px">Nenhum lembrete agendado.</div>`;
+      return;
+    }
+    el.innerHTML=lembretes.map(l=>`
+      <div style="background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div>
+            <div style="font-size:14px;font-weight:700">⏰ ${l.titulo}</div>
+            ${l.texto?`<div style="font-size:12px;color:var(--txt3);margin-top:2px">${l.texto}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">
+            <button style="font-size:11px;padding:3px 8px;border:1px solid ${l.ativo?'var(--ok)':'var(--bord)'};color:${l.ativo?'var(--ok)':'var(--txt3)'};background:transparent;border-radius:12px;cursor:pointer" onclick="toggleLembrete('${l.id}')">${l.ativo?'Ativo':'Pausado'}</button>
+            <button style="font-size:11px;padding:3px 8px;border:1px solid var(--er);color:var(--er);background:transparent;border-radius:12px;cursor:pointer" onclick="deleteLembrete('${l.id}')">Excluir</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${DIAS_PT.map((d,i)=>l.diasSemana.includes(i)?`<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${DIAS_CORES[i]}22;color:${DIAS_CORES[i]};border:1px solid ${DIAS_CORES[i]}44">${d}</span>`:'').filter(Boolean).join('')}
+        </div>
+        ${l.ultimoDisparo?`<div style="font-size:10px;color:var(--txt3);margin-top:6px">Último disparo: ${new Date(l.ultimoDisparo).toLocaleDateString('pt-BR')}</div>`:''}
+      </div>`).join('');
+  }
+
+  window.criarLembrete=()=>{
+    document.getElementById('modal-inner').innerHTML=`
+      <h3>⏰ Novo lembrete</h3>
+      <div class="fld"><label>Título</label><input type="text" id="lem-titulo" placeholder="Ex: Contagem de estoque"></div>
+      <div class="fld"><label>Descrição (opcional)</label><input type="text" id="lem-texto" placeholder="Ex: Solicitar contagem nos setores"></div>
+      <div class="fld"><label>Dias da semana</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${DIAS_PT.map((d,i)=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+            <input type="checkbox" value="${i}" class="lem-dia" style="accent-color:var(--acc)"> ${d}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div class="mbtns">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-ok" onclick="salvarLembrete()">Salvar</button>
+      </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+  };
+
+  window.salvarLembrete=()=>{
+    const titulo=document.getElementById('lem-titulo').value.trim();
+    const texto=document.getElementById('lem-texto').value.trim();
+    const dias=[...document.querySelectorAll('.lem-dia:checked')].map(c=>parseInt(c.value));
+    if(!titulo){showT('Informe o título');return;}
+    if(!dias.length){showT('Selecione ao menos um dia');return;}
+    lembretes.push({id:'lem_'+Date.now(),titulo,texto,diasSemana:dias,ativo:true,ultimoDisparo:null});
+    saveLembretes();fecharModal();renderLembretes();showT('✅ Lembrete criado!');
+  };
+
+  window.toggleLembrete=(id)=>{
+    const l=lembretes.find(x=>x.id===id);
+    if(l){l.ativo=!l.ativo;saveLembretes();renderLembretes();}
+  };
+
+  window.deleteLembrete=(id)=>{
+    lembretes=lembretes.filter(x=>x.id!==id);
+    saveLembretes();renderLembretes();
+  };
+
+  rNotif();
 },
 
 perfil(a) {
