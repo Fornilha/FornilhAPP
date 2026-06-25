@@ -897,6 +897,7 @@ tarefas(a) {
         <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01" oninput="calcTM()"></div>
         <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
         ${vFields}
+        <div class="fld"><label>Vendas Balcão (R$)</label><input type="number" id="cf-balcao" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Mesas atendidas</label><input type="number" id="cf-mesas" placeholder="0" min="0" oninput="calcTM()"></div>
         <div class="fld"><label>Ticket médio (R$) <span style="color:var(--txt3);font-weight:400;font-size:12px" id="cf-tm-hint"></span></label><input type="number" id="cf-tm" placeholder="Calculado automaticamente" min="0" step="0.01" oninput="calcTM(false)"></div>`;
     } else if(t.tipo==='producao'){
@@ -935,6 +936,7 @@ tarefas(a) {
     if(t.tipo==='caixa'){
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
+      dados.balcao=parseFloat(document.getElementById('cf-balcao').value)||0;
       dados.mesas=parseInt(document.getElementById('cf-mesas').value)||0;
       dados.tm=parseFloat(document.getElementById('cf-tm').value)||0;
       if(!dados.tm && dados.mesas>0) dados.tm=parseFloat((dados.fat/dados.mesas).toFixed(2));
@@ -1043,56 +1045,132 @@ estoque(a) {
 },
 
 vendas(a) {
-  const dadosValidos = DADOS_2026.filter(d=>d.fat>0);
-  const maxFat = Math.max(...dadosValidos.map(d=>d.fat));
-  const acumulado = dadosValidos.reduce((s,d)=>s+d.fat,0);
-  const mesesRows = DADOS_2026.map(d=>{
-    if(d.fat===0) return `<div class="mes-row"><span class="mes-nome" style="font-weight:600;color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
-    const pct=Math.round(d.fat/maxFat*100);
-    const var_=Math.round((d.fat/d.fat25-1)*100);
-    const cor=d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A';
-    return `<div class="mes-row">
-      <span class="mes-nome" style="font-weight:600;color:var(--txt)">${d.mes}</span>
-      <div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div>
-      <span class="mes-val">${fmt(d.fat)}</span>
-      <span class="mes-var" style="color:${var_>0?'var(--ok)':'var(--er)'}">${var_>0?'▲':'▼'}${Math.abs(var_)}%</span>
-    </div>`;
-  }).join('');
-  a.innerHTML=`
-  <div class="mcard">
-    <div class="ml">Faturamento acumulado 2026</div>
-    <div class="mv">${fmt(acumulado)}</div>
-    <div class="ms">Jan–Mai · Projeção anual: R$ 2,8M · Meta 2030: R$ 5M</div>
-    <div class="mp"><div class="mpf" style="width:${Math.round(acumulado/5000000*100)}%"></div></div>
-    <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">${Math.round(acumulado/5000000*100)}% da meta de R$ 5M até 2030</div>
-  </div>
-  <div class="slbl">Desempenho mensal 2026 vs 2025</div>
-  <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>
-  <div class="slbl">Indicadores por mês</div>
-  <div class="card"><div class="cb" style="padding-top:13px">
-    ${dadosValidos.map(d=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)">
-      <span style="font-size:12px;font-weight:700;width:32px">${d.mes}</span>
-      <span class="tag ${d.folha_pct<=17?'tag-g':d.folha_pct<=19?'tag-a':'tag-r'}">Folha ${d.folha_pct}%</span>
-      <span class="tag ${d.cmv_pct<=28?'tag-g':d.cmv_pct<=32?'tag-a':'tag-r'}">CMV ${d.cmv_pct}%</span>
-      <span class="tag ${d.margem>=30?'tag-g':d.margem>=15?'tag-a':'tag-r'}">${d.margem.toFixed(1)}%</span>
-      <span style="font-size:11px;color:var(--txt2);margin-left:auto">${d.pax} pax</span>
-    </div>`).join('')}
-  </div></div>
-  ${perfil==='admin'?`<button class="btn-p" style="margin-top:4px" onclick="abrirLanc()">+ Lançar faturamento do dia</button>`:''}`;
+  const hoje=new Date('2026-06-25T12:00:00');
+  const mesIdx=hoje.getMonth();
+  const anoAtual=hoje.getFullYear();
+  const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const mesNome=MESES[mesIdx]+'/'+String(anoAtual).slice(2);
 
-  window.abrirLanc=()=>{
-    document.getElementById('modal-inner').innerHTML=`
-    <h3>Lançar faturamento</h3><p>Registre o faturamento do dia.</p>
-    <div class="fld"><label>Data</label><input type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-    <div class="fld"><label>Almoço (R$)</label><input type="number" id="m-alm" placeholder="0,00"></div>
-    <div class="fld"><label>Jantar (R$)</label><input type="number" id="m-jan" placeholder="0,00"></div>
-    <div class="mbtns">
-      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-ok" onclick="fecharModal();showT('✅ Faturamento lançado!')">Lançar</button>
+  // Tarefas de caixa concluídas do mês vigente
+  const caixaMes=tarefas.filter(t=>{
+    if(t.tipo!=='caixa'||t.status!=='concluida')return false;
+    const d=new Date((t.prazo||'')+'T12:00:00');
+    return d.getMonth()===mesIdx&&d.getFullYear()===anoAtual;
+  });
+  const dias=caixaMes.length;
+  const diasNoMes=new Date(anoAtual,mesIdx+1,0).getDate();
+
+  // Acumulados
+  const acumMesTasks=caixaMes.reduce((s,t)=>s+(t.dados?.fat||0),0);
+  const dadosMes=DADOS_2026[mesIdx];
+  const acumMes=acumMesTasks>0?acumMesTasks:(dadosMes?.fat||0);
+  const acumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+d.fat,0)+acumMes;
+
+  // Taxas por quinzena
+  const taxaQ1=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()<=15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
+  const taxaQ2=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()>15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
+  const taxaTotal=taxaQ1+taxaQ2;
+
+  // Vendas por vendedor
+  const vendsGarcon=GARCONS.map(g=>({
+    nome:g.nome.split(' ')[0],
+    total:caixaMes.reduce((s,t)=>s+(t.dados?.['v_'+g.nome]||0),0)
+  }));
+  const totalBalcao=caixaMes.reduce((s,t)=>s+(t.dados?.balcao||0),0);
+  const totalVendedores=vendsGarcon.reduce((s,v)=>s+v.total,0)+totalBalcao;
+
+  // Mesas e TM
+  const totalMesas=caixaMes.reduce((s,t)=>s+(t.dados?.mesas||0),0);
+  const tmMedio=totalMesas>0?acumMesTasks/totalMesas:0;
+
+  const semDados=dias===0;
+  const aviso=semDados?`<div style="font-size:12px;color:var(--txt3);text-align:center;padding:18px 0">Nenhuma Conferência de Caixa lançada em ${mesNome} ainda.<br>Os dados aparecerão aqui conforme as tarefas forem concluídas.</div>`:'';
+
+  // Histórico mensal
+  const dadosValidos=DADOS_2026.filter(d=>d.fat>0);
+  const maxFat=Math.max(...dadosValidos.map(d=>d.fat));
+  const mesesRows=DADOS_2026.map(d=>{
+    if(d.fat===0)return`<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
+    const pct=Math.round(d.fat/maxFat*100);
+    const vr=Math.round((d.fat/d.fat25-1)*100);
+    const cor=d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A';
+    return`<div class="mes-row"><span class="mes-nome" style="font-weight:600">${d.mes}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span><span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span></div>`;
+  }).join('');
+
+  const kpiCard=(label,val,sub,cor='var(--acc)')=>`
+    <div style="background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${label}</div>
+      <div style="font-size:22px;font-weight:800;color:${cor};line-height:1.1">${val}</div>
+      ${sub?`<div style="font-size:11px;color:var(--txt3);margin-top:3px">${sub}</div>`:''}
     </div>`;
-    document.getElementById('modal-bg').classList.add('open');
-  };
+
+  const fmtR=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  a.innerHTML=`
+  <div class="mcard" style="margin-bottom:12px">
+    <div class="ml">Faturamento acumulado 2026</div>
+    <div class="mv">${fmt(acumAno)}</div>
+    <div class="ms">Meta 2030: R$ 5M</div>
+    <div class="mp"><div class="mpf" style="width:${Math.min(100,Math.round(acumAno/5000000*100))}%"></div></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px">${Math.round(acumAno/5000000*100)}% da meta</div>
+  </div>
+
+  <div class="slbl">Mês vigente — ${mesNome}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
+    ${kpiCard('Acumulado '+mesNome, fmt(acumMes), dias>0?`${dias} dia${dias>1?'s':''} lançado${dias>1?'s':''}`:'')}
+    ${kpiCard('Mesas atendidas', totalMesas||'—', tmMedio>0?'TM: '+fmtR(tmMedio):'')}
+  </div>
+
+  <div class="slbl">Taxa de serviço — ${mesNome}</div>
+  <div class="card" style="margin-bottom:12px"><div class="cb">
+    ${aviso}
+    ${!semDados?`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+      <span style="font-size:13px">1ª Quinzena (1–15/${mesNome.slice(0,3)})</span>
+      <strong>${fmtR(taxaQ1)}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+      <span style="font-size:13px">2ª Quinzena (16–${diasNoMes}/${mesNome.slice(0,3)})</span>
+      <strong>${fmtR(taxaQ2)}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
+      <span style="font-size:13px;font-weight:700">Total taxa de serviço</span>
+      <strong style="color:var(--acc)">${fmtR(taxaTotal)}</strong>
+    </div>`:''}
+  </div></div>
+
+  <div class="slbl">Vendas por vendedor — ${mesNome}</div>
+  <div class="card" style="margin-bottom:12px"><div class="cb">
+    ${aviso}
+    ${!semDados?[
+      ...vendsGarcon.map(v=>{
+        const pct=totalVendedores>0?Math.round(v.total/totalVendedores*100):0;
+        return`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:13px">👤 ${v.nome}</span>
+            <strong>${fmtR(v.total)}</strong>
+          </div>
+          <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:var(--acc);width:${pct}%;height:5px;border-radius:4px"></div></div>
+          <div style="font-size:10px;color:var(--txt3);margin-top:2px">${pct}% do total</div>
+        </div>`;
+      }),
+      `<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:13px">🏠 Balcão</span>
+          <strong>${fmtR(totalBalcao)}</strong>
+        </div>
+        <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:#EF9F27;width:${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}%;height:5px;border-radius:4px"></div></div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:2px">${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}% do total</div>
+      </div>`,
+      `<div style="display:flex;justify-content:space-between;padding:10px 0">
+        <span style="font-weight:700">Total vendas</span>
+        <strong style="color:var(--acc)">${fmtR(totalVendedores)}</strong>
+      </div>`
+    ].join(''):''}
+  </div></div>
+
+  <div class="slbl">Histórico mensal 2026 vs 2025</div>
+  <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>`;
 },
 
 notif(a) {
