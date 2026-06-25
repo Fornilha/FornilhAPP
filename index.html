@@ -333,12 +333,12 @@ const EQUIPE_LOCAL = [
 ];
 
 const DADOS_2026 = [
-  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:403269},
-  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:315257},
-  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996},
-  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040},
-  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001},
-  {mes:'Jun',fat:74398.21,lucro:9681.62,margem:13.01,folha_pct:4,cmv_pct:45,fix_pct:29,desp_var_pct:45,imp_pct:10,pax:9,fat25:114788},
+  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:403269,taxa_q1:20517.49,taxa_q2:17681.12},
+  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:315257,taxa_q1:16389.03,taxa_q2:16268.57},
+  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996,taxa_q1:12533.92,taxa_q2:14968.79},
+  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040,taxa_q1:14167.88,taxa_q2:11593.40},
+  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001,taxa_q1:7859.60,taxa_q2:6528.83},
+  {mes:'Jun',fat:76551.51,lucro:11619.59,margem:15.18,folha_pct:4,cmv_pct:43,fix_pct:28,desp_var_pct:43,imp_pct:10,pax:9,fat25:114788,taxa_q1:4775.45,taxa_q2:1964.25},
 ];
 
 const ESTOQUE = {
@@ -1101,9 +1101,12 @@ vendas(a) {
   const acumMes=acumMesTasks>0?acumMesTasks:(dadosMes?.fat||0);
   const acumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+d.fat,0)+acumMes;
 
-  // Taxas por quinzena
-  const taxaQ1=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()<=15).reduce((s,t)=>s+(t.dados?.taxa||0),0)*0.75;
-  const taxaQ2=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()>15).reduce((s,t)=>s+(t.dados?.taxa||0),0)*0.75;
+  // Taxas por quinzena (usa tarefas de caixa se existirem, senão histórico do DADOS_2026)
+  const taxaQ1Tasks=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()<=15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
+  const taxaQ2Tasks=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()>15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
+  const semTaxaTasks=taxaQ1Tasks===0&&taxaQ2Tasks===0;
+  const taxaQ1=(semTaxaTasks?(dadosMes?.taxa_q1||0):taxaQ1Tasks)*0.75;
+  const taxaQ2=(semTaxaTasks?(dadosMes?.taxa_q2||0):taxaQ2Tasks)*0.75;
   const taxaTotal=taxaQ1+taxaQ2;
 
   // Vendas por vendedor
