@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -382,6 +382,24 @@ const ESTOQUE = {
   ],
 };
 
+const PRODUCAO_COZINHA = {
+  'Ravioli':    ['Espinafre com ricota fresca','Camarão 4 formaggi','Gorgonzola e nozes','Abóbora e carne seca'],
+  'Lasanha':    ['Sugo','Bolognese','Camarão'],
+  'Nhoque':     ['Matriciana','Bolognese','4 Formaggi','Camarão 4 formaggi'],
+  'Fettuccine': ['Sugo','Bolognese','4 Formaggi','Alfredo com camarão']
+};
+const PRODUCAO_PIZZARIA = [
+  {n:'Massas abertas', un:'unid'},
+  {n:'Muçarela ralada', un:'kg'}
+];
+const GARCONS = EQUIPE_LOCAL.filter(e=>e.perfil==='garcom');
+const TIPOS_TAR = {
+  caixa:    {label:'Conferência do Caixa',   icon:'💰', cor:'#3C3489'},
+  producao: {label:'Contagem de Produção',   icon:'🍝', cor:'#993C1D'},
+  estoque:  {label:'Contagem de Estoque',    icon:'📦', cor:'#185FA5'},
+  outro:    {label:'Outro',                  icon:'📋', cor:'#555'}
+};
+
 // Posts e tarefas em memória (serão migrados para Supabase em breve)
 let posts=[
   {autor:'Sistema',cargo:'FornilhApp',cor:'#3C3489',badge:'tag-g',bl:'Resultado',txt:'Janeiro 2026: melhor mês da história do Fornilha. Faturamento de R$ 443.285 com margem de 38%. Parabéns à toda a equipe! 🏆',extra:'',time:'Jan 2026'},
@@ -389,9 +407,9 @@ let posts=[
 ];
 
 let tarefas=[
-  {id:1,titulo:'Contagem semanal — Cozinha',setor:'Cozinha',resp:'Tiago',tel:'5524999684094',prazo:'Dom 18:00',status:'pendente',prio:'#185FA5',desc:'Contar todos os insumos da cozinha: proteínas, laticínios e hortifruti.'},
-  {id:2,titulo:'Checklist abertura do salão',setor:'Salão',resp:'Patricia',tel:'5575988541932',prazo:'Hoje 17:00',status:'pendente',prio:'#EF9F27',desc:'Verificar mise en place, velas, talheres e cardápios.'},
-  {id:3,titulo:'Conferência de caixa',setor:'Caixa',resp:'Patricia',tel:'5575988541932',prazo:'Hoje 23:00',status:'pendente',prio:'#185FA5',desc:'Fechar e conferir valores do caixa do dia.'},
+  {id:1,tipo:'caixa',titulo:'Conferência do Caixa — 24/06',setor:'Caixa',resp:'Patricia',tel:'5575988541932',prazo:'2026-06-24',status:'pendente',dados:{}},
+  {id:2,tipo:'producao',titulo:'Contagem de Produção — Cozinha — 24/06',setor:'Cozinha',resp:'Tiago',tel:'5524999684094',prazo:'2026-06-24',status:'pendente',dados:{}},
+  {id:3,tipo:'estoque',titulo:'Contagem de Estoque — Bar — 24/06',setor:'Bar',resp:'Amado',tel:'5524993226538',prazo:'2026-06-24',status:'pendente',dados:{}},
 ];
 
 // ─── AUTH ────────────────────────────────────────────────
@@ -734,51 +752,157 @@ feed(a) {
 },
 
 tarefas(a) {
-  const sl = {pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída',atrasada:'Atrasada'};
-  const cs = {pendente:'sp',andamento:'sa',concluida:'sc',atrasada:'sat'};
+  const cs = {pendente:'sp',concluida:'sc'};
+  const sl = {pendente:'Pendente',concluida:'Concluída'};
   let filtro = 'todas';
+
+  function prazoFmt(p){ try{ return new Date(p+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }catch(e){return p;} }
+
   function rList(){
     const lista = filtro==='todas'?tarefas:tarefas.filter(t=>t.status===filtro);
-    document.getElementById('tar-list').innerHTML = lista.map(t=>`
-    <div class="tar">
-      <div class="tar-h"><div class="pdot" style="background:${t.prio}"></div>
-        <div class="tar-i"><div class="tar-t">${t.titulo}</div><div class="tar-m">${t.setor} · Prazo: ${t.prazo}</div></div>
-        <span class="sbadge ${cs[t.status]}">${sl[t.status]}</span>
-      </div>
-      <div class="tar-f">
-        <div class="tar-r">${t.resp}</div>
-        <button class="btn-tar" onclick="abrirTarefa(${t.id})">${t.status==='concluida'?'Ver':'Atualizar'}</button>
-      </div>
-    </div>`).join('')||'<div style="text-align:center;padding:24px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
+    document.getElementById('tar-list').innerHTML = lista.length ? lista.map(t=>{
+      const tp = TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
+      return `<div class="tar">
+        <div class="tar-h">
+          <div style="font-size:22px;margin-right:4px">${tp.icon}</div>
+          <div class="tar-i">
+            <div class="tar-t">${t.titulo}</div>
+            <div class="tar-m">${t.setor} · ${t.resp} · Prazo: ${prazoFmt(t.prazo)}</div>
+          </div>
+          <span class="sbadge ${cs[t.status]||'sp'}">${sl[t.status]||t.status}</span>
+        </div>
+        <div class="tar-f" style="justify-content:flex-end">
+          <button class="btn-tar" onclick="abrirTarefa(${t.id})">${t.status==='concluida'?'Ver resultado':'Preencher'}</button>
+        </div>
+      </div>`;
+    }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
   }
+
   a.innerHTML=`
   <div class="stabs">
     <button class="stab active" onclick="setF('todas',this)">Todas (${tarefas.length})</button>
-    <button class="stab" onclick="setF('pendente',this)">Pendentes</button>
+    <button class="stab" onclick="setF('pendente',this)">Pendentes (${tarefas.filter(t=>t.status==='pendente').length})</button>
     <button class="stab" onclick="setF('concluida',this)">Concluídas</button>
   </div>
   <div id="tar-list"></div>`;
+
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
+
   window.abrirTarefa=(id)=>{
     const t=tarefas.find(x=>x.id===id); if(!t)return;
-    const slMap={pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída'};
+    const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
+    const isAdmin=perfil==='admin';
+    const concluida=t.status==='concluida';
+
+    if(isAdmin && concluida){
+      let resumo='';
+      const d=t.dados||{};
+      if(t.tipo==='caixa'){
+        const tm=d.mesas>0?'R$ '+(d.fat/d.mesas).toFixed(2).replace('.',','):'—';
+        const vends=GARCONS.map(g=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${g.nome.split(' ')[0]}</span><strong>R$ ${(d['v_'+g.nome]||0).toFixed(2).replace('.',',')}</strong></div>`).join('');
+        resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Taxa de serviço</span><strong>R$ ${(d.taxa||0).toFixed(2).replace('.',',')}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Mesas atendidas</span><strong>${d.mesas||0}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Ticket médio</span><strong>${tm}</strong></div>
+        <div style="font-size:12px;font-weight:600;color:var(--txt2);margin:8px 0 4px">Vendas por garçom:</div>${vends}`;
+      } else if(t.tipo==='producao'){
+        if(t.setor==='Cozinha'){
+          resumo=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
+            <div style="font-size:12px;font-weight:700;color:var(--txt2);margin:8px 0 4px">${massa}</div>
+            ${sabs.map(s=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bord)"><span style="font-size:13px">${s}</span><strong>${d[massa+'_'+s]||0} unid</strong></div>`).join('')}`).join('');
+        } else {
+          resumo=PRODUCAO_PIZZARIA.map(it=>`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>${it.n}</span><strong>${d[it.n]||0} ${it.un}</strong></div>`).join('');
+        }
+      } else if(t.tipo==='estoque'){
+        resumo=(ESTOQUE[t.setor]||[]).map(it=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${it.n}</span><strong>${d[it.n]!==undefined?d[it.n]:it.q} ${it.un}</strong></div>`).join('');
+      } else {
+        resumo=`<p style="color:var(--txt2)">${d.obs||'Sem observação.'}</p>`;
+      }
+      document.getElementById('modal-inner').innerHTML=`
+        <h3>${tp.icon} ${t.titulo}</h3>
+        <p style="color:var(--ok);font-weight:600">Concluída · ${t.resp}</p>
+        <div style="margin-top:8px">${resumo}</div>
+        <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="fecharModal()">Fechar</button>`;
+      document.getElementById('modal-bg').classList.add('open');
+      return;
+    }
+
+    let formHtml='';
+    if(t.tipo==='caixa'){
+      const vFields=GARCONS.map(g=>`
+        <div class="fld"><label>Vendas — ${g.nome.split(' ')[0]}</label>
+          <input type="number" id="vend_${g.nome.replace(/\s/g,'_')}" placeholder="0,00" min="0" step="0.01">
+        </div>`).join('');
+      formHtml=`
+        <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
+        ${vFields}
+        <div class="fld"><label>Mesas atendidas</label><input type="number" id="cf-mesas" placeholder="0" min="0"></div>`;
+    } else if(t.tipo==='producao'){
+      if(t.setor==='Cozinha'){
+        formHtml=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
+          <div class="slbl" style="margin:12px 0 6px">${massa}</div>
+          ${sabs.map(s=>`<div class="fld"><label>${s}</label><input type="number" id="prod_${massa}_${s.replace(/\s/g,'_')}" placeholder="0" min="0"></div>`).join('')}`).join('');
+      } else {
+        formHtml=PRODUCAO_PIZZARIA.map(it=>`
+          <div class="fld"><label>${it.n} (${it.un})</label><input type="number" id="prod_${it.n.replace(/\s/g,'_')}" placeholder="0" min="0" step="${it.un==='kg'?'0.1':'1'}"></div>`).join('');
+      }
+    } else if(t.tipo==='estoque'){
+      const itens=ESTOQUE[t.setor]||[];
+      formHtml=itens.map(it=>`
+        <div class="fld"><label>${it.n} <span style="color:var(--txt3);font-weight:400">(atual: ${it.q} ${it.un})</span></label>
+          <input type="number" id="est_${it.n.replace(/[\s\/]/g,'_')}" placeholder="${it.q}" min="0" step="${it.un==='kg'?'0.1':'1'}">
+        </div>`).join('');
+    } else {
+      formHtml=`<div class="fld"><label>Observação / resultado</label><textarea id="outro-obs" placeholder="Descreva o que foi feito..." rows="4"></textarea></div>`;
+    }
+
     document.getElementById('modal-inner').innerHTML=`
-    <h3>${t.titulo}</h3><p>${t.desc}<br><br><strong>Responsável:</strong> ${t.resp} · <strong>Setor:</strong> ${t.setor} · <strong>Prazo:</strong> ${t.prazo}</p>
-    <div class="fld"><label>Atualizar status</label>
-      <select id="m-status">${['pendente','andamento','concluida'].map(s=>`<option value="${s}"${t.status===s?' selected':''}>${slMap[s]}</option>`).join('')}</select>
-    </div>
-    <div class="fld"><label>Observação</label><textarea placeholder="Adicionar observação..."></textarea></div>
-    <div class="mbtns">
-      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-ok" onclick="salvarTar(${id})">Salvar</button>
-    </div>`;
+      <h3>${tp.icon} ${t.titulo}</h3>
+      <p style="font-size:13px;color:var(--txt2)">Responsável: <strong>${t.resp}</strong> · Prazo: ${prazoFmt(t.prazo)}</p>
+      ${formHtml}
+      <div class="mbtns">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-ok" onclick="concluirTarefa(${id})">Enviar</button>
+      </div>`;
     document.getElementById('modal-bg').classList.add('open');
   };
-  window.salvarTar=(id)=>{
-    const t=tarefas.find(x=>x.id===id);
-    t.status=document.getElementById('m-status').value;
-    fecharModal(); rList(); showT('✅ Tarefa atualizada!');
+
+  window.concluirTarefa=(id)=>{
+    const t=tarefas.find(x=>x.id===id); if(!t)return;
+    const dados={};
+    if(t.tipo==='caixa'){
+      dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
+      dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
+      dados.mesas=parseInt(document.getElementById('cf-mesas').value)||0;
+      GARCONS.forEach(g=>{ dados['v_'+g.nome]=parseFloat(document.getElementById('vend_'+g.nome.replace(/\s/g,'_'))?.value)||0; });
+    } else if(t.tipo==='producao'){
+      if(t.setor==='Cozinha'){
+        Object.entries(PRODUCAO_COZINHA).forEach(([massa,sabs])=>{
+          sabs.forEach(s=>{ dados[massa+'_'+s]=parseInt(document.getElementById('prod_'+massa+'_'+s.replace(/\s/g,'_'))?.value)||0; });
+        });
+      } else {
+        PRODUCAO_PIZZARIA.forEach(it=>{ dados[it.n]=parseFloat(document.getElementById('prod_'+it.n.replace(/\s/g,'_'))?.value)||0; });
+      }
+    } else if(t.tipo==='estoque'){
+      (ESTOQUE[t.setor]||[]).forEach(it=>{
+        const v=parseFloat(document.getElementById('est_'+it.n.replace(/[\s\/]/g,'_'))?.value);
+        dados[it.n]=isNaN(v)?it.q:v;
+        it.q=dados[it.n];
+      });
+    } else {
+      dados.obs=document.getElementById('outro-obs')?.value||'';
+    }
+    t.status='concluida';
+    t.dados=dados;
+    const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
+    posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
+      badge:'tag-g',bl:'Concluído',setor:t.setor,
+      txt:`${tp.icon} <strong>${t.titulo}</strong> concluída por ${t.resp}.`,
+      mediaUrl:'',mediaName:'',extra:'',time:'Agora'});
+    fecharModal(); rList(); showT('Enviado com sucesso!');
   };
+
   rList();
   if(perfil==='admin'){
     const fab=document.createElement('button');
@@ -786,7 +910,6 @@ tarefas(a) {
     document.querySelector('.shell').appendChild(fab);
   }
 },
-
 estoque(a) {
   let sel='Pizzaria';
   function rEst(){
@@ -1084,43 +1207,92 @@ window.pubPost=()=>{
 function abrirNovaTarefa(){
   document.getElementById('modal-inner').innerHTML=`
   <h3>Nova tarefa</h3>
-  <div class="fld"><label>Título</label><input id="m-tit" placeholder="Ex: Contagem de estoque"></div>
-  <div class="row2">
-    <div class="fld"><label>Setor</label>
-      <select id="m-setor"><option>Cozinha</option><option>Pizzaria</option><option>Bar</option><option>Salão</option><option>Gestão</option></select>
-    </div>
-    <div class="fld"><label>Responsável</label>
-      <select id="m-resp">${EQUIPE_LOCAL.map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('')}</select>
-    </div>
+  <p style="font-size:13px;color:var(--txt2)">Escolha o tipo:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0">
+    ${Object.entries(TIPOS_TAR).map(([k,v])=>`
+      <button onclick="abrirFormTarefa('${k}')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;background:var(--surf);border:2px solid var(--bord);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600;color:var(--txt)">
+        <span style="font-size:28px">${v.icon}</span>${v.label}
+      </button>`).join('')}
   </div>
-  <div class="fld"><label>Prazo</label><input type="date" id="m-prazo" value="${new Date().toISOString().slice(0,10)}"></div>
-  <div class="fld"><label>Descrição</label><textarea id="m-desc" placeholder="Detalhes..."></textarea></div>
-  <div class="mbtns">
-    <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-    <button class="btn-ok" onclick="criarTar()">Criar tarefa</button>
-  </div>`;
+  <button class="btn-cancel" style="width:100%;margin-top:4px" onclick="fecharModal()">Cancelar</button>`;
   document.getElementById('modal-bg').classList.add('open');
 }
-window.criarTar=()=>{
-  const tit=document.getElementById('m-tit').value.trim();
-  if(!tit){showT('⚠️ Informe o título');return}
-  const rv=document.getElementById('m-resp').value.split('|');
-  const setor=document.getElementById('m-setor').value;
-  const prazo=document.getElementById('m-prazo').value;
-  const desc=document.getElementById('m-desc').value||'—';
-  const novo={id:Date.now(),titulo:tit,setor,resp:rv[0],tel:rv[1],prazo,status:'pendente',prio:'#185FA5',desc};
-  tarefas.unshift(novo);
-  // Publica automaticamente no feed
-  const prazoFmt = prazo ? new Date(prazo+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
-  posts.unshift({
-    autor:nome, cargo:'Gestão', cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
-    badge:'tag-a', bl:'Tarefa',
-    txt:`📋 <strong>${tit}</strong><br>Responsável: ${rv[0]} · Setor: ${setor} · Prazo: ${prazoFmt}${desc!=='—'?`<br><em>${desc}</em>`:''}`,
-    extra:'', time:'Agora'
-  });
-  fecharModal();goTo('tarefas');showT('✅ Tarefa criada e publicada no feed!');
+
+window.abrirFormTarefa=(tipo)=>{
+  const hoje=new Date().toISOString().slice(0,10);
+  const tp=TIPOS_TAR[tipo];
+  let formExtra='', setorFixed='', respFixed='';
+  if(tipo==='caixa'){
+    setorFixed='Caixa';
+    const cx=EQUIPE_LOCAL.find(e=>e.perfil==='caixa');
+    respFixed=cx?cx.nome:'Patricia';
+    formExtra=`<p style="background:var(--info-l);color:var(--info);border-radius:8px;padding:10px;font-size:13px">Enviada para <strong>${respFixed}</strong> (Caixa) preencher os dados do dia.</p>`;
+  } else if(tipo==='producao'){
+    formExtra=`<div class="fld"><label>Setor</label>
+      <select id="nt-setor" onchange="atualizaRespProd(this.value)">
+        <option value="Cozinha">Cozinha</option><option value="Pizzaria">Pizzaria</option>
+      </select></div>
+      <div class="fld"><label>Responsável</label>
+      <select id="nt-resp">${EQUIPE_LOCAL.filter(e=>e.perfil==='cozinha').map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('')}</select></div>`;
+  } else if(tipo==='estoque'){
+    formExtra=`<div class="fld"><label>Setor</label>
+      <select id="nt-setor">${Object.keys(ESTOQUE).map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div>
+      <div class="fld"><label>Responsável</label>
+      <select id="nt-resp">${EQUIPE_LOCAL.map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('')}</select></div>`;
+  } else {
+    formExtra=`
+      <div class="fld"><label>Título</label><input id="nt-tit" placeholder="Descreva a tarefa..."></div>
+      <div class="fld"><label>Setor</label>
+        <select id="nt-setor">${['Cozinha','Pizzaria','Bar','Salão','Caixa','Gestão'].map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="fld"><label>Responsável</label>
+        <select id="nt-resp">${EQUIPE_LOCAL.map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('')}</select></div>
+      <div class="fld"><label>Descrição</label><textarea id="nt-desc" placeholder="Detalhes..." rows="3"></textarea></div>`;
+  }
+  document.getElementById('modal-inner').innerHTML=`
+    <h3>${tp.icon} ${tp.label}</h3>
+    ${formExtra}
+    <div class="fld"><label>Prazo</label><input type="date" id="nt-prazo" value="${hoje}"></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="abrirNovaTarefa()">← Voltar</button>
+      <button class="btn-ok" onclick="criarTar('${tipo}','${setorFixed}','${respFixed}')">Criar e enviar</button>
+    </div>`;
 };
 
+window.atualizaRespProd=(setor)=>{
+  const p=setor==='Cozinha'?'cozinha':'pizzaria';
+  const el=document.getElementById('nt-resp'); if(!el)return;
+  el.innerHTML=EQUIPE_LOCAL.filter(e=>e.perfil===p).map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('');
+};
+
+window.criarTar=(tipo,setorFixed,respFixed)=>{
+  const prazo=document.getElementById('nt-prazo').value;
+  const prazoFmt=new Date(prazo+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  let setor,resp,tel,titulo;
+  if(tipo==='caixa'){
+    setor='Caixa'; resp=respFixed||'Patricia'; tel='';
+    titulo=`Conferência do Caixa — ${prazoFmt}`;
+  } else if(tipo==='outro'){
+    const tit=document.getElementById('nt-tit')?.value.trim();
+    if(!tit){showT('Informe o título');return}
+    setor=document.getElementById('nt-setor').value;
+    const rv=(document.getElementById('nt-resp')?.value||'').split('|');
+    resp=rv[0]; tel=rv[1]||''; titulo=tit;
+  } else {
+    setor=document.getElementById('nt-setor')?.value||'Cozinha';
+    const rv=(document.getElementById('nt-resp')?.value||'').split('|');
+    resp=rv[0]; tel=rv[1]||'';
+    const nomes={producao:'Contagem de Produção',estoque:'Contagem de Estoque'};
+    titulo=`${nomes[tipo]} — ${setor} — ${prazoFmt}`;
+  }
+  const novo={id:Date.now(),tipo,titulo,setor,resp,tel,prazo,status:'pendente',dados:{}};
+  tarefas.unshift(novo);
+  const tp=TIPOS_TAR[tipo];
+  posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
+    badge:'tag-a',bl:'Tarefa',setor,
+    txt:`${tp.icon} <strong>${titulo}</strong><br>Responsável: ${resp} · Prazo: ${prazoFmt}`,
+    mediaUrl:'',mediaName:'',extra:'',time:'Agora'});
+  fecharModal(); goTo('tarefas'); showT('Tarefa criada e enviada!');
+};
 function abrirEquipe(){
   document.getElementById('modal-inner').innerHTML=`
   <h3>Equipe Fornilha</h3><p>${EQUIPE_LOCAL.length} colaboradores · Baixa temporada</p>
