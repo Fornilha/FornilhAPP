@@ -1109,6 +1109,9 @@ vendas(a) {
   const taxaQ2=(semTaxaTasks?(dadosMes?.taxa_q2||0):taxaQ2Tasks)*0.75;
   const taxaTotal=taxaQ1+taxaQ2;
 
+  // Taxa acumulada no ano: meses anteriores (histórico bruto ×0.75) + mês vigente
+  const taxaAcumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75+taxaTotal;
+
   // Vendas por vendedor
   const vendsGarcon=GARCONS.map(g=>({
     nome:g.nome.split(' ')[0],
@@ -1161,8 +1164,7 @@ vendas(a) {
 
   <div class="slbl">Taxa de serviço (equipe 75%) — ${mesNome}</div>
   <div class="card" style="margin-bottom:12px"><div class="cb">
-    ${aviso}
-    ${!semDados?`
+    ${semDados?`<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos — Conferência de Caixa ainda não lançada em ${mesNome}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
       <span style="font-size:13px">1ª Quinzena (1–15/${mesNome.slice(0,3)})</span>
       <strong>${fmtR(taxaQ1)}</strong>
@@ -1171,10 +1173,14 @@ vendas(a) {
       <span style="font-size:13px">2ª Quinzena (16–${diasNoMes}/${mesNome.slice(0,3)})</span>
       <strong>${fmtR(taxaQ2)}</strong>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
-      <span style="font-size:13px;font-weight:700">Total taxa de serviço</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+      <span style="font-size:13px;font-weight:700">Total taxa ${mesNome}</span>
       <strong style="color:var(--acc)">${fmtR(taxaTotal)}</strong>
-    </div>`:''}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
+      <span style="font-size:13px;font-weight:700">Acumulado taxa 2026</span>
+      <strong style="color:var(--ok)">${fmtR(taxaAcumAno)}</strong>
+    </div>
   </div></div>
 
   <div class="slbl">Vendas por vendedor — ${mesNome}</div>
