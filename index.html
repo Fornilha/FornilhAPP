@@ -342,43 +342,65 @@ const DADOS_2026 = [
 ];
 
 const ESTOQUE = {
-  Pizzaria:[
-    {n:'Muçarela',q:2,min:20,max:40,un:'kg'},{n:'Farinha de trigo',q:18,min:35,max:70,un:'kg'},
-    {n:'Catupiry',q:4,min:3,max:6,un:'kg'},{n:'Molho de tomate',q:6,min:14,max:28,un:'un'},
-    {n:'Calabresa',q:5,min:3,max:6,un:'kg'},{n:'Azeitona s/ caroço',q:2,min:2,max:4,un:'kg'},
-    {n:'Palmito',q:3,min:1,max:2,un:'kg'},{n:'Carne seca (pizza)',q:3,min:2,max:4,un:'kg'},
-    {n:'Rúcula',q:4,min:3,max:6,un:'un'},{n:'Manjericão',q:2,min:2,max:4,un:'un'},
-    {n:'Parmesão',q:2,min:2,max:4,un:'kg'},{n:'Gorgonzola',q:1,min:1,max:2,un:'kg'},
-    {n:'Provolone',q:2,min:1,max:2,un:'kg'},{n:'Presunto',q:2,min:1,max:2,un:'kg'},
-  ],
   Cozinha:[
-    {n:'Camarão',q:3,min:2,max:4,un:'kg'},{n:'Carne seca',q:1,min:2,max:4,un:'kg'},
-    {n:'Frango',q:6,min:3,max:6,un:'kg'},{n:'Carne moída',q:3,min:2,max:4,un:'kg'},
-    {n:'Polvo',q:2,min:1,max:2,un:'kg'},{n:'Lula',q:1,min:1,max:2,un:'kg'},
-    {n:'Mexilhão',q:2,min:1,max:2,un:'kg'},{n:'Bacon manta',q:4,min:2,max:4,un:'kg'},
-    {n:'Ovos',q:1,min:1,max:2,un:'cx'},{n:'Leite integral',q:4,min:3,max:6,un:'L'},
-    {n:'Creme de leite',q:2,min:1,max:2,un:'kg'},{n:'Parmesão (massas)',q:2,min:2,max:4,un:'kg'},
-    {n:'Farinha de trigo (massas)',q:8,min:5,max:10,un:'kg'},{n:'Alho',q:1,min:1,max:2,un:'cx'},
-    {n:'Cebola',q:1,min:1,max:2,un:'sc'},{n:'Tomate',q:1,min:1,max:2,un:'cx'},
-    {n:'Batata Asterix',q:1,min:1,max:2,un:'sc'},{n:'Óleo de cozinha',q:3,min:2,max:4,un:'un'},
+    {n:'Acem Moído',q:0,min:1,max:5,un:'kg'},{n:'Frango',q:0,min:3,max:6,un:'kg'},
+    {n:'Bacon Manta',q:0,min:1,max:3,un:'pç'},{n:'Camarão',q:0,min:2,max:4,un:'kg'},
+    {n:'Lula',q:0,min:1,max:2,un:'kg'},{n:'Polvo',q:0,min:1,max:2,un:'kg'},
+    {n:'Mexilhão',q:0,min:1,max:2,un:'kg'},{n:'Atum',q:0,min:2,max:6,un:'un'},
+    {n:'Parmesão',q:0,min:1,max:2,un:'pç'},{n:'Gorgonzola',q:0,min:1,max:2,un:'pç'},
+    {n:'Óleo de Soja',q:0,min:2,max:4,un:'un'},{n:'Azeite Extra Virgem',q:0,min:1,max:3,un:'un'},
+    {n:'Sal',q:0,min:1,max:3,un:'kg'},{n:'Colorau',q:0,min:1,max:2,un:'kg'},
+    {n:'Açúcar',q:0,min:2,max:5,un:'kg'},{n:'Leite Integral',q:0,min:3,max:6,un:'un'},
+    {n:'Batata Asterix',q:0,min:1,max:2,un:'sc'},{n:'Ovos',q:0,min:1,max:2,un:'cx'},
+    {n:'Alho',q:0,min:1,max:2,un:'kg'},{n:'Salsinha',q:0,min:1,max:3,un:'un'},
+    {n:'Cloro 5L',q:0,min:1,max:2,un:'un'},{n:'Desinfetante 5L',q:0,min:1,max:2,un:'un'},
+    {n:'Detergente',q:0,min:2,max:4,un:'un'},{n:'Sabão em Pasta',q:0,min:1,max:2,un:'un'},
+    {n:'Papel Toalha',q:0,min:2,max:4,un:'cx'},{n:'Esponja',q:0,min:2,max:6,un:'un'},
+    {n:'Esponja de Aço',q:0,min:2,max:6,un:'un'},{n:'Bobina Plástica P',q:0,min:1,max:3,un:'un'},
+    {n:'Bobina Plástica G',q:0,min:1,max:3,un:'un'},{n:'Marmita Isopor',q:0,min:1,max:3,un:'cx'},
+    {n:'Saco Lixo 200L',q:0,min:1,max:2,un:'sc'},{n:'Inseticida',q:0,min:1,max:2,un:'un'},
+    {n:'Touca',q:0,min:1,max:2,un:'cx'},
+  ],
+  Pizzaria:[
+    {n:'Calabresa',q:0,min:1,max:3,un:'kg'},{n:'Carne Seca',q:0,min:1,max:3,un:'kg'},
+    {n:'Bacon Cubo',q:0,min:1,max:3,un:'kg'},{n:'Presunto',q:0,min:1,max:2,un:'pç'},
+    {n:'Molho de Tomate',q:0,min:5,max:14,un:'un'},{n:'Muçarela',q:0,min:5,max:15,un:'pç'},
+    {n:'Catupiry',q:0,min:2,max:5,un:'un'},{n:'Provolone',q:0,min:1,max:2,un:'pç'},
+    {n:'Farinha de Trigo',q:0,min:1,max:3,un:'sc'},{n:'Fermento em Pó',q:0,min:1,max:3,un:'un'},
+    {n:'Azeitona S/Caroço',q:0,min:1,max:3,un:'un'},{n:'Tomate Seco',q:0,min:1,max:3,un:'un'},
+    {n:'Palmito',q:0,min:1,max:3,un:'un'},{n:'Milho Verde',q:0,min:2,max:6,un:'un'},
+    {n:'Ervilha',q:0,min:2,max:6,un:'un'},{n:'Orégano',q:0,min:1,max:2,un:'kg'},
+    {n:'Pimenta Calabresa',q:0,min:1,max:2,un:'kg'},{n:'Alho Crocante',q:0,min:1,max:2,un:'kg'},
+    {n:'Chocolate Bisnaga',q:0,min:2,max:6,un:'un'},{n:'Doce de Leite Bisnaga',q:0,min:2,max:6,un:'un'},
+    {n:'Goiabada Bisnaga',q:0,min:2,max:6,un:'un'},{n:'Leite Condensado',q:0,min:2,max:6,un:'un'},
+    {n:'Granulado',q:0,min:1,max:2,un:'kg'},{n:'Canela em Pó',q:0,min:1,max:3,un:'un'},
+    {n:'Parmesão',q:0,min:1,max:2,un:'pç'},{n:'Rúcula',q:0,min:1,max:3,un:'un'},
+    {n:'Manjericão',q:0,min:1,max:3,un:'un'},{n:'Tomate',q:0,min:1,max:2,un:'cx'},
+    {n:'Cebola',q:0,min:1,max:2,un:'sc'},{n:'Banana',q:0,min:1,max:3,un:'un'},
+    {n:'Embalagem 40cm',q:0,min:1,max:3,un:'cx'},{n:'Embalagem 30cm',q:0,min:1,max:3,un:'cx'},
+    {n:'Álcool Gel',q:0,min:1,max:3,un:'un'},
   ],
   Bar:[
-    {n:'Coca-Cola lata',q:24,min:30,max:80,un:'un'},{n:'Coca-Cola Zero',q:18,min:25,max:60,un:'un'},
-    {n:'Guaraná',q:12,min:15,max:40,un:'un'},{n:'Fanta Uva',q:8,min:8,max:20,un:'un'},
-    {n:'Sprite / Citrus',q:8,min:8,max:20,un:'un'},{n:'Heineken long',q:30,min:20,max:50,un:'un'},
-    {n:'Stella long',q:24,min:20,max:50,un:'un'},{n:'Corona long',q:12,min:10,max:25,un:'un'},
-    {n:'Brahma long',q:18,min:15,max:35,un:'un'},{n:'Vodka',q:2,min:1,max:2,un:'L'},
-    {n:'Cachaça 51',q:2,min:1,max:2,un:'L'},{n:'Vinho nacional',q:4,min:3,max:6,un:'un'},
-    {n:'Vinho importado',q:2,min:1,max:2,un:'un'},{n:'Água s/ gás',q:30,min:25,max:60,un:'un'},
-    {n:'Água c/ gás',q:12,min:10,max:25,un:'un'},{n:'Água tônica',q:8,min:8,max:20,un:'un'},
-    {n:'Limão',q:1,min:1,max:2,un:'sc'},{n:'Maracujá',q:1,min:1,max:1,un:'cx'},
+    {n:'Coca-Cola',q:0,min:1,max:3,un:'cx'},{n:'Coca-Cola Zero',q:0,min:1,max:3,un:'cx'},
+    {n:'Guaraná',q:0,min:1,max:3,un:'cx'},{n:'Guaraná Zero',q:0,min:1,max:2,un:'cx'},
+    {n:'Sprite',q:0,min:1,max:2,un:'cx'},{n:'Citrus',q:0,min:1,max:2,un:'cx'},
+    {n:'Água Tônica',q:0,min:1,max:2,un:'cx'},{n:'Água Mineral',q:0,min:1,max:3,un:'cx'},
+    {n:'Água C/ Gás',q:0,min:1,max:2,un:'cx'},{n:'Heineken Long',q:0,min:1,max:3,un:'cx'},
+    {n:'Corona Long',q:0,min:1,max:2,un:'cx'},{n:'Stella Long',q:0,min:1,max:2,un:'cx'},
+    {n:'Brahma Long',q:0,min:1,max:2,un:'cx'},{n:'Vodka',q:0,min:1,max:2,un:'un'},
+    {n:'Cachaça',q:0,min:1,max:2,un:'un'},{n:'Vinhos',q:0,min:2,max:6,un:'un'},
+    {n:'Limão',q:0,min:1,max:2,un:'sc'},{n:'Laranja',q:0,min:1,max:2,un:'sc'},
+    {n:'Maracujá',q:0,min:1,max:2,un:'cx'},{n:'Copo Plástico 400ml',q:0,min:1,max:3,un:'cx'},
+    {n:'Canudo',q:0,min:1,max:3,un:'cx'},
   ],
   Salão:[
-    {n:'Guardanapo',q:4,min:3,max:6,un:'pct'},{n:'Papel higiênico',q:8,min:6,max:12,un:'rolo'},
-    {n:'Vela de mesa',q:20,min:14,max:28,un:'un'},{n:'Detergente',q:3,min:2,max:4,un:'un'},
-    {n:'Desengordurante',q:2,min:2,max:4,un:'un'},{n:'Álcool 70%',q:3,min:2,max:4,un:'un'},
-    {n:'Saco de lixo grande',q:10,min:8,max:16,un:'un'},{n:'Papel toalha',q:4,min:4,max:8,un:'rolo'},
-    {n:'Sabonete líquido',q:2,min:2,max:4,un:'un'},{n:'Desodorizador',q:2,min:2,max:4,un:'un'},
+    {n:'Ketchup',q:0,min:2,max:6,un:'un'},{n:'Pimenta Molho',q:0,min:2,max:6,un:'un'},
+    {n:'Sal Sachê',q:0,min:1,max:3,un:'cx'},{n:'Açúcar Sachê',q:0,min:1,max:3,un:'cx'},
+    {n:'Guardanapo',q:0,min:1,max:3,un:'cx'},{n:'Papel Higiênico',q:0,min:1,max:3,un:'cx'},
+    {n:'Pano de Chão',q:0,min:2,max:6,un:'un'},{n:'Vassoura',q:0,min:1,max:3,un:'un'},
+    {n:'Rodo',q:0,min:1,max:2,un:'un'},{n:'Pá',q:0,min:1,max:2,un:'un'},
+    {n:'Álcool 5L',q:0,min:1,max:2,un:'un'},{n:'Bobina Térmica P',q:0,min:1,max:3,un:'cx'},
+    {n:'Bobina Térmica G',q:0,min:1,max:3,un:'cx'},{n:'Luva',q:0,min:1,max:3,un:'cx'},
   ],
 };
 
@@ -788,6 +810,20 @@ tarefas(a) {
 
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
 
+  window.calcTM=(manual=true)=>{
+    const fat=parseFloat(document.getElementById('cf-fat')?.value)||0;
+    const mesas=parseFloat(document.getElementById('cf-mesas')?.value)||0;
+    const tmEl=document.getElementById('cf-tm');
+    const hint=document.getElementById('cf-tm-hint');
+    if(fat>0 && mesas>0){
+      const calc=(fat/mesas).toFixed(2);
+      if(tmEl && !manual) tmEl.value=calc;
+      if(hint) hint.textContent=`(sugerido: R$ ${calc})`;
+    } else {
+      if(hint) hint.textContent='';
+    }
+  };
+
   window.abrirTarefa=(id)=>{
     const t=tarefas.find(x=>x.id===id); if(!t)return;
     const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
@@ -798,7 +834,7 @@ tarefas(a) {
       let resumo='';
       const d=t.dados||{};
       if(t.tipo==='caixa'){
-        const tm=d.mesas>0?'R$ '+(d.fat/d.mesas).toFixed(2).replace('.',','):'—';
+        const tm=d.tm?'R$ '+d.tm.toFixed(2).replace('.',','):(d.mesas>0?'R$ '+(d.fat/d.mesas).toFixed(2).replace('.',','):'—');
         const vends=GARCONS.map(g=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${g.nome.split(' ')[0]}</span><strong>R$ ${(d['v_'+g.nome]||0).toFixed(2).replace('.',',')}</strong></div>`).join('');
         resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Taxa de serviço</span><strong>R$ ${(d.taxa||0).toFixed(2).replace('.',',')}</strong></div>
@@ -834,10 +870,11 @@ tarefas(a) {
           <input type="number" id="vend_${g.nome.replace(/\s/g,'_')}" placeholder="0,00" min="0" step="0.01">
         </div>`).join('');
       formHtml=`
-        <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01" oninput="calcTM()"></div>
         <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
         ${vFields}
-        <div class="fld"><label>Mesas atendidas</label><input type="number" id="cf-mesas" placeholder="0" min="0"></div>`;
+        <div class="fld"><label>Mesas atendidas</label><input type="number" id="cf-mesas" placeholder="0" min="0" oninput="calcTM()"></div>
+        <div class="fld"><label>Ticket médio (R$) <span style="color:var(--txt3);font-weight:400;font-size:12px" id="cf-tm-hint"></span></label><input type="number" id="cf-tm" placeholder="Calculado automaticamente" min="0" step="0.01" oninput="calcTM(false)"></div>`;
     } else if(t.tipo==='producao'){
       if(t.setor==='Cozinha'){
         formHtml=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
@@ -875,6 +912,8 @@ tarefas(a) {
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
       dados.mesas=parseInt(document.getElementById('cf-mesas').value)||0;
+      dados.tm=parseFloat(document.getElementById('cf-tm').value)||0;
+      if(!dados.tm && dados.mesas>0) dados.tm=parseFloat((dados.fat/dados.mesas).toFixed(2));
       GARCONS.forEach(g=>{ dados['v_'+g.nome]=parseFloat(document.getElementById('vend_'+g.nome.replace(/\s/g,'_'))?.value)||0; });
     } else if(t.tipo==='producao'){
       if(t.setor==='Cozinha'){
