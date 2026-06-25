@@ -333,12 +333,12 @@ const EQUIPE_LOCAL = [
 ];
 
 const DADOS_2026 = [
-  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:403269,taxa_q1:20517.49,taxa_q2:17681.12},
-  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:315257,taxa_q1:16389.03,taxa_q2:16268.57},
-  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996,taxa_q1:12533.92,taxa_q2:14968.79},
-  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040,taxa_q1:14167.88,taxa_q2:11593.40},
-  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001,taxa_q1:7859.60,taxa_q2:6528.83},
-  {mes:'Jun',fat:76551.51,lucro:11619.59,margem:15.18,folha_pct:4,cmv_pct:43,fix_pct:28,desp_var_pct:43,imp_pct:10,pax:9,fat25:114788,taxa_q1:4775.45,taxa_q2:1964.25},
+  {mes:'Jan',fat:443285.09,lucro:168515.02,margem:38.02,folha_pct:15,cmv_pct:28,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:403269,taxa_q1:20517.49,taxa_q2:17681.12,vendas_hist:{douglas:139205.52,antonio:0,patricia:97313.63}},
+  {mes:'Fev',fat:379204.25,lucro:151813.81,margem:40.03,folha_pct:16,cmv_pct:24,fix_pct:9,desp_var_pct:4,imp_pct:15,pax:14,fat25:315257,taxa_q1:16389.03,taxa_q2:16268.57,vendas_hist:{douglas:116816.92,antonio:0,patricia:46469.11}},
+  {mes:'Mar',fat:319405.78,lucro:108342.74,margem:33.92,folha_pct:15,cmv_pct:29,fix_pct:10,desp_var_pct:4,imp_pct:15,pax:13,fat25:307996,taxa_q1:12533.92,taxa_q2:14968.79,vendas_hist:{douglas:89422.50,antonio:0,patricia:40405.88}},
+  {mes:'Abr',fat:294335.33,lucro:77578.00,margem:26.36,folha_pct:20,cmv_pct:32,fix_pct:11,desp_var_pct:5,imp_pct:15,pax:13,fat25:178040,taxa_q1:14167.88,taxa_q2:11593.40,vendas_hist:{douglas:85564.22,antonio:19029.99,patricia:10864.59}},
+  {mes:'Mai',fat:164223.48,lucro:25839.67,margem:15.73,folha_pct:28,cmv_pct:34,fix_pct:13,desp_var_pct:5,imp_pct:10,pax:12,fat25:131001,taxa_q1:7859.60,taxa_q2:6528.83,vendas_hist:{douglas:55681.54,antonio:32176.33,patricia:1840.85}},
+  {mes:'Jun',fat:76551.51,lucro:11619.59,margem:15.18,folha_pct:4,cmv_pct:43,fix_pct:28,desp_var_pct:43,imp_pct:10,pax:9,fat25:114788,taxa_q1:4775.45,taxa_q2:1964.25,vendas_hist:{douglas:38455.01,antonio:15037.39,patricia:3954.07}},
 ];
 
 const ESTOQUE = {
@@ -1112,13 +1112,16 @@ vendas(a) {
   // Taxa acumulada no ano: meses anteriores (histórico bruto ×0.75) + mês vigente
   const taxaAcumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75+taxaTotal;
 
-  // Vendas por vendedor
+  // Vendas por vendedor (usa histórico quando sem tarefas de caixa)
+  const vh=dadosMes?.vendas_hist||{};
   const vendsGarcon=GARCONS.map(g=>({
     nome:g.nome.split(' ')[0],
-    total:caixaMes.reduce((s,t)=>s+(t.dados?.['v_'+g.nome]||0),0)
+    total:semDados?(vh[g.nome.split(' ')[0].toLowerCase()]||0):caixaMes.reduce((s,t)=>s+(t.dados?.['v_'+g.nome]||0),0)
   }));
-  const totalBalcao=caixaMes.reduce((s,t)=>s+(t.dados?.balcao||0),0);
-  const totalVendedores=vendsGarcon.reduce((s,v)=>s+v.total,0)+totalBalcao;
+  const totalPatricia=semDados?(vh.patricia||0):caixaMes.reduce((s,t)=>s+(t.dados?.['v_Patricia Jesus']||0),0);
+  const somaVendedores=vendsGarcon.reduce((s,v)=>s+v.total,0)+totalPatricia;
+  const totalBalcao=semDados?Math.max(0,acumMes-somaVendedores):caixaMes.reduce((s,t)=>s+(t.dados?.balcao||0),0);
+  const totalVendedores=somaVendedores+totalBalcao;
 
   // Mesas e TM
   const totalMesas=caixaMes.reduce((s,t)=>s+(t.dados?.mesas||0),0);
@@ -1185,9 +1188,10 @@ vendas(a) {
 
   <div class="slbl">Vendas por vendedor — ${mesNome}</div>
   <div class="card" style="margin-bottom:12px"><div class="cb">
-    ${aviso}
-    ${!semDados?[
+    ${semDados?`<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos — Conferência de Caixa ainda não lançada em ${mesNome}</div>`:''}
+    ${[
       ...vendsGarcon.map(v=>{
+        if(v.total===0)return'';
         const pct=totalVendedores>0?Math.round(v.total/totalVendedores*100):0;
         return`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
           <div style="display:flex;justify-content:space-between;margin-bottom:5px">
@@ -1198,19 +1202,27 @@ vendas(a) {
           <div style="font-size:10px;color:var(--txt3);margin-top:2px">${pct}% do total</div>
         </div>`;
       }),
-      `<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
+      totalPatricia>0?`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:13px">👤 Patrícia</span>
+          <strong>${fmtR(totalPatricia)}</strong>
+        </div>
+        <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:#3C3489;width:${totalVendedores>0?Math.round(totalPatricia/totalVendedores*100):0}%;height:5px;border-radius:4px"></div></div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:2px">${totalVendedores>0?Math.round(totalPatricia/totalVendedores*100):0}% do total</div>
+      </div>`:'',
+      totalBalcao>0?`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
         <div style="display:flex;justify-content:space-between;margin-bottom:5px">
           <span style="font-size:13px">🏠 Balcão</span>
           <strong>${fmtR(totalBalcao)}</strong>
         </div>
         <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:#EF9F27;width:${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}%;height:5px;border-radius:4px"></div></div>
         <div style="font-size:10px;color:var(--txt3);margin-top:2px">${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}% do total</div>
-      </div>`,
+      </div>`:'',
       `<div style="display:flex;justify-content:space-between;padding:10px 0">
         <span style="font-weight:700">Total vendas</span>
         <strong style="color:var(--acc)">${fmtR(totalVendedores)}</strong>
       </div>`
-    ].join(''):''}
+    ].join('')}
   </div></div>
 
   <div class="slbl">Histórico mensal 2026 vs 2025</div>
