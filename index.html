@@ -346,7 +346,7 @@ const ESTOQUE = {
     {n:'Acem Moído',q:0,min:1,max:5,un:'kg'},{n:'Frango',q:0,min:3,max:6,un:'kg'},
     {n:'Bacon Manta',q:0,min:1,max:3,un:'pç'},{n:'Camarão',q:0,min:2,max:4,un:'kg'},
     {n:'Lula',q:0,min:1,max:2,un:'kg'},{n:'Polvo',q:0,min:1,max:2,un:'kg'},
-    {n:'Mexilhão',q:0,min:1,max:2,un:'kg'},{n:'Atum',q:0,min:2,max:6,un:'un'},
+    {n:'Mexilhão',q:0,min:1,max:2,un:'kg'},
     {n:'Parmesão',q:0,min:1,max:2,un:'pç'},{n:'Gorgonzola',q:0,min:1,max:2,un:'pç'},
     {n:'Óleo de Soja',q:0,min:2,max:4,un:'un'},{n:'Azeite Extra Virgem',q:0,min:1,max:3,un:'un'},
     {n:'Sal',q:0,min:1,max:3,un:'kg'},{n:'Colorau',q:0,min:1,max:2,un:'kg'},
@@ -362,7 +362,7 @@ const ESTOQUE = {
     {n:'Touca',q:0,min:1,max:2,un:'cx'},
   ],
   Pizzaria:[
-    {n:'Calabresa',q:0,min:1,max:3,un:'kg'},{n:'Carne Seca',q:0,min:1,max:3,un:'kg'},
+    {n:'Atum',q:0,min:2,max:6,un:'un'},{n:'Calabresa',q:0,min:1,max:3,un:'kg'},{n:'Carne Seca',q:0,min:1,max:3,un:'kg'},
     {n:'Bacon Cubo',q:0,min:1,max:3,un:'kg'},{n:'Presunto',q:0,min:1,max:2,un:'pç'},
     {n:'Molho de Tomate',q:0,min:5,max:14,un:'un'},{n:'Muçarela',q:0,min:5,max:15,un:'pç'},
     {n:'Catupiry',q:0,min:2,max:5,un:'un'},{n:'Provolone',q:0,min:1,max:2,un:'pç'},
@@ -765,6 +765,11 @@ inicio(a) {
       <span class="ind-lbl">Margem líquida</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.margem/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
       <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Folha</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.folha_pct/META_FOLHA*100,100)}%;background:${corFolha}"></div></div>
+      <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Impostos</span>
