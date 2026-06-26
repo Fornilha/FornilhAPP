@@ -503,7 +503,11 @@ async function init() {
   }
 
   db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session && !window._primeiroAcesso) {
+    if (event === 'SIGNED_IN' && session) {
+      if (window._loginAtivo) return; // entrar() já está gerenciando
+      // Restauração de sessão (refresh da página) — verifica perfil
+      const { data: prof } = await db.from('profiles').select('perfil,nome').eq('id', session.user.id).single();
+      if (!prof || !prof.perfil || !prof.nome) return; // sem perfil completo, ignora
       userSession = session;
       await carregarPerfil(session.user.id, session.user.email);
       await mostrarApp();
@@ -534,27 +538,27 @@ function codigoParaEmail(codigo) {
 }
 
 async function entrar() {
+  window._loginAtivo = true;
   const codigo = document.getElementById('l-codigo').value.trim().toUpperCase();
   const senha = document.getElementById('l-senha').value;
   const btn = document.getElementById('btn-entrar');
-  if (!codigo) { mostrarErroLogin('Selecione seu usuário.'); return; }
-  if (!senha) { mostrarErroLogin('Digite sua senha.'); return; }
+  if (!codigo) { window._loginAtivo=false; mostrarErroLogin('Selecione seu usuário.'); return; }
+  if (!senha)  { window._loginAtivo=false; mostrarErroLogin('Digite sua senha.'); return; }
   const email = codigoParaEmail(codigo);
   btn.disabled = true;
   btn.textContent = 'Entrando...';
   const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
   if (error) {
-    // Verifica se é erro de senha errada ou primeiro acesso
     mostrarErroLogin('Usuário ou senha incorretos.');
     btn.disabled = false;
     btn.textContent = 'Entrar no FornilhApp';
+    window._loginAtivo = false;
     return;
   }
-  // Login OK — verifica se perfil está completo no banco
+  // Verifica se perfil está completo no banco
   const { data: prof } = await db.from('profiles').select('perfil,nome').eq('id', data.user.id).single();
   const primeiroAcesso = !prof || !prof.perfil || !prof.nome;
   if (primeiroAcesso) {
-    window._primeiroAcesso = true;
     document.getElementById('login-titulo').textContent = 'Bem-vindo!';
     document.getElementById('login-sub').textContent = 'Identifique-se na equipe e crie sua senha pessoal.';
     document.getElementById('l-senha').closest('.fld').style.display = 'none';
@@ -565,7 +569,6 @@ async function entrar() {
     document.getElementById('btn-criar-senha').style.display = 'block';
     document.getElementById('fld-usuario').style.display = 'none';
     document.getElementById('login-err').style.display = 'none';
-    window._primeiroAcesso = true;
     window._sessaoTemp = data.session;
     window._codigoLogin = codigo;
     const sel = document.getElementById('l-apelido');
@@ -573,11 +576,13 @@ async function entrar() {
       EQUIPE_LOCAL.filter(e=>e.perfil!=='admin').map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
     btn.disabled = false;
     btn.textContent = 'Entrar no FornilhApp';
+    // _loginAtivo fica true até criarSenha() concluir
     return;
   }
-  // Perfil completo — carrega e entra
+  // Perfil completo — entra
   userSession = data.session;
   await carregarPerfil(data.user.id, data.user.email);
+  window._loginAtivo = false;
   await mostrarApp();
 }
 
@@ -610,7 +615,7 @@ async function criarSenha() {
     apelido: colaboradorNome.split(' ')[0],
     user_code: window._codigoLogin || ''
   }, { onConflict: 'id' });
-  window._primeiroAcesso = false;
+  window._loginAtivo = false;
   userSession = session;
   await carregarPerfil(session.user.id, session.user.email);
   await mostrarApp();
