@@ -614,18 +614,27 @@ async function criarSenha() {
     return;
   }
   const { data: { session } } = await db.auth.getSession();
-  await db.from('profiles').upsert({
+  const nomeReal = colab?.nome || colaboradorNome;
+  const perfilReal = colab?.perfil || 'garcom';
+  const { error: upsertError } = await db.from('profiles').upsert({
     id: session.user.id,
-    nome: colab?.nome || colaboradorNome,
+    nome: nomeReal,
     cargo: colab?.cargo || '',
-    perfil: colab?.perfil || 'garcom',
+    perfil: perfilReal,
     telefone: colab?.tel || '',
     apelido: colaboradorNome.split(' ')[0],
     user_code: window._codigoLogin || ''
   }, { onConflict: 'id' });
+  if (upsertError) {
+    mostrarErroLogin('Erro ao salvar perfil: ' + (upsertError.message || 'Tente novamente.'));
+    btn.disabled = false; btn.textContent = 'Salvar e entrar';
+    window._loginAtivo = false; return;
+  }
+  nome = nomeReal;
+  perfil = perfilReal;
+  userProfile = { nome: nomeReal, perfil: perfilReal, cargo: colab?.cargo || '', apelido: colaboradorNome.split(' ')[0] };
   window._loginAtivo = false;
   userSession = session;
-  await carregarPerfil(session.user.id, session.user.email);
   await mostrarApp();
   showT('✅ Bem-vindo, ' + colaboradorNome.split(' ')[0] + '!');
 }
