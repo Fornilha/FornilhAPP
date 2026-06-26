@@ -268,7 +268,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="fld"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
     <!-- Campos para criação de nova senha (primeiro acesso) -->
-    <div class="fld" id="fld-apelido" style="display:none"><label>Como quer ser chamado?</label><input type="text" id="l-apelido" placeholder="Ex: João, Maria, Tiago…" autocomplete="off"></div>
+    <div class="fld" id="fld-apelido" style="display:none"><label>Quem sou eu na equipe?</label><select id="l-apelido"><option value="">— Selecione —</option></select></div>
     <div class="fld" id="fld-nova-senha" style="display:none"><label>Crie sua senha (mínimo 6 caracteres)</label><input type="password" id="l-nova-senha" placeholder="Nova senha"></div>
     <div class="fld" id="fld-conf-senha" style="display:none"><label>Confirmar senha</label><input type="password" id="l-conf-senha" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')criarSenha()"></div>
     <div class="login-err" id="login-err"></div>
@@ -497,7 +497,7 @@ async function init() {
   if (session) {
     userSession = session;
     await carregarPerfil(session.user.id, session.user.email);
-    mostrarApp();
+    await mostrarApp();
   } else {
     mostrarLogin();
   }
@@ -506,7 +506,7 @@ async function init() {
     if (event === 'SIGNED_IN' && session) {
       userSession = session;
       await carregarPerfil(session.user.id, session.user.email);
-      mostrarApp();
+      await mostrarApp();
     } else if (event === 'SIGNED_OUT') {
       mostrarLogin();
     }
@@ -514,15 +514,14 @@ async function init() {
 }
 
 async function carregarPerfil(userId, email) {
-  const { data, error } = await db.from('profiles').select('*').eq('id', userId).single();
+  const { data } = await db.from('profiles').select('*').eq('id', userId).single();
   if (data) {
     userProfile = data;
-    perfil = data.cargo;
-    nome = data.nome;
+    nome = data.nome || email.split('@')[0];
+    perfil = data.perfil || (email === 'financeiro.fornilha@gmail.com' ? 'admin' : 'garcom');
   } else {
-    // Fallback: usa o email para identificar
-    nome = email.split('@')[0];
-    perfil = 'admin';
+    nome = email === 'financeiro.fornilha@gmail.com' ? 'Vinicius' : email.split('@')[0];
+    perfil = email === 'financeiro.fornilha@gmail.com' ? 'admin' : 'garcom';
   }
 }
 
@@ -564,40 +563,53 @@ async function entrar() {
     document.getElementById('fld-usuario').style.display = 'none';
     document.getElementById('login-err').style.display = 'none';
     window._sessaoTemp = data.session;
+    window._codigoLogin = codigo;
+    // Popula select com membros da equipe (exceto admin)
+    const sel = document.getElementById('l-apelido');
+    sel.innerHTML = '<option value="">— Selecione —</option>' +
+      EQUIPE_LOCAL.filter(e=>e.perfil!=='admin').map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
     btn.disabled = false;
     return;
   }
   // Sessão normal — carrega perfil
   userSession = data.session;
   await carregarPerfil(data.user.id, data.user.email);
-  mostrarApp();
+  await mostrarApp();
 }
 
 async function criarSenha() {
-  const apelido = document.getElementById('l-apelido').value.trim();
+  const colaboradorNome = document.getElementById('l-apelido').value;
   const nova = document.getElementById('l-nova-senha').value;
   const conf = document.getElementById('l-conf-senha').value;
-  if (!apelido) { mostrarErroLogin('Informe como quer ser chamado.'); return; }
+  if (!colaboradorNome) { mostrarErroLogin('Selecione quem você é na equipe.'); return; }
   if (!nova || nova.length < 6) { mostrarErroLogin('A senha precisa ter pelo menos 6 caracteres.'); return; }
   if (nova !== conf) { mostrarErroLogin('As senhas não coincidem.'); return; }
   if (nova === SENHA_PADRAO) { mostrarErroLogin('Escolha uma senha diferente da padrão.'); return; }
   const btn = document.getElementById('btn-criar-senha');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
-  const { error } = await db.auth.updateUser({ password: nova, data: { nome: apelido } });
+  const colab = EQUIPE_LOCAL.find(e => e.nome === colaboradorNome);
+  const { error } = await db.auth.updateUser({ password: nova, data: { nome: colaboradorNome } });
   if (error) {
     mostrarErroLogin('Erro ao salvar. Tente novamente.');
     btn.disabled = false;
     btn.textContent = 'Salvar e entrar';
     return;
   }
-  // Salva nome no perfil
   const { data: { session } } = await db.auth.getSession();
-  await db.from('profiles').upsert({ id: session.user.id, nome: apelido }, { onConflict: 'id' });
+  await db.from('profiles').upsert({
+    id: session.user.id,
+    nome: colab?.nome || colaboradorNome,
+    cargo: colab?.cargo || '',
+    perfil: colab?.perfil || 'garcom',
+    telefone: colab?.tel || '',
+    apelido: colaboradorNome.split(' ')[0],
+    user_code: window._codigoLogin || ''
+  }, { onConflict: 'id' });
   userSession = session;
   await carregarPerfil(session.user.id, session.user.email);
-  mostrarApp();
-  showT('✅ Bem-vindo, ' + apelido + '!');
+  await mostrarApp();
+  showT('✅ Bem-vindo, ' + colaboradorNome.split(' ')[0] + '!');
 }
 
 function mostrarErroLogin(msg) {
@@ -612,7 +624,31 @@ function mostrarLogin() {
   document.getElementById('scr-login').classList.add('active');
 }
 
-function mostrarApp() {
+// ─── TAREFAS PERSISTÊNCIA SUPABASE ───────────────────────────
+async function loadTarefas() {
+  try {
+    const { data } = await db.from('tarefas').select('*').order('created_at', { ascending: false });
+    if (data && data.length > 0) tarefas = data;
+  } catch(e) {}
+}
+async function saveTarefa(t) {
+  try {
+    const { data } = await db.from('tarefas').insert({
+      tipo: t.tipo, titulo: t.titulo, setor: t.setor,
+      resp: t.resp, tel: t.tel, prazo: t.prazo,
+      status: t.status, dados: t.dados
+    }).select().single();
+    if (data) t.id = data.id;
+  } catch(e) {}
+}
+async function updateTarefa(id, changes) {
+  try {
+    await db.from('tarefas').update(changes).eq('id', id);
+  } catch(e) {}
+}
+
+async function mostrarApp() {
+  await loadTarefas();
   document.getElementById('scr-loading').classList.remove('active');
   document.getElementById('scr-login').classList.remove('active');
   document.getElementById('scr-app').classList.add('active');
@@ -1000,6 +1036,7 @@ tarefas(a) {
     }
     t.status='concluida';
     t.dados=dados;
+    updateTarefa(t.id, { status: 'concluida', dados });
     const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
     posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
       badge:'tag-g',bl:'Concluído',setor:t.setor,
@@ -1679,6 +1716,7 @@ window.criarTar=(tipo,setorFixed,respFixed)=>{
   }
   const novo={id:Date.now(),tipo,titulo,setor,resp,tel,prazo,status:'pendente',dados:{}};
   tarefas.unshift(novo);
+  saveTarefa(novo);
   const tp=TIPOS_TAR[tipo];
   posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
     badge:'tag-a',bl:'Tarefa',setor,
