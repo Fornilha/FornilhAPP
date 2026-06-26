@@ -550,10 +550,12 @@ async function entrar() {
     btn.textContent = 'Entrar no FornilhApp';
     return;
   }
-  // Login OK — verifica se é primeiro acesso (senha padrão)
-  if (senha === SENHA_PADRAO) {
+  // Login OK — verifica se perfil está completo no banco
+  const { data: prof } = await db.from('profiles').select('perfil,nome').eq('id', data.user.id).single();
+  const primeiroAcesso = !prof || !prof.perfil || !prof.nome;
+  if (primeiroAcesso) {
     document.getElementById('login-titulo').textContent = 'Bem-vindo!';
-    document.getElementById('login-sub').textContent = 'Primeiro acesso: diga como quer ser chamado e crie sua senha.';
+    document.getElementById('login-sub').textContent = 'Identifique-se na equipe e crie sua senha pessoal.';
     document.getElementById('l-senha').closest('.fld').style.display = 'none';
     document.getElementById('fld-apelido').style.display = 'block';
     document.getElementById('fld-nova-senha').style.display = 'block';
@@ -564,14 +566,14 @@ async function entrar() {
     document.getElementById('login-err').style.display = 'none';
     window._sessaoTemp = data.session;
     window._codigoLogin = codigo;
-    // Popula select com membros da equipe (exceto admin)
     const sel = document.getElementById('l-apelido');
     sel.innerHTML = '<option value="">— Selecione —</option>' +
       EQUIPE_LOCAL.filter(e=>e.perfil!=='admin').map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
     btn.disabled = false;
+    btn.textContent = 'Entrar no FornilhApp';
     return;
   }
-  // Sessão normal — carrega perfil
+  // Perfil completo — carrega e entra
   userSession = data.session;
   await carregarPerfil(data.user.id, data.user.email);
   await mostrarApp();
