@@ -503,7 +503,7 @@ async function init() {
   }
 
   db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
+    if (event === 'SIGNED_IN' && session && !window._primeiroAcesso) {
       userSession = session;
       await carregarPerfil(session.user.id, session.user.email);
       await mostrarApp();
@@ -554,6 +554,7 @@ async function entrar() {
   const { data: prof } = await db.from('profiles').select('perfil,nome').eq('id', data.user.id).single();
   const primeiroAcesso = !prof || !prof.perfil || !prof.nome;
   if (primeiroAcesso) {
+    window._primeiroAcesso = true;
     document.getElementById('login-titulo').textContent = 'Bem-vindo!';
     document.getElementById('login-sub').textContent = 'Identifique-se na equipe e crie sua senha pessoal.';
     document.getElementById('l-senha').closest('.fld').style.display = 'none';
@@ -564,6 +565,7 @@ async function entrar() {
     document.getElementById('btn-criar-senha').style.display = 'block';
     document.getElementById('fld-usuario').style.display = 'none';
     document.getElementById('login-err').style.display = 'none';
+    window._primeiroAcesso = true;
     window._sessaoTemp = data.session;
     window._codigoLogin = codigo;
     const sel = document.getElementById('l-apelido');
@@ -593,7 +595,7 @@ async function criarSenha() {
   const colab = EQUIPE_LOCAL.find(e => e.nome === colaboradorNome);
   const { error } = await db.auth.updateUser({ password: nova, data: { nome: colaboradorNome } });
   if (error) {
-    mostrarErroLogin('Erro ao salvar. Tente novamente.');
+    mostrarErroLogin('Erro: ' + (error.message || 'Tente novamente.'));
     btn.disabled = false;
     btn.textContent = 'Salvar e entrar';
     return;
@@ -608,6 +610,7 @@ async function criarSenha() {
     apelido: colaboradorNome.split(' ')[0],
     user_code: window._codigoLogin || ''
   }, { onConflict: 'id' });
+  window._primeiroAcesso = false;
   userSession = session;
   await carregarPerfil(session.user.id, session.user.email);
   await mostrarApp();
