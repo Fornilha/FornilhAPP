@@ -495,6 +495,14 @@ function checkLembretes(){
 async function init() {
   const { data: { session } } = await db.auth.getSession();
   if (session) {
+    // Verifica se perfil está completo antes de entrar no app
+    const { data: prof } = await db.from('profiles').select('perfil,nome').eq('id', session.user.id).single();
+    if (!prof || !prof.perfil || !prof.nome) {
+      // Perfil incompleto — faz logout e pede novo login para completar identificação
+      await db.auth.signOut();
+      mostrarLogin();
+      return;
+    }
     userSession = session;
     await carregarPerfil(session.user.id, session.user.email);
     await mostrarApp();
