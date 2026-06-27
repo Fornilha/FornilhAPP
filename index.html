@@ -649,10 +649,9 @@ function mostrarLogin() {
 
 // ─── TAREFAS PERSISTÊNCIA SUPABASE ───────────────────────────
 async function loadTarefas() {
-  try {
-    const { data } = await db.from('tarefas').select('*').order('created_at', { ascending: false });
-    if (data && data.length > 0) tarefas = data;
-  } catch(e) {}
+  const { data, error } = await db.from('tarefas').select('*').order('created_at', { ascending: false });
+  if (error) { showT('⚠️ Erro ao carregar tarefas: ' + error.message); return; }
+  if (data) tarefas = data.map(t => ({...t, dados: t.dados || {}}));
 }
 async function saveTarefa(t) {
   const { data, error } = await db.from('tarefas').insert({
@@ -905,7 +904,8 @@ tarefas(a) {
 
   function tarefasVisiveis() {
     let lista = isAdmin ? tarefas : tarefas.filter(t => t.setor === meuSetor);
-    if (filtro !== 'todas') lista = lista.filter(t => t.status === filtro);
+    if (filtro === 'todas') lista = lista.filter(t => t.status !== 'cancelada');
+    else lista = lista.filter(t => t.status === filtro);
     return lista;
   }
 
@@ -935,9 +935,10 @@ tarefas(a) {
 
   a.innerHTML=`
   <div class="stabs">
-    <button class="stab active" onclick="setF('todas',this)">Todas (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).length})</button>
+    <button class="stab active" onclick="setF('todas',this)">Todas (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status!=='cancelada').length})</button>
     <button class="stab" onclick="setF('pendente',this)">Pendentes (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status==='pendente').length})</button>
     <button class="stab" onclick="setF('concluida',this)">Concluídas</button>
+    ${isAdmin ? `<button class="stab" onclick="setF('cancelada',this)">Canceladas</button>` : ''}
   </div>
   <div id="tar-list"></div>`;
 
