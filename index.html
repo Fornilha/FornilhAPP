@@ -668,9 +668,8 @@ async function saveTarefa(t) {
   if (data) t.id = data.id;
 }
 async function updateTarefa(id, changes) {
-  try {
-    await db.from('tarefas').update(changes).eq('id', id);
-  } catch(e) {}
+  const { error } = await db.from('tarefas').update(changes).eq('id', id);
+  if (error) showT('⚠️ Erro ao atualizar tarefa: ' + error.message);
 }
 
 async function mostrarApp() {
