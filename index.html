@@ -581,7 +581,7 @@ async function entrar() {
     window._codigoLogin = codigo;
     const sel = document.getElementById('l-apelido');
     sel.innerHTML = '<option value="">— Selecione —</option>' +
-      EQUIPE_LOCAL.filter(e=>e.perfil!=='admin').map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
+      EQUIPE_LOCAL.map(e=>`<option value="${e.nome}">${e.nome.split(' ')[0]} — ${e.cargo}</option>`).join('');
     btn.disabled = false;
     btn.textContent = 'Entrar no FornilhApp';
     // _loginAtivo fica true até criarSenha() concluir
@@ -903,13 +903,24 @@ tarefas(a) {
   const cs = {pendente:'sp',concluida:'sc'};
   const sl = {pendente:'Pendente',concluida:'Concluída'};
   let filtro = 'todas';
+  const isAdmin = perfil === 'admin';
+  const perfilSetor = {caixa:'Caixa',bar:'Bar',garcom:'Salão',pizzaria:'Pizzaria',cozinha:'Cozinha'};
+  const meuSetor = perfilSetor[perfil] || null;
 
   function prazoFmt(p){ try{ return new Date(p+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }catch(e){return p;} }
 
+  function tarefasVisiveis() {
+    let lista = isAdmin ? tarefas : tarefas.filter(t => t.setor === meuSetor);
+    if (filtro !== 'todas') lista = lista.filter(t => t.status === filtro);
+    return lista;
+  }
+
   function rList(){
-    const lista = filtro==='todas'?tarefas:tarefas.filter(t=>t.status===filtro);
+    const lista = tarefasVisiveis();
     document.getElementById('tar-list').innerHTML = lista.length ? lista.map(t=>{
       const tp = TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
+      const possoExecutar = isAdmin || t.setor === meuSetor;
+      const btnLabel = t.status==='concluida' ? 'Ver resultado' : (possoExecutar ? 'Preencher' : '');
       return `<div class="tar">
         <div class="tar-h">
           <div style="font-size:22px;margin-right:4px">${tp.icon}</div>
@@ -919,17 +930,17 @@ tarefas(a) {
           </div>
           <span class="sbadge ${cs[t.status]||'sp'}">${sl[t.status]||t.status}</span>
         </div>
-        <div class="tar-f" style="justify-content:flex-end">
-          <button class="btn-tar" onclick="abrirTarefa(${t.id})">${t.status==='concluida'?'Ver resultado':'Preencher'}</button>
-        </div>
+        ${btnLabel ? `<div class="tar-f" style="justify-content:flex-end">
+          <button class="btn-tar" onclick="abrirTarefa(${t.id})">${btnLabel}</button>
+        </div>` : ''}
       </div>`;
     }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
   }
 
   a.innerHTML=`
   <div class="stabs">
-    <button class="stab active" onclick="setF('todas',this)">Todas (${tarefas.length})</button>
-    <button class="stab" onclick="setF('pendente',this)">Pendentes (${tarefas.filter(t=>t.status==='pendente').length})</button>
+    <button class="stab active" onclick="setF('todas',this)">Todas (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).length})</button>
+    <button class="stab" onclick="setF('pendente',this)">Pendentes (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status==='pendente').length})</button>
     <button class="stab" onclick="setF('concluida',this)">Concluídas</button>
   </div>
   <div id="tar-list"></div>`;
