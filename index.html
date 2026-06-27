@@ -978,7 +978,9 @@ tarefas(a) {
       if(t.tipo==='caixa'){
         const tm=d.tm?'R$ '+d.tm.toFixed(2).replace('.',','):(d.mesas>0?'R$ '+(d.fat/d.mesas).toFixed(2).replace('.',','):'—');
         const vends=GARCONS.map(g=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${g.nome.split(' ')[0]}</span><strong>R$ ${(d['v_'+g.nome]||0).toFixed(2).replace('.',',')}</strong></div>`).join('');
-        resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
+        const dataFmt=d.data?new Date(d.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+        resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>Data</span><strong>${dataFmt}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Taxa de serviço (equipe 75%)</span><strong>R$ ${((d.taxa||0)*0.75).toFixed(2).replace('.',',')}</strong></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--txt3);font-size:12px">Taxa bruta (100%)</span><span style="color:var(--txt3);font-size:12px">R$ ${(d.taxa||0).toFixed(2).replace('.',',')}</span></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Mesas atendidas</span><strong>${d.mesas||0}</strong></div>
@@ -1013,6 +1015,7 @@ tarefas(a) {
           <input type="number" id="vend_${g.nome.replace(/\s/g,'_')}" placeholder="0,00" min="0" step="0.01">
         </div>`).join('');
       formHtml=`
+        <div class="fld"><label>Data do movimento</label><input type="date" id="cf-data" value="${new Date().toISOString().slice(0,10)}"></div>
         <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01" oninput="calcTM()"></div>
         <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
         ${vFields}
@@ -1053,6 +1056,7 @@ tarefas(a) {
     const t=tarefas.find(x=>x.id===id); if(!t)return;
     const dados={};
     if(t.tipo==='caixa'){
+      dados.data=document.getElementById('cf-data').value||new Date().toISOString().slice(0,10);
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
       dados.balcao=parseFloat(document.getElementById('cf-balcao').value)||0;
