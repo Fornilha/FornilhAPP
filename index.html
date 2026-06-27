@@ -926,8 +926,8 @@ tarefas(a) {
           <span class="sbadge ${cs[t.status]||'sp'}">${sl[t.status]||t.status}</span>
         </div>
         <div class="tar-f" style="justify-content:flex-end;gap:8px">
-          ${btnLabel ? `<button class="btn-tar" onclick="abrirTarefa(${t.id})">${btnLabel}</button>` : ''}
-          ${isAdmin && pendente ? `<button class="btn-tar" style="background:var(--danger,#E24B4A);color:#fff" onclick="cancelarTarefa(${t.id})">Cancelar</button>` : ''}
+          ${btnLabel ? `<button class="btn-tar" onclick="abrirTarefa('${t.id}')">${btnLabel}</button>` : ''}
+          ${isAdmin && pendente ? `<button class="btn-tar" style="background:var(--danger,#E24B4A);color:#fff" onclick="cancelarTarefa('${t.id}')">Cancelar</button>` : ''}
         </div>
       </div>`;
     }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
