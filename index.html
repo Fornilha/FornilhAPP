@@ -123,7 +123,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tar-m{font-size:11px;color:var(--txt2);margin-top:1px}
 .sbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;flex-shrink:0}
 .sp{background:var(--av-l);color:var(--av)} .sa{background:var(--info-l);color:var(--info)}
-.sc{background:var(--ok-l);color:var(--ok)} .sat{background:var(--er-l);color:var(--er)}
+.sc{background:var(--ok-l);color:var(--ok)} .sat{background:var(--er-l);color:var(--er)} .sx{background:#f0f0f0;color:#999}
 .tar-f{border-top:1px solid var(--bord);padding:9px 13px;display:flex;align-items:center;justify-content:space-between}
 .tar-r{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2)}
 .btn-tar{background:var(--verm);color:#fff;border:none;padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
@@ -659,14 +659,13 @@ async function loadTarefas() {
   } catch(e) {}
 }
 async function saveTarefa(t) {
-  try {
-    const { data } = await db.from('tarefas').insert({
-      tipo: t.tipo, titulo: t.titulo, setor: t.setor,
-      resp: t.resp, tel: t.tel, prazo: t.prazo,
-      status: t.status, dados: t.dados
-    }).select().single();
-    if (data) t.id = data.id;
-  } catch(e) {}
+  const { data, error } = await db.from('tarefas').insert({
+    tipo: t.tipo, titulo: t.titulo, setor: t.setor,
+    resp: t.resp, tel: t.tel, prazo: t.prazo,
+    status: t.status, dados: t.dados
+  }).select().single();
+  if (error) { showT('⚠️ Erro ao salvar tarefa: ' + error.message); return; }
+  if (data) t.id = data.id;
 }
 async function updateTarefa(id, changes) {
   try {
@@ -900,8 +899,8 @@ feed(a) {
 },
 
 tarefas(a) {
-  const cs = {pendente:'sp',concluida:'sc'};
-  const sl = {pendente:'Pendente',concluida:'Concluída'};
+  const cs = {pendente:'sp',concluida:'sc',cancelada:'sx'};
+  const sl = {pendente:'Pendente',concluida:'Concluída',cancelada:'Cancelada'};
   let filtro = 'todas';
   const isAdmin = perfil === 'admin';
   const perfilSetor = {caixa:'Caixa',bar:'Bar',garcom:'Salão',pizzaria:'Pizzaria',cozinha:'Cozinha'};
@@ -920,7 +919,8 @@ tarefas(a) {
     document.getElementById('tar-list').innerHTML = lista.length ? lista.map(t=>{
       const tp = TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
       const possoExecutar = isAdmin || t.setor === meuSetor;
-      const btnLabel = t.status==='concluida' ? 'Ver resultado' : (possoExecutar ? 'Preencher' : '');
+      const pendente = t.status === 'pendente';
+      const btnLabel = t.status==='concluida' ? 'Ver resultado' : (pendente && possoExecutar ? 'Preencher' : '');
       return `<div class="tar">
         <div class="tar-h">
           <div style="font-size:22px;margin-right:4px">${tp.icon}</div>
@@ -930,9 +930,10 @@ tarefas(a) {
           </div>
           <span class="sbadge ${cs[t.status]||'sp'}">${sl[t.status]||t.status}</span>
         </div>
-        ${btnLabel ? `<div class="tar-f" style="justify-content:flex-end">
-          <button class="btn-tar" onclick="abrirTarefa(${t.id})">${btnLabel}</button>
-        </div>` : ''}
+        <div class="tar-f" style="justify-content:flex-end;gap:8px">
+          ${btnLabel ? `<button class="btn-tar" onclick="abrirTarefa(${t.id})">${btnLabel}</button>` : ''}
+          ${isAdmin && pendente ? `<button class="btn-tar" style="background:var(--danger,#E24B4A);color:#fff" onclick="cancelarTarefa(${t.id})">Cancelar</button>` : ''}
+        </div>
       </div>`;
     }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
   }
@@ -946,6 +947,14 @@ tarefas(a) {
   <div id="tar-list"></div>`;
 
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
+  window.cancelarTarefa=async(id)=>{
+    if(!confirm('Cancelar esta tarefa?')) return;
+    const t=tarefas.find(x=>x.id===id); if(!t) return;
+    t.status='cancelada';
+    await updateTarefa(id,{status:'cancelada'});
+    rList();
+    showT('Tarefa cancelada.');
+  };
 
   window.calcTM=(manual=true)=>{
     const fat=parseFloat(document.getElementById('cf-fat')?.value)||0;
