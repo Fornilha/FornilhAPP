@@ -667,8 +667,23 @@ async function updateTarefa(id, changes) {
   if (error) showT('⚠️ Erro ao atualizar tarefa: ' + error.message);
 }
 
+function aplicarEstoqueDosTasks() {
+  // Para cada setor, pega a tarefa de estoque concluída mais recente e aplica as quantidades
+  Object.keys(ESTOQUE).forEach(setor => {
+    const concluidas = tarefas
+      .filter(t => t.tipo === 'estoque' && t.setor === setor && t.status === 'concluida')
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (!concluidas.length) return;
+    const dados = concluidas[0].dados || {};
+    ESTOQUE[setor].forEach(it => {
+      if (dados[it.n] !== undefined) it.q = dados[it.n];
+    });
+  });
+}
+
 async function mostrarApp() {
   await loadTarefas();
+  aplicarEstoqueDosTasks();
   document.getElementById('scr-loading').classList.remove('active');
   document.getElementById('scr-login').classList.remove('active');
   document.getElementById('scr-app').classList.add('active');
