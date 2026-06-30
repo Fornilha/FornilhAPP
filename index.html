@@ -1681,7 +1681,24 @@ async financeiro(a) {
   await loadPagamentos();
 
   const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Rescisão','Reembolso','Outro'];
+  const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Rescisão','Reembolso','Folha de Pagamento','Outro'];
+  const DEST_FLAVIANE = 'financeirorestaurantelonier@gmail.com';
+  const DEST_CONTAB = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
+  const MESES_NOME = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  function numExtenso(n) {
+    const ex = {1:'UM',2:'DOIS',3:'TRÊS',4:'QUATRO',5:'CINCO',6:'SEIS',7:'SETE',8:'OITO',9:'NOVE',10:'DEZ'};
+    return ex[n] || String(n);
+  }
+  function numExtensoF(n) { // feminino para faltas
+    const ex = {1:'UMA',2:'DUAS',3:'TRÊS',4:'QUATRO',5:'CINCO',6:'SEIS',7:'SETE',8:'OITO',9:'NOVE',10:'DEZ'};
+    return ex[n] || String(n);
+  }
+  function faltasTxt(n) {
+    n = parseInt(n)||0;
+    if (!n) return 'NÃO TEVE FALTAS';
+    return `TEVE ${n} (${numExtensoF(n)}) FALTA${n>1?'S':''}`;
+  }
   const hoje = new Date();
   const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
   const hojeISO = hoje.toISOString().slice(0,10);
@@ -1736,7 +1753,7 @@ async financeiro(a) {
       <div id="fin-campos-extra"></div>
       <div id="fin-campos-comuns"></div>
       <div id="fin-btns" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-        <button class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
+        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
         <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
       </div>
     </div></div>
@@ -1850,6 +1867,24 @@ async financeiro(a) {
         <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Diária extra — 28/06"></div>
         <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
+    } else if (tipo === 'Folha de Pagamento') {
+      window._folhaCount = window._folhaCount || 1;
+      extra.innerHTML = `
+        <div class="row2" style="margin-bottom:8px">
+          <div class="fld" style="margin:0"><label>Subtipo</label>
+            <select id="fin-subtipo" onchange="window._finAtualizaFolha()">
+              <option value="FUNC. REGISTRADOS">Func. Registrados (CLT)</option>
+              <option value="ACERTO POR FORA">Acerto por Fora</option>
+            </select>
+          </div>
+          <div class="fld" style="margin:0"><label>Mês de referência</label>
+            <input id="fin-mes-ref" placeholder="JUN/26" value="${mesAtual}">
+          </div>
+        </div>
+        <div id="fin-folha-funcs"></div>
+        <button class="btn-p" id="fin-btn-add-func" style="width:100%;background:var(--surf);color:var(--txt);border:1px solid var(--bord);margin-top:4px" onclick="window._finAdicionaFunc()">+ Adicionar funcionário</button>`;
+      comuns.innerHTML = '';
+      setTimeout(() => { window._folhaCount = 1; window._finAtualizaFolha(); }, 30);
     } else {
       extra.innerHTML = `<div class="fld"><label>Fornecedor / Beneficiário</label><input id="fin-forn" placeholder="Ex: Gás Litoral"></div>`;
       comuns.innerHTML = `
@@ -1857,7 +1892,108 @@ async financeiro(a) {
         <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
     }
+
+    // Atualiza label do botão de e-mail
+    const btnEmail = document.getElementById('fin-btn-email');
+    if (btnEmail) {
+      if (tipo === 'Folha de Pagamento') {
+        btnEmail.textContent = '✉️ Gerar e-mail para Contabilidade';
+      } else {
+        btnEmail.textContent = '✉️ Gerar e-mail para Flaviane';
+      }
+    }
   };
+
+  function renderFuncCard(i) {
+    return `<div id="fin-func-${i}" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong style="font-size:13px">Funcionário ${i+1}</strong>
+        ${i>0?`<button onclick="window._finRemoveFunc(${i})" style="background:none;border:none;color:var(--verm);cursor:pointer;font-size:13px">✕ Remover</button>`:''}
+      </div>
+      <div class="row2">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Nome completo</label><input id="ff-nome-${i}" placeholder="Nome do colaborador"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Cargo</label><input id="ff-cargo-${i}" placeholder="Ex: Cozinheiro"></div>
+      </div>
+      <div class="row2" style="margin-top:6px">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Salário base (R$)</label><input type="number" id="ff-sal-${i}" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Data de início</label><input type="date" id="ff-ini-${i}"></div>
+      </div>
+      <div class="row2" style="margin-top:6px">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Último dia</label><input type="date" id="ff-fim-${i}"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Dias trabalhados</label><input type="number" id="ff-dias-${i}" placeholder="0" min="0"></div>
+      </div>
+      <div class="row2" style="margin-top:6px">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Horas c/ adic. noturno</label><input id="ff-hnoturno-${i}" placeholder="00:00"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Hora extra</label><input id="ff-hextra-${i}" placeholder="00:00"></div>
+      </div>
+      <div class="row2" style="margin-top:6px">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Feriados a compensar</label><input type="number" id="ff-feriado-${i}" placeholder="0" min="0" value="0"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Domingos a compensar</label><input type="number" id="ff-domingo-${i}" placeholder="0" min="0" value="0"></div>
+      </div>
+      <div class="fld" style="margin-top:6px"><label style="font-size:11px">Faltas no mês</label><input type="number" id="ff-faltas-${i}" placeholder="0" min="0" value="0"></div>
+    </div>`;
+  }
+
+  window._finAtualizaFolha = () => {
+    const n = window._folhaCount || 1;
+    const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
+    const wrap = document.getElementById('fin-folha-funcs');
+    if (!wrap) return;
+    wrap.innerHTML = Array.from({length:n}, (_,i) => renderFuncCard(i)).join('');
+    const btnAdd = document.getElementById('fin-btn-add-func');
+    if (btnAdd) btnAdd.style.display = subtipo === 'FUNC. REGISTRADOS' ? '' : 'none';
+  };
+
+  window._finAdicionaFunc = () => {
+    window._folhaCount = (window._folhaCount||1) + 1;
+    window._finAtualizaFolha();
+  };
+
+  window._finRemoveFunc = (idx) => {
+    // Collect current values, remove idx, rebuild
+    const n = window._folhaCount || 1;
+    const dados = [];
+    for (let i=0; i<n; i++) {
+      if (i === idx) continue;
+      dados.push({
+        nome: document.getElementById('ff-nome-'+i)?.value||'',
+        cargo: document.getElementById('ff-cargo-'+i)?.value||'',
+        sal: document.getElementById('ff-sal-'+i)?.value||'',
+        ini: document.getElementById('ff-ini-'+i)?.value||'',
+        fim: document.getElementById('ff-fim-'+i)?.value||'',
+        dias: document.getElementById('ff-dias-'+i)?.value||'',
+        hnoturno: document.getElementById('ff-hnoturno-'+i)?.value||'',
+        hextra: document.getElementById('ff-hextra-'+i)?.value||'',
+        feriado: document.getElementById('ff-feriado-'+i)?.value||'0',
+        domingo: document.getElementById('ff-domingo-'+i)?.value||'0',
+        faltas: document.getElementById('ff-faltas-'+i)?.value||'0',
+      });
+    }
+    window._folhaCount = Math.max(1, n-1);
+    window._finAtualizaFolha();
+    dados.forEach((d,i) => {
+      ['nome','cargo','sal','ini','fim','dias','hnoturno','hextra','feriado','domingo','faltas'].forEach(k => {
+        const el = document.getElementById(`ff-${k}-${i}`);
+        if (el) el.value = d[k];
+      });
+    });
+  };
+
+  function getFuncDados(i) {
+    return {
+      nome:    document.getElementById('ff-nome-'+i)?.value||'',
+      cargo:   document.getElementById('ff-cargo-'+i)?.value||'',
+      sal:     parseFloat(document.getElementById('ff-sal-'+i)?.value||0),
+      ini:     document.getElementById('ff-ini-'+i)?.value||'',
+      fim:     document.getElementById('ff-fim-'+i)?.value||'',
+      dias:    parseInt(document.getElementById('ff-dias-'+i)?.value||0),
+      hnoturno:document.getElementById('ff-hnoturno-'+i)?.value||'00:00',
+      hextra:  document.getElementById('ff-hextra-'+i)?.value||'00:00',
+      feriado: parseInt(document.getElementById('ff-feriado-'+i)?.value||0),
+      domingo: parseInt(document.getElementById('ff-domingo-'+i)?.value||0),
+      faltas:  parseInt(document.getElementById('ff-faltas-'+i)?.value||0),
+    };
+  }
 
   window._finPreenchePix = () => {
     const sel = document.getElementById('fin-forn');
@@ -1906,6 +2042,38 @@ async financeiro(a) {
       }).filter(Boolean);
       corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
 
+    } else if (tipo === 'Folha de Pagamento') {
+      const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
+      const mesRef  = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
+      const [mesAbrev] = mesRef.split('/');
+      const mesNome = MESES_NOME[MESES_PT.indexOf(mesAbrev.charAt(0)+mesAbrev.slice(1).toLowerCase())] || mesAbrev;
+      const n = window._folhaCount || 1;
+
+      if (subtipo === 'FUNC. REGISTRADOS') {
+        assunto = `Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesRef}.`;
+        const linhas = Array.from({length:n}, (_,i) => {
+          const d = getFuncDados(i);
+          if (!d.nome) return '';
+          const compens = [];
+          if (d.feriado > 0) compens.push(`· Compensar ${d.feriado} (${numExtenso(d.feriado)}) FERIADO;`);
+          if (d.domingo > 0) compens.push(`· Compensar ${d.domingo} (${numExtenso(d.domingo)}) Domingo do mês;`);
+          return `${i+1}- ${d.nome} - ${d.cargo.toUpperCase()}\n· Cargo: ${d.cargo}\n· Salário base: R$ ${d.sal.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n· Data de Início: ${d.ini ? fmtDataBr(d.ini) : '__/__/____'}\n· Último dia de trabalho ${d.fim ? fmtDataBr(d.fim) : '__/__/____'}\n· Dias trabalhados: ${d.dias} Dias\n· Horas com adicional noturno: ${d.hnoturno}hs;\n· Hora extra no mês de ${mesNome.toUpperCase()}: ${d.hextra}hs;\n${compens.join('\n')}${compens.length?'\n':''}· ${faltasTxt(d.faltas)}`;
+        }).filter(Boolean);
+        corpo = linhas.join('\n\n');
+        window.open(`mailto:${DEST_CONTAB}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+        return;
+      } else {
+        // ACERTO POR FORA — abre um mailto por funcionário
+        for (let i=0; i<n; i++) {
+          const d = getFuncDados(i);
+          if (!d.nome) continue;
+          assunto = `Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${d.nome} - ${mesRef}`;
+          corpo = `Olá Luciana.\n\nFavor nos enviar o acerto por fora referente ao mês de ${mesRef} - ${d.nome}.\n\nSegue informações para o Acerto por Fora (folha de pagamento):\n· Cargo: ${d.cargo}\n· Salário base: R$ ${d.sal.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n· Data de Início: ${d.ini ? fmtDataBr(d.ini) : '__/__/____'}\n· Último dia de trabalho ${d.fim ? fmtDataBr(d.fim) : '__/__/____'}\n· Dias trabalhados: ${d.dias} Dias.\n· Hora extra no mês de ${mesNome} com adicional noturno: ${d.hnoturno}hs;\n· Hora extra no mês de ${mesNome}: ${d.hextra}hs;\n· ${faltasTxt(d.faltas)}`;
+          window.open(`mailto:${DEST_CONTAB}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+        }
+        return;
+      }
+
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
@@ -1924,7 +2092,7 @@ async financeiro(a) {
       corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
     }
 
-    window.open(`mailto:financeirorestaurantelonier@gmail.com?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+    window.open(`mailto:${DEST_FLAVIANE}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
   };
 
   window._finSalvar = async () => {
@@ -1947,6 +2115,12 @@ async financeiro(a) {
       const venc   = document.getElementById('fin-venc')?.value || '';
       const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
       await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1});
+    } else if (tipo === 'Folha de Pagamento') {
+      const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
+      const mesRef  = document.getElementById('fin-mes-ref')?.value || mesAtual;
+      const n = window._folhaCount || 1;
+      const nomes = Array.from({length:n}, (_,i) => document.getElementById('ff-nome-'+i)?.value||'').filter(Boolean).join(', ');
+      await savePagamento({tipo, fornecedor: subtipo, item: `Folha ${mesRef} — ${nomes}`, valor: 0, vencimento: null, cc: 'Fornilha', parcelas: n});
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
