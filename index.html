@@ -1682,6 +1682,9 @@ async financeiro(a) {
 
   const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Rescisão','Reembolso','Outro'];
+  const hoje = new Date();
+  const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
+  const hojeISO = hoje.toISOString().slice(0,10);
 
   function fmtDataBr(iso) {
     if (!iso) return '—';
@@ -1691,6 +1694,12 @@ async financeiro(a) {
   function fmtVal(v) {
     return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
+  // distribui total em n parcelas com arredondamento na primeira
+  function distribuirParcelas(total, n) {
+    const base = Math.floor(total * 100 / n) / 100;
+    const resto = Math.round((total - base * n) * 100) / 100;
+    return Array.from({length:n}, (_,i) => parseFloat((i===0 ? base+resto : base).toFixed(2)));
+  }
 
   function renderHistorico() {
     if (!pagamentos.length) return '<div style="padding:24px;text-align:center;color:var(--txt2)">Nenhum pagamento registrado ainda.</div>';
@@ -1698,38 +1707,18 @@ async financeiro(a) {
       const tipoCor = {Boleto:'#185FA5',PIX:'#1D9E75',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
       const cor = tipoCor[p.tipo] || '#555';
       const dt = p.vencimento ? fmtDataBr(p.vencimento) : '—';
+      const parcInfo = p.parcelas > 1 ? ` · ${p.parcelas}x` : '';
       return `<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bord)">
         <div style="width:40px;height:40px;border-radius:10px;background:${cor}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
           ${p.tipo==='Boleto'?'📄':p.tipo==='PIX'?'💸':p.tipo==='Salário'?'👥':p.tipo==='Extra'?'💵':p.tipo==='Venda Folga'?'🏖️':p.tipo==='Rescisão'?'📝':'💰'}
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--txt)">${p.item||p.fornecedor||'—'}</div>
-          <div style="font-size:11px;color:var(--txt2)">${p.tipo} · ${p.fornecedor||''} · Venc. ${dt}</div>
+          <div style="font-size:11px;color:var(--txt2)">${p.tipo}${parcInfo} · ${p.fornecedor||''} · 1º venc. ${dt}</div>
         </div>
         <div style="font-size:13px;font-weight:700;color:${cor};white-space:nowrap">${fmtVal(p.valor)}</div>
       </div>`;
     }).join('');
-  }
-
-  function renderForm() {
-    const forn_boleto = FORNECEDORES_FIN.filter(f=>f.tipo==='Boleto');
-    const forn_pix    = FORNECEDORES_FIN.filter(f=>f.tipo==='PIX');
-    return `
-    <div class="fld"><label>Tipo de pagamento</label>
-      <select id="fin-tipo" onchange="window._finAtualizaForm()">
-        ${TIPOS_PAG.map(t=>`<option value="${t}">${t}</option>`).join('')}
-      </select>
-    </div>
-    <div id="fin-campos-extra"></div>
-    <div id="fin-campos-comuns" style="display:none">
-      <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Nota fiscal de carnes — Mai/26"></div>
-      <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
-      <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${new Date().toISOString().slice(0,10)}"></div>
-    </div>
-    <div id="fin-btns" style="display:none;margin-top:10px;display:flex;flex-direction:column;gap:8px">
-      <button class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
-      <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
-    </div>`;
   }
 
   a.innerHTML = `
@@ -1738,14 +1727,23 @@ async financeiro(a) {
     <button id="fin-tab-hist" class="btn-p" style="flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)" onclick="window._finTab('hist')">📋 Histórico</button>
   </div>
   <div id="fin-painel-novo">
-    <div class="card"><div class="cb">${renderForm()}</div></div>
+    <div class="card"><div class="cb">
+      <div class="fld"><label>Tipo de pagamento</label>
+        <select id="fin-tipo" onchange="window._finAtualizaForm()">
+          ${TIPOS_PAG.map(t=>`<option value="${t}">${t}</option>`).join('')}
+        </select>
+      </div>
+      <div id="fin-campos-extra"></div>
+      <div id="fin-campos-comuns"></div>
+      <div id="fin-btns" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
+        <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
+      </div>
+    </div></div>
   </div>
   <div id="fin-painel-hist" style="display:none">
     <div class="card"><div class="cb" style="padding:0 14px" id="fin-hist-lista">${renderHistorico()}</div></div>
   </div>`;
-
-  const hoje = new Date();
-  const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
 
   window._finTab = (t) => {
     document.getElementById('fin-painel-novo').style.display = t==='novo' ? '' : 'none';
@@ -1755,20 +1753,68 @@ async financeiro(a) {
     if (t==='hist') document.getElementById('fin-hist-lista').innerHTML = renderHistorico();
   };
 
+  function renderParcelasBoleto(n) {
+    const total = parseFloat(document.getElementById('fin-valor-total')?.value||0);
+    const vals = total > 0 ? distribuirParcelas(total, n) : Array(n).fill(0);
+    let html = '';
+    for (let i=0; i<n; i++) {
+      html += `<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">
+        <div class="fld" style="margin:0;flex:1"><label style="font-size:11px">Parcela ${i+1} — Valor</label>
+          <input type="number" id="fin-parc-val-${i}" value="${vals[i]||''}" placeholder="0,00" step="0.01" min="0">
+        </div>
+        <div class="fld" style="margin:0;flex:1"><label style="font-size:11px">Vencimento</label>
+          <input type="date" id="fin-parc-venc-${i}" value="">
+        </div>
+      </div>`;
+    }
+    return html;
+  }
+
+  window._finAtualizaParcs = () => {
+    const n = parseInt(document.getElementById('fin-num-parc')?.value||1);
+    document.getElementById('fin-parcelas-wrap').innerHTML = renderParcelasBoleto(n);
+  };
+
+  window._finDistribuiValor = () => {
+    const n = parseInt(document.getElementById('fin-num-parc')?.value||1);
+    const total = parseFloat(document.getElementById('fin-valor-total')?.value||0);
+    if (!total) return;
+    const vals = distribuirParcelas(total, n);
+    for (let i=0; i<n; i++) {
+      const el = document.getElementById('fin-parc-val-'+i);
+      if (el) el.value = vals[i];
+    }
+  };
+
   window._finAtualizaForm = () => {
     const tipo = document.getElementById('fin-tipo').value;
     const extra = document.getElementById('fin-campos-extra');
     const comuns = document.getElementById('fin-campos-comuns');
-    const btns = document.getElementById('fin-btns');
-    comuns.style.display = tipo === 'Salário' ? 'none' : '';
-    btns.style.display = '';
 
     if (tipo === 'Boleto') {
       extra.innerHTML = `
         <div class="fld"><label>Fornecedor</label>
           <select id="fin-forn">${FORNECEDORES_FIN.filter(f=>f.tipo==='Boleto').map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}</select>
         </div>
-        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Cozinha"></div>`;
+        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Compra de Frios para a Pizzaria."></div>
+        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Pizzaria Fornilha."></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">
+          <div class="fld" style="margin:0;flex:2"><label>Valor total (R$)</label>
+            <input type="number" id="fin-valor-total" placeholder="0,00" step="0.01" min="0" oninput="window._finDistribuiValor()">
+          </div>
+          <div class="fld" style="margin:0;flex:1"><label>Parcelas</label>
+            <select id="fin-num-parc" onchange="window._finAtualizaParcs()">
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="3" selected>3x</option>
+            </select>
+          </div>
+        </div>
+        <div id="fin-parcelas-wrap">${renderParcelasBoleto(3)}</div>
+        <div style="background:var(--info-l);color:var(--info);border-radius:8px;padding:9px 11px;font-size:12px;margin-top:4px">
+          📎 Lembre de anexar o PDF do boleto no Gmail antes de enviar.
+        </div>`;
+      comuns.innerHTML = '';
     } else if (tipo === 'PIX') {
       extra.innerHTML = `
         <div class="fld"><label>Fornecedor / Prestador</label>
@@ -1776,6 +1822,10 @@ async financeiro(a) {
         </div>
         <div id="fin-pix-dados" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;font-size:13px;margin-bottom:8px"></div>
         <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Geral"></div>`;
+      comuns.innerHTML = `
+        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Compra de Sacolão — Jun/26"></div>
+        <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
       setTimeout(window._finPreenchePix, 50);
     } else if (tipo === 'Salário') {
       const campos = COLABORADORES_FIN.map((c,i) => `
@@ -1788,15 +1838,24 @@ async financeiro(a) {
         </div>`).join('');
       extra.innerHTML = `
         <div class="fld"><label>Mês de referência</label><input id="fin-mes-ref" placeholder="MAI/26" value="${mesAtual}"></div>
-        <div class="fld"><label>Data de pagamento (vencimento)</label><input type="date" id="fin-venc" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="fld"><label>Data de pagamento (vencimento)</label><input type="date" id="fin-venc" value="${hojeISO}"></div>
         <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:0 12px;margin-bottom:8px">${campos}</div>`;
-    } else if (tipo === 'Extra' || tipo === 'Venda Folga' || tipo === 'Rescisão' || tipo === 'Reembolso') {
+      comuns.innerHTML = '';
+    } else if (['Extra','Venda Folga','Rescisão','Reembolso'].includes(tipo)) {
       extra.innerHTML = `
         <div class="fld"><label>Colaborador</label>
           <select id="fin-forn">${COLABORADORES_FIN.map(c=>`<option value="${c.nome}">${c.nome.split(' ')[0]} — ${c.cargo}</option>`).join('')}</select>
         </div>`;
+      comuns.innerHTML = `
+        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Diária extra — 28/06"></div>
+        <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
     } else {
       extra.innerHTML = `<div class="fld"><label>Fornecedor / Beneficiário</label><input id="fin-forn" placeholder="Ex: Gás Litoral"></div>`;
+      comuns.innerHTML = `
+        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Descreva o pagamento"></div>
+        <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
     }
   };
 
@@ -1815,16 +1874,30 @@ async financeiro(a) {
 
   window._finGerarEmail = () => {
     const tipo = document.getElementById('fin-tipo').value;
-    const vencEl = document.getElementById('fin-venc');
-    const venc = vencEl ? vencEl.value : '';
-    const vencFmt = venc ? fmtDataBr(venc).slice(0,5) : 'DD/MM';
-
     let assunto = '', corpo = '';
 
-    if (tipo === 'Salário') {
+    if (tipo === 'Boleto') {
+      const forn = document.getElementById('fin-forn')?.value || '';
+      const item = document.getElementById('fin-item')?.value || '';
+      const cc   = document.getElementById('fin-cc')?.value || 'Pizzaria Fornilha.';
+      const n    = parseInt(document.getElementById('fin-num-parc')?.value||1);
+      const parcelas = [];
+      for (let i=0; i<n; i++) {
+        const val  = parseFloat(document.getElementById('fin-parc-val-'+i)?.value||0);
+        const venc = document.getElementById('fin-parc-venc-'+i)?.value || '';
+        parcelas.push({val, venc});
+      }
+      const primeiroVenc = parcelas[0]?.venc ? fmtDataBr(parcelas[0].venc).slice(0,5) : 'DD/MM';
+      assunto = `Lançar e Agendar - ${forn.toUpperCase()} - FORNILHA - VENC. ${primeiroVenc}`;
+      const linhasParcelas = parcelas.map(p =>
+        `Valor do Boleto: R$ ${p.val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\nVencimento dia ${p.venc ? fmtDataBr(p.venc).slice(0,5) : 'DD/MM'}`
+      ).join('\n\n');
+      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+
+    } else if (tipo === 'Salário') {
       const mesRef = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
-      const [mesN, anoN] = mesRef.split('/');
-      const vencPag = venc ? fmtDataBr(venc) : 'DD/MM/AAAA';
+      const venc = document.getElementById('fin-venc')?.value || '';
+      const vencFmt = venc ? fmtDataBr(venc).slice(0,5) : 'DD/MM';
       assunto = `Lançar e Agendar - Salário ref. ao Mês de ${mesRef} - FORNILHA - VENC ${vencFmt}.`;
       const linhas = COLABORADORES_FIN.map((c,i) => {
         const val = parseFloat(document.getElementById('sal_'+i)?.value||0);
@@ -1832,45 +1905,57 @@ async financeiro(a) {
         return `${c.nome} - ${c.cargo}\nChave Pix: (${c.pixTipo}) - ${c.pixChave}${c.banco?`\nBanco: ${c.banco}`:''}\nNome: ${c.nome}\nValor de R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n`;
       }).filter(Boolean);
       corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
-    } else {
-      const item = document.getElementById('fin-item')?.value || '';
-      const fornEl = document.getElementById('fin-forn');
-      const forn = fornEl?.value || '';
-      const val = parseFloat(document.getElementById('fin-valor')?.value||0);
-      const cc = document.getElementById('fin-cc')?.value || 'Fornilha';
-      const valFmt = val ? `R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
 
-      let dadosPag = '';
+    } else {
+      const item  = document.getElementById('fin-item')?.value || '';
+      const fornEl = document.getElementById('fin-forn');
+      const forn  = fornEl?.value || '';
+      const val   = parseFloat(document.getElementById('fin-valor')?.value||0);
+      const cc    = document.getElementById('fin-cc')?.value || 'Fornilha';
+      const venc  = document.getElementById('fin-venc')?.value || '';
+      const vencFmt = venc ? fmtDataBr(venc).slice(0,5) : 'DD/MM';
+      const valFmt = val ? `R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+      let dadosPix = '';
       if (tipo === 'PIX') {
         const f = FORNECEDORES_FIN.find(x=>x.nome===forn);
-        if (f && f.pixChave) dadosPag = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
+        if (f?.pixChave) dadosPix = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
       }
-
-      assunto = `Lançar e Agendar - ${item||forn} - FORNILHA - VENC. ${vencFmt}`;
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\nValor: ${valFmt}\nVencimento: ${venc ? fmtDataBr(venc) : '—'}\nTipo: ${tipo}${dadosPag}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+      assunto = `Lançar e Agendar - ${(item||forn).toUpperCase()} - FORNILHA - VENC. ${vencFmt}`;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
     }
 
-    const mailto = `mailto:financeirorestaurantelonier@gmail.com?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-    window.open(mailto);
+    window.open(`mailto:financeirorestaurantelonier@gmail.com?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
   };
 
   window._finSalvar = async () => {
     const tipo = document.getElementById('fin-tipo').value;
-    const vencEl = document.getElementById('fin-venc');
-    const venc = vencEl?.value || '';
-
-    if (tipo === 'Salário') {
-      const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
-      const total = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
-      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha'});
-    } else {
+    if (tipo === 'Boleto') {
+      const forn = document.getElementById('fin-forn')?.value || '';
       const item = document.getElementById('fin-item')?.value || '';
+      const cc   = document.getElementById('fin-cc')?.value || '';
+      const n    = parseInt(document.getElementById('fin-num-parc')?.value||1);
+      let totalGeral = 0;
+      let primeiroVenc = '';
+      for (let i=0; i<n; i++) {
+        totalGeral += parseFloat(document.getElementById('fin-parc-val-'+i)?.value||0);
+        if (i===0) primeiroVenc = document.getElementById('fin-parc-venc-0')?.value || '';
+      }
+      if (!forn) { showT('⚠️ Informe o fornecedor'); return; }
+      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n});
+    } else if (tipo === 'Salário') {
+      const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
+      const venc   = document.getElementById('fin-venc')?.value || '';
+      const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
+      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1});
+    } else {
+      const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
-      const forn = typeof fornEl?.value === 'string' ? fornEl.value : '';
-      const val = parseFloat(document.getElementById('fin-valor')?.value||0);
-      const cc = document.getElementById('fin-cc')?.value || '';
+      const forn  = typeof fornEl?.value === 'string' ? fornEl.value : '';
+      const val   = parseFloat(document.getElementById('fin-valor')?.value||0);
+      const cc    = document.getElementById('fin-cc')?.value || '';
+      const venc  = document.getElementById('fin-venc')?.value || '';
       if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc});
+      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1});
     }
     showT('✅ Pagamento salvo no histórico!');
     window._finTab('hist');
