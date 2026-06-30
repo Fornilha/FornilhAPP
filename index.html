@@ -297,6 +297,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="ni" id="ni-tarefas" onclick="goTo('tarefas')"><span class="ni-ico">✅</span><span class="ni-lbl">Tarefas</span></button>
     <button class="ni" id="ni-estoque" onclick="goTo('estoque')"><span class="ni-ico">📦</span><span class="ni-lbl">Estoque</span></button>
     <button class="ni" id="ni-vendas" onclick="goTo('vendas')"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
+    <button class="ni" id="ni-financeiro" onclick="goTo('financeiro')" style="display:none"><span class="ni-ico">💳</span><span class="ni-lbl">Financeiro</span></button>
   </nav>
 </div>
 </div>
@@ -415,6 +416,44 @@ const PRODUCAO_PIZZARIA = [
   {n:'Muçarela ralada', un:'pç'}
 ];
 const GARCONS = EQUIPE_LOCAL.filter(e=>e.perfil==='garcom');
+
+// ─── FINANCEIRO ───────────────────────────────────────────
+const FORNECEDORES_FIN = [
+  {nome:'NutriMax',          tipo:'Boleto', setor:'Alimentos',   cc:'Cozinha'},
+  {nome:'Frigo Serra',       tipo:'Boleto', setor:'Carnes',      cc:'Cozinha'},
+  {nome:'Rio Quality',       tipo:'Boleto', setor:'Bebidas',     cc:'Bar'},
+  {nome:'Clean Mix',         tipo:'Boleto', setor:'Limpeza',     cc:'Geral'},
+  {nome:'Armazen Beer',      tipo:'Boleto', setor:'Bebidas',     cc:'Bar'},
+  {nome:'Connect Rio',       tipo:'Boleto', setor:'Tecnologia',  cc:'Geral'},
+  {nome:'Agivanilson - Sacolão', tipo:'PIX', pixTipo:'telefone', pixChave:'24999537979', pixNome:'Agivanilson Cirino Queiroz', setor:'Hortifruti', cc:'Cozinha'},
+  {nome:'André Luis - Frete',    tipo:'PIX', pixTipo:'CPF',      pixChave:'10724270795', pixNome:'Andre Luis Lima Pires',      banco:'Itaú', setor:'Logística', cc:'Geral'},
+  {nome:'Lobo Briquetes',        tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Lenha',     cc:'Pizzaria'},
+  {nome:'Churras do Chef',       tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gelo',      cc:'Bar'},
+  {nome:'Litoral Costa Verde',   tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gás',       cc:'Cozinha'},
+];
+const COLABORADORES_FIN = [
+  {nome:'Joelson Santos da Silva',         cargo:'PIZZAIOLO',       pixTipo:'telefone', pixChave:'24999237441'},
+  {nome:'Antônio Carlos José Franco Junior',cargo:'GARÇOM',         pixTipo:'CEL',      pixChave:'21988498394'},
+  {nome:'Amado Alexandre de Souza Júnior', cargo:'BARMAN',          pixTipo:'CPF',      pixChave:'07726150556'},
+  {nome:'Vinicius Querino Alves Santos',   cargo:'GERENTE',         pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
+  {nome:'Rosenilda Davi Campos',           cargo:'COZINHEIRA',      pixTipo:'CPF',      pixChave:'700.562.952-3'},
+  {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO',      pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
+  {nome:'João Marcos Muniz Silva',         cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'12844173799'},
+  {nome:'Patricia Jesus dos Santos',       cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'86615647516'},
+  {nome:'Douglas Silva Santos',            cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'14747157700'},
+  {nome:'Bruno Da Silva Felix',            cargo:'AJUD. PIZZAIOLO', pixTipo:'Cel',      pixChave:'silvabrunoda748@gmail.com'},
+];
+let pagamentos = [];
+async function loadPagamentos() {
+  const { data } = await db.from('pagamentos').select('*').order('created_at', { ascending: false });
+  if (data) pagamentos = data;
+}
+async function savePagamento(p) {
+  const { data, error } = await db.from('pagamentos').insert(p).select().single();
+  if (error) { showT('⚠️ Erro ao salvar: ' + error.message); return null; }
+  if (data) pagamentos.unshift(data);
+  return data;
+}
 const TIPOS_TAR = {
   caixa:    {label:'Conferência do Caixa',   icon:'💰', cor:'#3C3489'},
   producao: {label:'Contagem de Produção',   icon:'🍝', cor:'#993C1D'},
@@ -693,6 +732,8 @@ async function mostrarApp() {
   const cor = EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor || '#8B1A1A';
   av.style.background = cor;
   checkLembretes();
+  const btnFin = document.getElementById('ni-financeiro');
+  if (btnFin) btnFin.style.display = perfil === 'admin' ? '' : 'none';
   goTo('inicio');
 }
 
@@ -727,7 +768,7 @@ function goTo(tela) {
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   const nav = document.getElementById('ni-'+tela);
   if (nav) nav.classList.add('active');
-  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
+  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',financeiro:'Financeiro',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
   document.getElementById('tb-pg').textContent = pgs[tela]||'';
   document.querySelectorAll('.fab').forEach(f=>f.remove());
   renders[tela] && renders[tela](document.getElementById('content'));
@@ -1633,6 +1674,209 @@ perfil(a) {
       showT(`✅ Usuário ${num} vinculado a ${nome_v.split(' ')[0]}!`);
     }
   };
+},
+
+async financeiro(a) {
+  if (perfil !== 'admin') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
+  await loadPagamentos();
+
+  const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Rescisão','Reembolso','Outro'];
+
+  function fmtDataBr(iso) {
+    if (!iso) return '—';
+    const [y,m,d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  function fmtVal(v) {
+    return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  function renderHistorico() {
+    if (!pagamentos.length) return '<div style="padding:24px;text-align:center;color:var(--txt2)">Nenhum pagamento registrado ainda.</div>';
+    return pagamentos.map(p => {
+      const tipoCor = {Boleto:'#185FA5',PIX:'#1D9E75',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
+      const cor = tipoCor[p.tipo] || '#555';
+      const dt = p.vencimento ? fmtDataBr(p.vencimento) : '—';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bord)">
+        <div style="width:40px;height:40px;border-radius:10px;background:${cor}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
+          ${p.tipo==='Boleto'?'📄':p.tipo==='PIX'?'💸':p.tipo==='Salário'?'👥':p.tipo==='Extra'?'💵':p.tipo==='Venda Folga'?'🏖️':p.tipo==='Rescisão'?'📝':'💰'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--txt)">${p.item||p.fornecedor||'—'}</div>
+          <div style="font-size:11px;color:var(--txt2)">${p.tipo} · ${p.fornecedor||''} · Venc. ${dt}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${cor};white-space:nowrap">${fmtVal(p.valor)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderForm() {
+    const forn_boleto = FORNECEDORES_FIN.filter(f=>f.tipo==='Boleto');
+    const forn_pix    = FORNECEDORES_FIN.filter(f=>f.tipo==='PIX');
+    return `
+    <div class="fld"><label>Tipo de pagamento</label>
+      <select id="fin-tipo" onchange="window._finAtualizaForm()">
+        ${TIPOS_PAG.map(t=>`<option value="${t}">${t}</option>`).join('')}
+      </select>
+    </div>
+    <div id="fin-campos-extra"></div>
+    <div id="fin-campos-comuns" style="display:none">
+      <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Nota fiscal de carnes — Mai/26"></div>
+      <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
+      <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div id="fin-btns" style="display:none;margin-top:10px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
+      <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
+    </div>`;
+  }
+
+  a.innerHTML = `
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="fin-tab-novo" class="btn-p" style="flex:1;font-size:13px" onclick="window._finTab('novo')">➕ Novo pagamento</button>
+    <button id="fin-tab-hist" class="btn-p" style="flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)" onclick="window._finTab('hist')">📋 Histórico</button>
+  </div>
+  <div id="fin-painel-novo">
+    <div class="card"><div class="cb">${renderForm()}</div></div>
+  </div>
+  <div id="fin-painel-hist" style="display:none">
+    <div class="card"><div class="cb" style="padding:0 14px" id="fin-hist-lista">${renderHistorico()}</div></div>
+  </div>`;
+
+  const hoje = new Date();
+  const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
+
+  window._finTab = (t) => {
+    document.getElementById('fin-painel-novo').style.display = t==='novo' ? '' : 'none';
+    document.getElementById('fin-painel-hist').style.display = t==='hist' ? '' : 'none';
+    document.getElementById('fin-tab-novo').style.cssText = t==='novo' ? 'flex:1;font-size:13px' : 'flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)';
+    document.getElementById('fin-tab-hist').style.cssText = t==='hist' ? 'flex:1;font-size:13px' : 'flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)';
+    if (t==='hist') document.getElementById('fin-hist-lista').innerHTML = renderHistorico();
+  };
+
+  window._finAtualizaForm = () => {
+    const tipo = document.getElementById('fin-tipo').value;
+    const extra = document.getElementById('fin-campos-extra');
+    const comuns = document.getElementById('fin-campos-comuns');
+    const btns = document.getElementById('fin-btns');
+    comuns.style.display = tipo === 'Salário' ? 'none' : '';
+    btns.style.display = '';
+
+    if (tipo === 'Boleto') {
+      extra.innerHTML = `
+        <div class="fld"><label>Fornecedor</label>
+          <select id="fin-forn">${FORNECEDORES_FIN.filter(f=>f.tipo==='Boleto').map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}</select>
+        </div>
+        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Cozinha"></div>`;
+    } else if (tipo === 'PIX') {
+      extra.innerHTML = `
+        <div class="fld"><label>Fornecedor / Prestador</label>
+          <select id="fin-forn" onchange="window._finPreenchePix()">${FORNECEDORES_FIN.filter(f=>f.tipo==='PIX').map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}<option value="Outro">Outro...</option></select>
+        </div>
+        <div id="fin-pix-dados" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;font-size:13px;margin-bottom:8px"></div>
+        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Geral"></div>`;
+      setTimeout(window._finPreenchePix, 50);
+    } else if (tipo === 'Salário') {
+      const campos = COLABORADORES_FIN.map((c,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bord)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600">${c.nome.split(' ')[0]} ${c.nome.split(' ').slice(-1)[0]}</div>
+            <div style="font-size:11px;color:var(--txt2)">${c.cargo}</div>
+          </div>
+          <input type="number" id="sal_${i}" placeholder="0,00" step="0.01" min="0" style="width:100px;text-align:right">
+        </div>`).join('');
+      extra.innerHTML = `
+        <div class="fld"><label>Mês de referência</label><input id="fin-mes-ref" placeholder="MAI/26" value="${mesAtual}"></div>
+        <div class="fld"><label>Data de pagamento (vencimento)</label><input type="date" id="fin-venc" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:0 12px;margin-bottom:8px">${campos}</div>`;
+    } else if (tipo === 'Extra' || tipo === 'Venda Folga' || tipo === 'Rescisão' || tipo === 'Reembolso') {
+      extra.innerHTML = `
+        <div class="fld"><label>Colaborador</label>
+          <select id="fin-forn">${COLABORADORES_FIN.map(c=>`<option value="${c.nome}">${c.nome.split(' ')[0]} — ${c.cargo}</option>`).join('')}</select>
+        </div>`;
+    } else {
+      extra.innerHTML = `<div class="fld"><label>Fornecedor / Beneficiário</label><input id="fin-forn" placeholder="Ex: Gás Litoral"></div>`;
+    }
+  };
+
+  window._finPreenchePix = () => {
+    const sel = document.getElementById('fin-forn');
+    if (!sel) return;
+    const f = FORNECEDORES_FIN.find(x=>x.nome===sel.value);
+    const box = document.getElementById('fin-pix-dados');
+    if (!box) return;
+    if (f && f.pixChave) {
+      box.innerHTML = `<strong>Chave PIX (${f.pixTipo}):</strong> ${f.pixChave}<br><strong>Nome:</strong> ${f.pixNome}${f.banco?`<br><strong>Banco:</strong> ${f.banco}`:''}`;
+    } else {
+      box.innerHTML = `<span style="color:var(--txt2)">Preencha os dados do PIX manualmente no e-mail.</span>`;
+    }
+  };
+
+  window._finGerarEmail = () => {
+    const tipo = document.getElementById('fin-tipo').value;
+    const vencEl = document.getElementById('fin-venc');
+    const venc = vencEl ? vencEl.value : '';
+    const vencFmt = venc ? fmtDataBr(venc).slice(0,5) : 'DD/MM';
+
+    let assunto = '', corpo = '';
+
+    if (tipo === 'Salário') {
+      const mesRef = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
+      const [mesN, anoN] = mesRef.split('/');
+      const vencPag = venc ? fmtDataBr(venc) : 'DD/MM/AAAA';
+      assunto = `Lançar e Agendar - Salário ref. ao Mês de ${mesRef} - FORNILHA - VENC ${vencFmt}.`;
+      const linhas = COLABORADORES_FIN.map((c,i) => {
+        const val = parseFloat(document.getElementById('sal_'+i)?.value||0);
+        if (!val) return '';
+        return `${c.nome} - ${c.cargo}\nChave Pix: (${c.pixTipo}) - ${c.pixChave}${c.banco?`\nBanco: ${c.banco}`:''}\nNome: ${c.nome}\nValor de R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n`;
+      }).filter(Boolean);
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+    } else {
+      const item = document.getElementById('fin-item')?.value || '';
+      const fornEl = document.getElementById('fin-forn');
+      const forn = fornEl?.value || '';
+      const val = parseFloat(document.getElementById('fin-valor')?.value||0);
+      const cc = document.getElementById('fin-cc')?.value || 'Fornilha';
+      const valFmt = val ? `R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+
+      let dadosPag = '';
+      if (tipo === 'PIX') {
+        const f = FORNECEDORES_FIN.find(x=>x.nome===forn);
+        if (f && f.pixChave) dadosPag = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
+      }
+
+      assunto = `Lançar e Agendar - ${item||forn} - FORNILHA - VENC. ${vencFmt}`;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\nValor: ${valFmt}\nVencimento: ${venc ? fmtDataBr(venc) : '—'}\nTipo: ${tipo}${dadosPag}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+    }
+
+    const mailto = `mailto:financeirorestaurantelonier@gmail.com?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+    window.open(mailto);
+  };
+
+  window._finSalvar = async () => {
+    const tipo = document.getElementById('fin-tipo').value;
+    const vencEl = document.getElementById('fin-venc');
+    const venc = vencEl?.value || '';
+
+    if (tipo === 'Salário') {
+      const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
+      const total = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
+      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha'});
+    } else {
+      const item = document.getElementById('fin-item')?.value || '';
+      const fornEl = document.getElementById('fin-forn');
+      const forn = typeof fornEl?.value === 'string' ? fornEl.value : '';
+      const val = parseFloat(document.getElementById('fin-valor')?.value||0);
+      const cc = document.getElementById('fin-cc')?.value || '';
+      if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return; }
+      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc});
+    }
+    showT('✅ Pagamento salvo no histórico!');
+    window._finTab('hist');
+  };
+
+  window._finAtualizaForm();
 }
 
 };
