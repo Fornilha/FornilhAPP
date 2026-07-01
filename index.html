@@ -856,14 +856,14 @@ inicio(a) {
   <div class="slbl">Indicadores ${mesLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
-      <span class="ind-lbl">Acumulado ano</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(acumuladoAno/2800000*100),100)}%;background:#1D9E75"></div></div>
-      <span class="ind-val" style="color:#1D9E75">${varSinal}${varAno}% 🟢</span>
-    </div>
-    <div class="ind-row">
       <span class="ind-lbl">Acumulado mês</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(ref.fat/ref.fat25*100),100)}%;background:${corMargem}"></div></div>
       <span class="ind-val" style="color:${corMargem}">${fmt(ref.fat)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Folha</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.folha_pct/META_FOLHA*100,100)}%;background:${corFolha}"></div></div>
+      <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">CMV / Variáveis</span>
@@ -876,19 +876,19 @@ inicio(a) {
       <span class="ind-val" style="color:${corFix}">${ref.fix_pct}% ${indIcon(ref.fix_pct,META_FIX,true)}</span>
     </div>
     <div class="ind-row">
+      <span class="ind-lbl">Impostos</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
+      <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
+    </div>
+    <div class="ind-row">
       <span class="ind-lbl">Margem líquida</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.margem/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
       <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Folha</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.folha_pct/META_FOLHA*100,100)}%;background:${corFolha}"></div></div>
-      <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
-    </div>
-    <div class="ind-row">
-      <span class="ind-lbl">Impostos</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
-      <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
+      <span class="ind-lbl">Acumulado ano</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(acumuladoAno/2800000*100),100)}%;background:#1D9E75"></div></div>
+      <span class="ind-val" style="color:#1D9E75">${varSinal}${varAno}% 🟢</span>
     </div>
   </div></div>
 
