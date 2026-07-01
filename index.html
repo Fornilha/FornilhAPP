@@ -2166,12 +2166,11 @@ async rh(a) {
   const anoAbr  = String(ano).slice(2);
 
   const tabs = [
-    {id:'folha-reg',   ico:'📋', lbl:'Folha Registrados'},
-    {id:'folha-acerto',ico:'📝', lbl:'Acerto por Fora'},
-    {id:'admissao',    ico:'✅', lbl:'Admissão'},
-    {id:'rescisao',    ico:'🔴', lbl:'Rescisão'},
-    {id:'simulacao',   ico:'🔎', lbl:'Simulação Rescisão'},
-    {id:'ferias',      ico:'🏖️', lbl:'Aviso de Férias'},
+    {id:'folha',    ico:'📋', lbl:'Folha'},
+    {id:'admissao', ico:'✅', lbl:'Admissão'},
+    {id:'rescisao', ico:'🔴', lbl:'Rescisão'},
+    {id:'simulacao',ico:'🔎', lbl:'Simulação Rescisão'},
+    {id:'ferias',   ico:'🏖️', lbl:'Aviso de Férias'},
   ];
 
   a.innerHTML = `
@@ -2187,63 +2186,43 @@ async rh(a) {
 
   const colaboradores = COLABORADORES_FIN;
 
-  function formFolhaReg() {
+  function formFolha() {
     const {m:cm,a:ca} = mesAnoAtual();
-    let cols = colaboradores.map((c,i)=>`
-    <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:10px" id="freg-emp-${i}">
-      <div style="font-size:12px;font-weight:700;color:var(--verm);margin-bottom:8px">${i+1}. ${c.nome} · ${c.cargo}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-        <div class="fld"><label>Salário Base</label><input id="freg-sal-${i}" type="number" placeholder="0.00" step="0.01"></div>
-        <div class="fld"><label>Dias Trabalhados</label><input id="freg-dias-${i}" type="number" placeholder="30"></div>
-        <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="freg-inicio-${i}" placeholder="01/01/2026"></div>
-        <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="freg-ultimo-${i}" placeholder="${new Date().toLocaleDateString('pt-BR')}"></div>
-        <div class="fld"><label>H. Noturno (HH:MM)</label><input id="freg-hnoturno-${i}" placeholder="00:00"></div>
-        <div class="fld"><label>H. Extra (HH:MM)</label><input id="freg-hextra-${i}" placeholder="00:00"></div>
-        <div class="fld"><label>Feriados a comp.</label><input id="freg-feriados-${i}" type="number" placeholder="0" min="0"></div>
-        <div class="fld"><label>Domingos a comp.</label><input id="freg-domingos-${i}" type="number" placeholder="0" min="0"></div>
-        <div class="fld" style="grid-column:span 2"><label>Faltas</label><input id="freg-faltas-${i}" type="number" placeholder="0" min="0"></div>
-      </div>
-    </div>`).join('');
-
-    return `
-    <div class="card"><div class="cb">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px">📋 Folha — FUNC. REGISTRADOS</div>
-      <div class="fld"><label>Mês/Ano de Referência</label>
-        <select id="freg-mes">
-          ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
-        </select>
-      </div>
-      ${cols}
-      <button class="btn-p" onclick="window._rhEnviarFolhaReg(${ca})">📧 Gerar e-mail da Folha</button>
-    </div></div>`;
-  }
-
-  function formFolhaAcerto() {
-    const {m:cm,a:ca} = mesAnoAtual();
-    let cols = colaboradores.map((c,i)=>`
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const cols = colaboradores.map((c,i)=>`
     <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--verm);margin-bottom:8px">${c.nome} · ${c.cargo}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-        <div class="fld"><label>Salário Base</label><input id="facerto-sal-${i}" type="number" placeholder="0.00" step="0.01"></div>
-        <div class="fld"><label>Dias Trabalhados</label><input id="facerto-dias-${i}" type="number" placeholder="30"></div>
-        <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="facerto-inicio-${i}" placeholder="01/01/2026"></div>
-        <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="facerto-ultimo-${i}" placeholder="${new Date().toLocaleDateString('pt-BR')}"></div>
-        <div class="fld"><label>H. Extra Noturno (HH:MM)</label><input id="facerto-hnoturno-${i}" placeholder="00:00"></div>
-        <div class="fld"><label>H. Extra (HH:MM)</label><input id="facerto-hextra-${i}" placeholder="00:00"></div>
-        <div class="fld" style="grid-column:span 2"><label>Faltas</label><input id="facerto-faltas-${i}" type="number" placeholder="0" min="0"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--verm)">${c.nome} · ${c.cargo}</span>
+        <div style="display:flex;border:1.5px solid var(--bord);border-radius:8px;overflow:hidden;flex-shrink:0">
+          <button id="ftipo-reg-${i}" onclick="window._rhFolhaTipo(${i},'reg')"
+            style="padding:4px 10px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:var(--verm);color:#fff">Registrado</button>
+          <button id="ftipo-acerto-${i}" onclick="window._rhFolhaTipo(${i},'acerto')"
+            style="padding:4px 10px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--txt2)">Acerto</button>
+        </div>
       </div>
-      <button class="btn-p" style="margin-top:6px;background:var(--ouro);color:var(--verm-d)" onclick="window._rhEnviarAcerto(${i},${ca})">📧 E-mail de ${c.nome.split(' ')[0]}</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+        <div class="fld"><label>Salário Base</label><input id="f-sal-${i}" type="number" placeholder="0.00" step="0.01"></div>
+        <div class="fld"><label>Dias Trabalhados</label><input id="f-dias-${i}" type="number" placeholder="30"></div>
+        <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="f-inicio-${i}" placeholder="01/01/2026"></div>
+        <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="f-ultimo-${i}" placeholder="${hoje}"></div>
+        <div class="fld"><label>H. Noturno (HH:MM)</label><input id="f-hnoturno-${i}" placeholder="00:00"></div>
+        <div class="fld"><label>H. Extra (HH:MM)</label><input id="f-hextra-${i}" placeholder="00:00"></div>
+        <div id="f-feriados-wrap-${i}" class="fld"><label>Feriados a comp.</label><input id="f-feriados-${i}" type="number" placeholder="0" min="0"></div>
+        <div id="f-domingos-wrap-${i}" class="fld"><label>Domingos a comp.</label><input id="f-domingos-${i}" type="number" placeholder="0" min="0"></div>
+        <div class="fld" style="grid-column:span 2"><label>Faltas</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0"></div>
+      </div>
     </div>`).join('');
 
     return `
     <div class="card"><div class="cb">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px">📝 Folha — ACERTO POR FORA</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">📋 Folha de Pagamento</div>
       <div class="fld"><label>Mês/Ano de Referência</label>
-        <select id="facerto-mes">
+        <select id="f-mes">
           ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
         </select>
       </div>
       ${cols}
+      <button class="btn-p" onclick="window._rhEnviarFolha(${ca})">📧 Gerar e-mails da Folha</button>
     </div></div>`;
   }
 
@@ -2338,12 +2317,32 @@ async rh(a) {
       }
     });
     const c = document.getElementById('rh-content');
-    if (id==='folha-reg')    c.innerHTML = formFolhaReg();
-    if (id==='folha-acerto') c.innerHTML = formFolhaAcerto();
-    if (id==='admissao')     c.innerHTML = formAdmissao();
-    if (id==='rescisao')     c.innerHTML = formRescisao(false);
-    if (id==='simulacao')    c.innerHTML = formRescisao(true);
-    if (id==='ferias')       c.innerHTML = formFerias();
+    if (id==='folha')    c.innerHTML = formFolha();
+    if (id==='admissao') c.innerHTML = formAdmissao();
+    if (id==='rescisao') c.innerHTML = formRescisao(false);
+    if (id==='simulacao')c.innerHTML = formRescisao(true);
+    if (id==='ferias')   c.innerHTML = formFerias();
+  };
+
+  // tipo: 'reg' ou 'acerto' — alterna visual do toggle e mostra/oculta campos exclusivos de registrado
+  window._rhFolhaTipo = (i, tipo) => {
+    const btnReg    = document.getElementById(`ftipo-reg-${i}`);
+    const btnAcerto = document.getElementById(`ftipo-acerto-${i}`);
+    const ferWrap   = document.getElementById(`f-feriados-wrap-${i}`);
+    const domWrap   = document.getElementById(`f-domingos-wrap-${i}`);
+    if (!btnReg) return;
+    if (tipo === 'reg') {
+      btnReg.style.background    = 'var(--verm)'; btnReg.style.color    = '#fff';
+      btnAcerto.style.background = 'transparent'; btnAcerto.style.color = 'var(--txt2)';
+      if (ferWrap) ferWrap.style.display = '';
+      if (domWrap) domWrap.style.display = '';
+    } else {
+      btnAcerto.style.background = 'var(--ouro)'; btnAcerto.style.color = 'var(--verm-d)';
+      btnReg.style.background    = 'transparent'; btnReg.style.color    = 'var(--txt2)';
+      if (ferWrap) ferWrap.style.display = 'none';
+      if (domWrap) domWrap.style.display = 'none';
+    }
+    btnReg.dataset.tipo = tipo; // guarda no DOM para leitura posterior
   };
 
   window._rhRescisaoFuncChange = (id) => {
@@ -2362,58 +2361,64 @@ async rh(a) {
     document.getElementById('fer-cargo').value = c;
   };
 
-  window._rhEnviarFolhaReg = (ano) => {
-    const mesIdx = parseInt(document.getElementById('freg-mes').value);
-    const mesN = MESES_NOME[mesIdx].toUpperCase();
-    const mesA = MESES_ABR[mesIdx];
+  window._rhEnviarFolha = (ano) => {
+    const mesIdx  = parseInt(document.getElementById('f-mes').value);
+    const mesN    = MESES_NOME[mesIdx].toUpperCase();
+    const mesA    = MESES_ABR[mesIdx];
     const anoAbr2 = String(ano).slice(2);
-    let linhas = [];
-    colaboradores.forEach((c,i) => {
-      const sal   = parseFloat(document.getElementById(`freg-sal-${i}`)?.value||0);
-      const dias  = document.getElementById(`freg-dias-${i}`)?.value||'';
-      const ini   = document.getElementById(`freg-inicio-${i}`)?.value||'';
-      const ult   = document.getElementById(`freg-ultimo-${i}`)?.value||'';
-      const hn    = document.getElementById(`freg-hnoturno-${i}`)?.value||'00:00';
-      const hex   = document.getElementById(`freg-hextra-${i}`)?.value||'00:00';
-      const fer   = parseInt(document.getElementById(`freg-feriados-${i}`)?.value||0);
-      const dom   = parseInt(document.getElementById(`freg-domingos-${i}`)?.value||0);
-      const falt  = parseInt(document.getElementById(`freg-faltas-${i}`)?.value||0);
-      const salFmt = sal.toLocaleString('pt-BR',{minimumFractionDigits:2});
-      let bloco = `${i+1}- ${c.nome} - ${c.cargo}%0A`;
-      bloco += `· Cargo: ${c.cargo}%0A`;
-      bloco += `· Salário base: R$ ${salFmt}%0A`;
-      bloco += `· Data de Início: ${ini}%0A`;
-      bloco += `· Último dia de trabalho ${ult}%0A`;
-      bloco += `· Dias trabalhados: ${dias} Dias%0A`;
-      bloco += `· Horas com adicional noturno: ${hn}hs;%0A`;
-      bloco += `· Hora extra no mês de ${mesN}: ${hex}hs;%0A`;
-      if (fer>0) bloco += `· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};%0A`;
-      if (dom>0) bloco += `· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;%0A`;
-      bloco += `· ${faltasTxt(falt)}`;
-      linhas.push(bloco);
-    });
-    const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesA}/${anoAbr2}.`);
-    const body = linhas.join('%0A%0A');
-    window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
-  };
 
-  window._rhEnviarAcerto = (i, ano) => {
-    const mesIdx = parseInt(document.getElementById('facerto-mes').value);
-    const mesN = MESES_NOME[mesIdx].toUpperCase();
-    const mesA = MESES_ABR[mesIdx];
-    const anoAbr2 = String(ano).slice(2);
-    const c = colaboradores[i];
-    const sal    = parseFloat(document.getElementById(`facerto-sal-${i}`)?.value||0);
-    const dias   = document.getElementById(`facerto-dias-${i}`)?.value||'';
-    const ini    = document.getElementById(`facerto-inicio-${i}`)?.value||'';
-    const ult    = document.getElementById(`facerto-ultimo-${i}`)?.value||'';
-    const hn     = document.getElementById(`facerto-hnoturno-${i}`)?.value||'00:00';
-    const hex    = document.getElementById(`facerto-hextra-${i}`)?.value||'00:00';
-    const falt   = parseInt(document.getElementById(`facerto-faltas-${i}`)?.value||0);
-    const salFmt = sal.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${c.nome} - ${mesA}/${anoAbr2}`);
-    const body = `Olá Luciana.%0AFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.%0ASegue informações para o Acerto por Fora (folha de pagamento):%0A· Cargo: ${c.cargo}%0A· Salário base: R$ ${salFmt}%0A· Data de Início: ${ini}%0A· Último dia de trabalho ${ult}%0A· Dias trabalhados: ${dias} Dias.%0A· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;%0A· Hora extra no mês de ${mesN}: ${hex}hs;%0A· ${falt} (${falt>0?numExtenso(falt):'ZERO'}) FALTA${falt!==1?'S':''}`;
-    window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
+    const registrados = [];
+    const acertos = [];
+
+    colaboradores.forEach((c, i) => {
+      const btnReg = document.getElementById(`ftipo-reg-${i}`);
+      // tipo: se dataset.tipo === 'acerto' é acerto por fora, senão registrado (padrão)
+      const tipo = btnReg?.dataset?.tipo === 'acerto' ? 'acerto' : 'reg';
+
+      const sal    = parseFloat(document.getElementById(`f-sal-${i}`)?.value||0);
+      const dias   = document.getElementById(`f-dias-${i}`)?.value||'';
+      const ini    = document.getElementById(`f-inicio-${i}`)?.value||'';
+      const ult    = document.getElementById(`f-ultimo-${i}`)?.value||'';
+      const hn     = document.getElementById(`f-hnoturno-${i}`)?.value||'00:00';
+      const hex    = document.getElementById(`f-hextra-${i}`)?.value||'00:00';
+      const falt   = parseInt(document.getElementById(`f-faltas-${i}`)?.value||0);
+      const salFmt = sal.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+      if (tipo === 'reg') {
+        const fer = parseInt(document.getElementById(`f-feriados-${i}`)?.value||0);
+        const dom = parseInt(document.getElementById(`f-domingos-${i}`)?.value||0);
+        let bloco = `${registrados.length+1}- ${c.nome} - ${c.cargo}%0A`;
+        bloco += `· Cargo: ${c.cargo}%0A`;
+        bloco += `· Salário base: R$ ${salFmt}%0A`;
+        bloco += `· Data de Início: ${ini}%0A`;
+        bloco += `· Último dia de trabalho ${ult}%0A`;
+        bloco += `· Dias trabalhados: ${dias} Dias%0A`;
+        bloco += `· Horas com adicional noturno: ${hn}hs;%0A`;
+        bloco += `· Hora extra no mês de ${mesN}: ${hex}hs;%0A`;
+        if (fer>0) bloco += `· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};%0A`;
+        if (dom>0) bloco += `· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;%0A`;
+        bloco += `· ${faltasTxt(falt)}`;
+        registrados.push(bloco);
+      } else {
+        acertos.push({c, sal, salFmt, dias, ini, ult, hn, hex, falt});
+      }
+    });
+
+    // e-mail único para registrados
+    if (registrados.length > 0) {
+      const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesA}/${anoAbr2}.`);
+      const body = registrados.join('%0A%0A');
+      window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
+    }
+
+    // e-mail individual para cada acerto por fora
+    acertos.forEach(({c, salFmt, dias, ini, ult, hn, hex, falt}) => {
+      const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${c.nome} - ${mesA}/${anoAbr2}`);
+      const body = `Olá Luciana.%0AFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.%0ASegue informações para o Acerto por Fora (folha de pagamento):%0A· Cargo: ${c.cargo}%0A· Salário base: R$ ${salFmt}%0A· Data de Início: ${ini}%0A· Último dia de trabalho ${ult}%0A· Dias trabalhados: ${dias} Dias.%0A· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;%0A· Hora extra no mês de ${mesN}: ${hex}hs;%0A· ${falt} (${falt>0?numExtenso(falt):'ZERO'}) FALTA${falt!==1?'S':''}`;
+      window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
+    });
+
+    if (registrados.length === 0 && acertos.length === 0) showT('⚠️ Nenhum colaborador preenchido');
   };
 
   window._rhAdmissao = () => {
@@ -2514,7 +2519,7 @@ async rh(a) {
     window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
   };
 
-  window._rhTab('folha-reg');
+  window._rhTab('folha');
 }
 
 };
