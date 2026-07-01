@@ -2324,25 +2324,19 @@ async rh(a) {
     if (id==='ferias')   c.innerHTML = formFerias();
   };
 
-  // tipo: 'reg' ou 'acerto' — alterna visual do toggle e mostra/oculta campos exclusivos de registrado
+  // tipo: 'reg' ou 'acerto' — apenas alterna visual do toggle
   window._rhFolhaTipo = (i, tipo) => {
     const btnReg    = document.getElementById(`ftipo-reg-${i}`);
     const btnAcerto = document.getElementById(`ftipo-acerto-${i}`);
-    const ferWrap   = document.getElementById(`f-feriados-wrap-${i}`);
-    const domWrap   = document.getElementById(`f-domingos-wrap-${i}`);
     if (!btnReg) return;
     if (tipo === 'reg') {
       btnReg.style.background    = 'var(--verm)'; btnReg.style.color    = '#fff';
       btnAcerto.style.background = 'transparent'; btnAcerto.style.color = 'var(--txt2)';
-      if (ferWrap) ferWrap.style.display = '';
-      if (domWrap) domWrap.style.display = '';
     } else {
       btnAcerto.style.background = 'var(--ouro)'; btnAcerto.style.color = 'var(--verm-d)';
       btnReg.style.background    = 'transparent'; btnReg.style.color    = 'var(--txt2)';
-      if (ferWrap) ferWrap.style.display = 'none';
-      if (domWrap) domWrap.style.display = 'none';
     }
-    btnReg.dataset.tipo = tipo; // guarda no DOM para leitura posterior
+    btnReg.dataset.tipo = tipo;
   };
 
   window._rhRescisaoFuncChange = (id) => {
@@ -2400,7 +2394,9 @@ async rh(a) {
         bloco += `· ${faltasTxt(falt)}`;
         registrados.push(bloco);
       } else {
-        acertos.push({c, sal, salFmt, dias, ini, ult, hn, hex, falt});
+        const fer2 = parseInt(document.getElementById(`f-feriados-${i}`)?.value||0);
+        const dom2 = parseInt(document.getElementById(`f-domingos-${i}`)?.value||0);
+        acertos.push({c, sal, salFmt, dias, ini, ult, hn, hex, falt, fer:fer2, dom:dom2});
       }
     });
 
@@ -2412,9 +2408,12 @@ async rh(a) {
     }
 
     // e-mail individual para cada acerto por fora
-    acertos.forEach(({c, salFmt, dias, ini, ult, hn, hex, falt}) => {
+    acertos.forEach(({c, salFmt, dias, ini, ult, hn, hex, falt, fer, dom}) => {
       const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${c.nome} - ${mesA}/${anoAbr2}`);
-      const body = `Olá Luciana.%0AFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.%0ASegue informações para o Acerto por Fora (folha de pagamento):%0A· Cargo: ${c.cargo}%0A· Salário base: R$ ${salFmt}%0A· Data de Início: ${ini}%0A· Último dia de trabalho ${ult}%0A· Dias trabalhados: ${dias} Dias.%0A· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;%0A· Hora extra no mês de ${mesN}: ${hex}hs;%0A· ${falt} (${falt>0?numExtenso(falt):'ZERO'}) FALTA${falt!==1?'S':''}`;
+      let body = `Olá Luciana.%0AFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.%0ASegue informações para o Acerto por Fora (folha de pagamento):%0A· Cargo: ${c.cargo}%0A· Salário base: R$ ${salFmt}%0A· Data de Início: ${ini}%0A· Último dia de trabalho ${ult}%0A· Dias trabalhados: ${dias} Dias.%0A· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;%0A· Hora extra no mês de ${mesN}: ${hex}hs;`;
+      if (fer>0) body += `%0A· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};`;
+      if (dom>0) body += `%0A· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;`;
+      body += `%0A· ${falt} (${falt>0?numExtenso(falt):'ZERO'}) FALTA${falt!==1?'S':''}`;
       window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
     });
 
