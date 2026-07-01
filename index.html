@@ -881,11 +881,6 @@ inicio(a) {
       <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Margem líquida</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.margem/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
-      <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
-    </div>
-    <div class="ind-row">
       <span class="ind-lbl">Acumulado ano</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(acumuladoAno/2800000*100),100)}%;background:#1D9E75"></div></div>
       <span class="ind-val" style="color:#1D9E75">${varSinal}${varAno}% 🟢</span>
