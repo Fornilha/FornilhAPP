@@ -784,18 +784,33 @@ const fmt = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximum
 // ─── RENDERS ─────────────────────────────────────────────
 const renders = {
 
-inicio(a) {
-  const dt = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  const dadosFechados = DADOS_2026.filter(d=>d.fat>0);
-  const acumuladoAno = dadosFechados.reduce((s,d)=>s+d.fat,0);
-  const ref = dadosFechados.slice(-1)[0]; // último mês fechado
+async inicio(a) {
+  a.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--txt3);font-size:13px">Carregando...</div>';
+
+  const hoje = new Date();
+  const hojeStr = hoje.toISOString().split('T')[0];
+  const mesRef = hojeStr.slice(0,7); // '2026-07'
+  const [anoAtual, mesAtual] = mesRef.split('-').map(Number);
+  const nomeMes = hoje.toLocaleDateString('pt-BR',{month:'long'});
+  const dt = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+
+  // Carregar faturamento real do mês atual
+  const { data: fatDiario } = await db.from('faturamento_diario')
+    .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
+  const dias = fatDiario || [];
+  const acumuladoMes = dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0);
+  const lancadoHoje = dias.find(d => d.data === hojeStr);
+
+  // Histórico fechado (meses anteriores do DADOS_2026)
+  const mesesFechados = DADOS_2026.filter(d => d.fat > 0);
+  const acumuladoAno = mesesFechados.reduce((s,d) => s + d.fat, 0) + acumuladoMes;
+  const ref = mesesFechados.slice(-1)[0]; // indicadores do último mês fechado
   const mesLabel = ref.mes + '/26';
-  const var25 = dadosFechados.reduce((s,d)=>s+d.fat25,0);
+  const var25 = mesesFechados.reduce((s,d) => s + d.fat25, 0);
   const varAno = Math.round((acumuladoAno/var25-1)*100);
-  const varSinal = varAno>=0?'+':'';
+  const varSinal = varAno >= 0 ? '+' : '';
 
   function indCor(val,meta,inv=false){
-    // inv=true: menor é melhor (custos)
     if(inv) return val<=meta*0.9?'#1D9E75':val<=meta?'#EF9F27':'#E24B4A';
     return val>=meta*0.9?'#1D9E75':val>=meta*0.7?'#EF9F27':'#E24B4A';
   }
@@ -804,30 +819,47 @@ inicio(a) {
     const warn=inv?val<=meta*1.15:val>=meta*0.7;
     return ok?'🟢':warn?'🟡':'🔴';
   }
-  function barW(val,meta,inv=false){
-    // barra relativa à meta
-    const pct = inv ? Math.min(val/meta*100,100) : Math.min(val/meta*100,100);
-    return Math.round(pct)+'%';
-  }
 
-  // Metas definidas
   const META_CMV=28, META_FIX=10, META_FOLHA=19, META_MARGEM=42, META_IMP=10, META_VAR=5;
+  const corMargem = indCor(ref.margem,META_MARGEM);
+  const corFolha  = indCor(ref.folha_pct,META_FOLHA,true);
+  const corCMV    = indCor(ref.cmv_pct,META_CMV,true);
+  const corFix    = indCor(ref.fix_pct,META_FIX,true);
+  const corImp    = indCor(ref.imp_pct,META_IMP,true);
+  const corVar    = indCor(ref.desp_var_pct,META_VAR,true);
 
-  const corMargem  = indCor(ref.margem,META_MARGEM);
-  const corFolha   = indCor(ref.folha_pct,META_FOLHA,true);
-  const corCMV     = indCor(ref.cmv_pct,META_CMV,true);
-  const corFix     = indCor(ref.fix_pct,META_FIX,true);
-  const corImp     = indCor(ref.imp_pct,META_IMP,true);
-  const corVar     = indCor(ref.desp_var_pct,META_VAR,true);
+  const podeLancar = perfil === 'admin' || perfil === 'caixa';
+
+  const cardHoje = lancadoHoje
+    ? `<div style="background:var(--ok-l);border:1px solid var(--ok);border-radius:var(--r);padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">✅</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--ok)">Faturamento lançado hoje</div>
+          <div style="font-size:18px;font-weight:700;color:var(--txt);margin-top:1px">${fmt(lancadoHoje.faturamento_bruto)}</div>
+        </div>
+        ${podeLancar ? `<button onclick="window._editarFaturamento('${lancadoHoje.data}',${lancadoHoje.faturamento_bruto})" style="background:none;border:1px solid var(--ok);color:var(--ok);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Editar</button>` : ''}
+      </div>`
+    : podeLancar
+      ? `<div style="background:var(--av-l);border:1px solid var(--ouro);border-radius:var(--r);padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">⚠️</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--av)">Faturamento de hoje não lançado</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Lançar o faturamento atualiza os KPIs automaticamente</div>
+          </div>
+          <button onclick="window._lancarFaturamento()" style="background:var(--verm);color:#fff;border:none;padding:8px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Lançar</button>
+        </div>`
+      : '';
 
   a.innerHTML=`
   <div style="padding:16px 0 4px"><p style="font-size:21px;font-weight:700">Olá, ${nome.split(' ')[0]} 👋</p><p style="font-size:13px;color:var(--txt2);margin-top:2px">${dt} · Baixa temporada</p></div>
 
+  ${cardHoje}
+
   <div class="kgrid">
     <div class="kpi dest">
-      <div class="kpi-l">Acumulado ${mesLabel}</div>
-      <div class="kpi-v">${fmt(ref.fat)}</div>
-      <div class="kpi-s">Ref.: mês anterior fechado</div>
+      <div class="kpi-l">Acumulado ${nomeMes}</div>
+      <div class="kpi-v">${acumuladoMes > 0 ? fmt(acumuladoMes) : '—'}</div>
+      <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Margem ${mesLabel}</div>
@@ -848,13 +880,22 @@ inicio(a) {
 
   <div class="ai-card">
     <div class="ai-hd"><span class="ai-badge">IA</span><span class="ai-title">Assistente Fornilha</span></div>
-    <p id="ai-resp">Analisando dados reais de jan–mai/2026... O Fornilha cresceu 25% vs 2025 no período. Maior preocupação: folha em 28% em maio (crítico). Recomendo redução de 1-2 colaboradores na baixa temporada para proteger caixa nos próximos 4 meses.</p>
+    <p id="ai-resp">Analisando dados reais de jan–jun/2026... O Fornilha acumulou ${fmt(acumuladoAno)} no ano. Mês atual (${nomeMes}): ${acumuladoMes > 0 ? fmt(acumuladoMes) + ' em ' + dias.length + ' dias.' : 'nenhum faturamento lançado ainda.'}</p>
     <div class="ai-inp">
       <input id="ai-q" placeholder="Pergunte sobre o Fornilha..." onkeydown="if(event.key==='Enter')askAI()">
       <button onclick="askAI()">→</button>
     </div>
     <div class="ai-loading" id="ai-load"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Analisando...</span></div>
   </div>
+
+  ${dias.length > 0 ? `
+  <div class="slbl">Faturamento — ${nomeMes} dia a dia</div>
+  <div class="card"><div class="cb" style="padding-top:13px">
+    ${dias.slice().reverse().map(d => {
+      const dataFmt = new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+      return `<div class="alrt"><span class="alrt-ico">💰</span><span class="alrt-txt">${dataFmt}</span><span style="font-size:14px;font-weight:700;color:var(--txt)">${fmt(Number(d.faturamento_bruto))}</span></div>`;
+    }).join('')}
+  </div></div>` : ''}
 
   <div class="slbl">Indicadores ${mesLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
@@ -898,6 +939,54 @@ inicio(a) {
     ${ref.margem < 20 ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Margem em ${ref.margem.toFixed(1)}% em ${mesLabel} — abaixo do mínimo de 20%</span><span class="tag tag-r">Crítico</span></div>` : ''}
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
+
+  // Lançar faturamento do dia
+  window._lancarFaturamento = function(dataEdit, valEdit) {
+    const isEdit = !!dataEdit;
+    const dataDefault = dataEdit || hojeStr;
+    document.getElementById('modal-inner').innerHTML = `
+      <h3>${isEdit ? 'Editar' : 'Lançar'} faturamento</h3>
+      <p>Valor bruto do dia (antes de taxas e descontos)</p>
+      <div class="fld"><label>Data</label>
+        <input type="date" id="fat-data" value="${dataDefault}" max="${hojeStr}">
+      </div>
+      <div class="fld"><label>Faturamento bruto (R$)</label>
+        <input type="number" id="fat-val" placeholder="0,00" step="0.01" min="0" value="${valEdit||''}">
+      </div>
+      <div id="fat-err" style="color:var(--er);font-size:12px;margin-bottom:8px;display:none"></div>
+      <div class="mbtns">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-ok" id="fat-btn" onclick="window._salvarFaturamento()">Salvar</button>
+      </div>`;
+    document.getElementById('modal-bg').classList.add('open');
+    setTimeout(() => document.getElementById('fat-val')?.focus(), 100);
+  };
+  window._editarFaturamento = window._lancarFaturamento;
+
+  window._salvarFaturamento = async function() {
+    const btn = document.getElementById('fat-btn');
+    const errEl = document.getElementById('fat-err');
+    const dataVal = document.getElementById('fat-data').value;
+    const fatVal = parseFloat(document.getElementById('fat-val').value);
+    if (!dataVal || isNaN(fatVal) || fatVal <= 0) {
+      errEl.textContent = 'Preencha a data e o valor corretamente.';
+      errEl.style.display = 'block'; return;
+    }
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const mesRefSave = dataVal.slice(0,7);
+    const { error } = await db.from('faturamento_diario').upsert(
+      { data: dataVal, mes_ref: mesRefSave, faturamento_bruto: fatVal, created_by: nome },
+      { onConflict: 'data' }
+    );
+    if (error) {
+      errEl.textContent = 'Erro ao salvar: ' + error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Salvar'; return;
+    }
+    fecharModal();
+    showToast('Faturamento salvo ✅');
+    renders.inicio(document.getElementById('content'));
+  };
 },
 
 feed(a) {
