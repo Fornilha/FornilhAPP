@@ -789,22 +789,23 @@ async inicio(a) {
 
   const hoje = new Date();
   const hojeStr = hoje.toISOString().split('T')[0];
-  const mesRef = hojeStr.slice(0,7); // '2026-07'
-  const [anoAtual, mesAtual] = mesRef.split('-').map(Number);
+  const mesRef = hojeStr.slice(0,7);
   const nomeMes = hoje.toLocaleDateString('pt-BR',{month:'long'});
   const dt = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
 
-  // Carregar faturamento real do mês atual
-  const { data: fatDiario } = await db.from('faturamento_diario')
-    .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
+  // Carregar dados em paralelo
+  const [{ data: fatDiario }, { data: taxaHoje }] = await Promise.all([
+    db.from('faturamento_diario').select('*').eq('mes_ref', mesRef).order('data', {ascending:true}),
+    db.from('taxa_lancamentos').select('*').eq('data', hojeStr).maybeSingle(),
+  ]);
+
   const dias = fatDiario || [];
   const acumuladoMes = dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0);
-  const lancadoHoje = dias.find(d => d.data === hojeStr);
+  const fatHoje = dias.find(d => d.data === hojeStr);
 
-  // Histórico fechado (meses anteriores do DADOS_2026)
   const mesesFechados = DADOS_2026.filter(d => d.fat > 0);
   const acumuladoAno = mesesFechados.reduce((s,d) => s + d.fat, 0) + acumuladoMes;
-  const ref = mesesFechados.slice(-1)[0]; // indicadores do último mês fechado
+  const ref = mesesFechados.slice(-1)[0];
   const mesLabel = ref.mes + '/26';
   const var25 = mesesFechados.reduce((s,d) => s + d.fat25, 0);
   const varAno = Math.round((acumuladoAno/var25-1)*100);
@@ -830,30 +831,70 @@ async inicio(a) {
 
   const podeLancar = perfil === 'admin' || perfil === 'caixa';
 
-  const cardHoje = lancadoHoje
-    ? `<div style="background:var(--ok-l);border:1px solid var(--ok);border-radius:var(--r);padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:22px">✅</span>
+  // ── Checklist diário (só admin/caixa) ──
+  function itemChecklist({ok, ico, titulo, detalhe, acao, fn}) {
+    if (ok) return `
+      <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--bord)">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--ok-l);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">${ico}</div>
         <div style="flex:1">
-          <div style="font-size:12px;font-weight:600;color:var(--ok)">Faturamento lançado hoje</div>
-          <div style="font-size:18px;font-weight:700;color:var(--txt);margin-top:1px">${fmt(lancadoHoje.faturamento_bruto)}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--txt)">${titulo}</div>
+          <div style="font-size:11px;color:var(--ok);margin-top:1px">${detalhe}</div>
         </div>
-        ${podeLancar ? `<button onclick="window._editarFaturamento('${lancadoHoje.data}',${lancadoHoje.faturamento_bruto})" style="background:none;border:1px solid var(--ok);color:var(--ok);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Editar</button>` : ''}
-      </div>`
-    : podeLancar
-      ? `<div style="background:var(--av-l);border:1px solid var(--ouro);border-radius:var(--r);padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">⚠️</span>
+        <span style="font-size:18px">✅</span>
+      </div>`;
+    return `
+      <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--bord)">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--av-l);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">${ico}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--txt)">${titulo}</div>
+          <div style="font-size:11px;color:var(--av);margin-top:1px">Pendente</div>
+        </div>
+        <button onclick="${fn}()" style="background:var(--verm);color:#fff;border:none;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">${acao}</button>
+      </div>`;
+  }
+
+  const itensChecklist = [
+    { ok: !!fatHoje, ico: '💰', titulo: 'Faturamento bruto',
+      detalhe: fatHoje ? fmt(fatHoje.faturamento_bruto) : '',
+      acao: 'Lançar', fn: 'window._lancarFaturamento' },
+    { ok: !!taxaHoje, ico: '🪙', titulo: 'Taxa de serviço 10%',
+      detalhe: taxaHoje ? `R$ ${Number(taxaHoje.valor_taxa).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '',
+      acao: 'Lançar', fn: '()=>goTo("taxa")' },
+  ];
+
+  const totalItens = itensChecklist.length;
+  const totalOk = itensChecklist.filter(i => i.ok).length;
+  const todosOk = totalOk === totalItens;
+  const pct = Math.round(totalOk/totalItens*100);
+
+  const checklistHtml = podeLancar ? `
+    <div class="card" style="margin-bottom:13px;overflow:hidden">
+      <div style="padding:12px 15px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:var(--txt)">Lançamentos do dia</div>
+          <div style="font-size:11px;font-weight:600;color:${todosOk?'var(--ok)':'var(--av)'}">${totalOk}/${totalItens} concluídos</div>
+        </div>
+        <div style="height:4px;background:var(--bg);border-radius:2px;margin-bottom:12px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${todosOk?'var(--ok)':'var(--ouro)'};border-radius:2px;transition:width .4s"></div>
+        </div>
+      </div>
+      <div style="padding:0 15px 4px">
+        ${itensChecklist.map(i => itemChecklist(i)).join('')}
+        <div style="display:flex;align-items:center;gap:11px;padding:11px 0">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;opacity:.5">📦</div>
           <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;color:var(--av)">Faturamento de hoje não lançado</div>
-            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Lançar o faturamento atualiza os KPIs automaticamente</div>
+            <div style="font-size:13px;font-weight:600;color:var(--txt3)">Despesas do dia</div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:1px">Notas e PIX — em breve</div>
           </div>
-          <button onclick="window._lancarFaturamento()" style="background:var(--verm);color:#fff;border:none;padding:8px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Lançar</button>
-        </div>`
-      : '';
+          <span style="font-size:11px;color:var(--txt3);padding:4px 9px;border:1px solid var(--bord);border-radius:20px">Em breve</span>
+        </div>
+      </div>
+    </div>` : '';
 
   a.innerHTML=`
-  <div style="padding:16px 0 4px"><p style="font-size:21px;font-weight:700">Olá, ${nome.split(' ')[0]} 👋</p><p style="font-size:13px;color:var(--txt2);margin-top:2px">${dt} · Baixa temporada</p></div>
+  <div style="padding:16px 0 8px"><p style="font-size:21px;font-weight:700">Olá, ${nome.split(' ')[0]} 👋</p><p style="font-size:13px;color:var(--txt2);margin-top:2px">${dt} · Baixa temporada</p></div>
 
-  ${cardHoje}
+  ${checklistHtml}
 
   <div class="kgrid">
     <div class="kpi dest">
@@ -880,7 +921,7 @@ async inicio(a) {
 
   <div class="ai-card">
     <div class="ai-hd"><span class="ai-badge">IA</span><span class="ai-title">Assistente Fornilha</span></div>
-    <p id="ai-resp">Analisando dados reais de jan–jun/2026... O Fornilha acumulou ${fmt(acumuladoAno)} no ano. Mês atual (${nomeMes}): ${acumuladoMes > 0 ? fmt(acumuladoMes) + ' em ' + dias.length + ' dias.' : 'nenhum faturamento lançado ainda.'}</p>
+    <p id="ai-resp">Acumulado 2026: ${fmt(acumuladoAno)}. Mês atual (${nomeMes}): ${acumuladoMes > 0 ? fmt(acumuladoMes) + ' em ' + dias.length + ' dias lançados.' : 'nenhum faturamento lançado ainda.'} Indicadores baseados em ${mesLabel}.</p>
     <div class="ai-inp">
       <input id="ai-q" placeholder="Pergunte sobre o Fornilha..." onkeydown="if(event.key==='Enter')askAI()">
       <button onclick="askAI()">→</button>
@@ -940,15 +981,14 @@ async inicio(a) {
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 
-  // Lançar faturamento do dia
+  // Modal: lançar faturamento
   window._lancarFaturamento = function(dataEdit, valEdit) {
     const isEdit = !!dataEdit;
-    const dataDefault = dataEdit || hojeStr;
     document.getElementById('modal-inner').innerHTML = `
       <h3>${isEdit ? 'Editar' : 'Lançar'} faturamento</h3>
-      <p>Valor bruto do dia (antes de taxas e descontos)</p>
+      <p>Valor bruto do dia — antes de taxa e descontos</p>
       <div class="fld"><label>Data</label>
-        <input type="date" id="fat-data" value="${dataDefault}" max="${hojeStr}">
+        <input type="date" id="fat-data" value="${dataEdit||hojeStr}" max="${hojeStr}">
       </div>
       <div class="fld"><label>Faturamento bruto (R$)</label>
         <input type="number" id="fat-val" placeholder="0,00" step="0.01" min="0" value="${valEdit||''}">
@@ -961,7 +1001,6 @@ async inicio(a) {
     document.getElementById('modal-bg').classList.add('open');
     setTimeout(() => document.getElementById('fat-val')?.focus(), 100);
   };
-  window._editarFaturamento = window._lancarFaturamento;
 
   window._salvarFaturamento = async function() {
     const btn = document.getElementById('fat-btn');
@@ -973,13 +1012,12 @@ async inicio(a) {
       errEl.style.display = 'block'; return;
     }
     btn.disabled = true; btn.textContent = 'Salvando...';
-    const mesRefSave = dataVal.slice(0,7);
     const { error } = await db.from('faturamento_diario').upsert(
-      { data: dataVal, mes_ref: mesRefSave, faturamento_bruto: fatVal, created_by: nome },
+      { data: dataVal, mes_ref: dataVal.slice(0,7), faturamento_bruto: fatVal, created_by: nome },
       { onConflict: 'data' }
     );
     if (error) {
-      errEl.textContent = 'Erro ao salvar: ' + error.message;
+      errEl.textContent = 'Erro: ' + error.message;
       errEl.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Salvar'; return;
     }
