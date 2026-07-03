@@ -299,6 +299,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="ni" id="ni-vendas" onclick="goTo('vendas')"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
     <button class="ni" id="ni-financeiro" onclick="goTo('financeiro')" style="display:none"><span class="ni-ico">💳</span><span class="ni-lbl">Financeiro</span></button>
     <button class="ni" id="ni-rh" onclick="goTo('rh')" style="display:none"><span class="ni-ico">👥</span><span class="ni-lbl">RH</span></button>
+    <button class="ni" id="ni-taxa" onclick="goTo('taxa')" style="display:none"><span class="ni-ico">🪙</span><span class="ni-lbl">Taxa 10%</span></button>
   </nav>
 </div>
 </div>
@@ -736,6 +737,8 @@ async function mostrarApp() {
   if (btnFin) btnFin.style.display = perfil === 'admin' ? '' : 'none';
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
+  const btnTaxa = document.getElementById('ni-taxa');
+  if (btnTaxa) btnTaxa.style.display = perfil === 'admin' ? '' : 'none';
   goTo('inicio');
 }
 
@@ -770,7 +773,7 @@ function goTo(tela) {
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   const nav = document.getElementById('ni-'+tela);
   if (nav) nav.classList.add('active');
-  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',financeiro:'Financeiro',rh:'RH / Contabilidade',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
+  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',financeiro:'Financeiro',rh:'RH / Contabilidade',taxa:'Taxa de Serviço 10%',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
   document.getElementById('tb-pg').textContent = pgs[tela]||'';
   document.querySelectorAll('.fab').forEach(f=>f.remove());
   renders[tela] && renders[tela](document.getElementById('content'));
@@ -2519,7 +2522,275 @@ async rh(a) {
   };
 
   window._rhTab('folha');
-}
+},
+
+async taxa(a) {
+  if (perfil !== 'admin') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
+
+  const COLS = COLABORADORES_FIN.map(c => c.nome);
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtD = s => { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+  const hoje = new Date();
+  const mesRef = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const quinzAtual = hoje.getDate() <= 15 ? 1 : 2;
+
+  const tabs = [
+    {id:'lanc', ico:'📝', lbl:'Lançamento'},
+    {id:'resumo', ico:'📊', lbl:'Resumo'},
+    {id:'fecha', ico:'✉️', lbl:'Fechamento'},
+  ];
+
+  a.innerHTML = `
+  <div style="padding:14px 14px 88px">
+    <div class="slbl">Taxa de Serviço 10%</div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">
+      ${tabs.map(t=>`<button id="tx-tab-${t.id}" onclick="window._txTab('${t.id}')"
+        style="flex-shrink:0;padding:7px 12px;border-radius:20px;border:1.5px solid var(--bord);background:var(--surf);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s">
+        ${t.ico} ${t.lbl}</button>`).join('')}
+    </div>
+    <div id="tx-content"></div>
+  </div>`;
+
+  function setTab(id) {
+    tabs.forEach(t => {
+      const b = document.getElementById('tx-tab-'+t.id);
+      if (!b) return;
+      b.style.background = t.id===id ? 'var(--verm)' : 'var(--surf)';
+      b.style.color = t.id===id ? '#fff' : 'var(--txt)';
+      b.style.borderColor = t.id===id ? 'var(--verm)' : 'var(--bord)';
+    });
+  }
+
+  async function renderLanc() {
+    setTab('lanc');
+    const {data:lancs} = await db.from('taxa_lancamentos')
+      .select('*').eq('mes_ref', mesRef).order('data', {ascending:false}).limit(10);
+
+    document.getElementById('tx-content').innerHTML = `
+    <div class="card"><div class="cb">
+      <div class="slbl">Registrar dia</div>
+      <div class="fld"><label>Data</label>
+        <input type="date" id="tx-data" value="${hoje.toISOString().split('T')[0]}" max="${hoje.toISOString().split('T')[0]}">
+      </div>
+      <div class="fld"><label>Valor da taxa do dia (R$)</label>
+        <input type="number" id="tx-val" placeholder="0,00" min="0" step="0.01">
+      </div>
+      <div class="fld"><label>Ausentes no dia</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+          ${COLS.map((n,i)=>`
+          <label style="display:flex;align-items:center;gap:7px;padding:7px 9px;border:1.5px solid var(--bord);border-radius:8px;font-size:12px;cursor:pointer;background:var(--surf2)">
+            <input type="checkbox" id="tx-aus-${i}" value="${n}" style="width:15px;height:15px;accent-color:var(--verm)">
+            ${n.split(' ')[0]}
+          </label>`).join('')}
+        </div>
+      </div>
+      <button class="btn-p" onclick="window._txSalvar()">Salvar lançamento</button>
+    </div></div>
+
+    <div class="slbl" style="margin-top:4px">Últimos lançamentos — ${mesRef.split('-')[1]}/${mesRef.split('-')[0]}</div>
+    ${!lancs||!lancs.length ? `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:18px">Nenhum lançamento ainda.</p>` :
+      lancs.map(l=>{
+        const aus = l.ausentes||[];
+        const presentes = COLS.length - aus.length;
+        const taxaFunc = l.valor_taxa * 0.75;
+        const porPessoa = presentes > 0 ? taxaFunc/presentes : 0;
+        return `<div class="card"><div class="cb" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div>
+            <div style="font-size:14px;font-weight:600">${fmtD(l.data)}</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:2px">${presentes} presentes · ${fmtR(porPessoa)}/pessoa</div>
+            ${aus.length ? `<div style="font-size:11px;color:var(--er);margin-top:1px">Ausentes: ${aus.map(n=>n.split(' ')[0]).join(', ')}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:15px;font-weight:700;color:var(--verm)">${fmtR(l.valor_taxa)}</div>
+            <div style="font-size:10px;color:var(--txt3)">taxa total</div>
+          </div>
+        </div></div>`;
+      }).join('')
+    }`;
+  }
+
+  async function renderResumo() {
+    setTab('resumo');
+    const {data:lancs} = await db.from('taxa_lancamentos')
+      .select('*').eq('mes_ref', mesRef).order('data');
+    const {data:consumos} = await db.from('taxa_consumo')
+      .select('*').eq('mes_ref', mesRef);
+
+    if (!lancs||!lancs.length) {
+      document.getElementById('tx-content').innerHTML = `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para ${mesRef}.</p>`;
+      return;
+    }
+
+    const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=15; });
+    const q2 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d>15; });
+
+    function calcQuinzena(dias) {
+      const totais = {};
+      COLS.forEach(n => totais[n] = 0);
+      dias.forEach(l => {
+        const aus = l.ausentes||[];
+        const pres = COLS.filter(n=>!aus.includes(n));
+        if (!pres.length) return;
+        const share = (l.valor_taxa * 0.75) / pres.length;
+        pres.forEach(n => totais[n] += share);
+      });
+      return totais;
+    }
+
+    const t1 = calcQuinzena(q1);
+    const t2 = calcQuinzena(q2);
+    const cMap = {};
+    (consumos||[]).forEach(c => { if (!cMap[c.colaborador_nome]) cMap[c.colaborador_nome]={}; cMap[c.colaborador_nome][c.quinzena]=c.valor; });
+
+    const totalTaxa = lancs.reduce((s,l)=>s+l.valor_taxa,0);
+    const totalFuncBruto = totalTaxa * 0.75;
+    const totalCasa = totalTaxa * 0.25;
+
+    document.getElementById('tx-content').innerHTML = `
+    <div class="kgrid" style="margin-bottom:12px">
+      <div class="kpi"><div class="kpi-l">Total taxa mês</div><div class="kpi-v">${fmtR(totalTaxa)}</div></div>
+      <div class="kpi"><div class="kpi-l">Casa (25%)</div><div class="kpi-v" style="color:var(--av)">${fmtR(totalCasa)}</div></div>
+      <div class="kpi"><div class="kpi-l">Equipe (75%)</div><div class="kpi-v" style="color:var(--ok)">${fmtR(totalFuncBruto)}</div></div>
+      <div class="kpi"><div class="kpi-l">Dias registrados</div><div class="kpi-v">${lancs.length}</div></div>
+    </div>
+
+    ${['1ª Quinzena','2ª Quinzena'].map((qNome,qi)=>{
+      const tot = qi===0 ? t1 : t2;
+      const dias = qi===0 ? q1 : q2;
+      if (!dias.length) return `<div class="slbl">${qNome} — sem dados</div>`;
+      const totalQ = dias.reduce((s,l)=>s+l.valor_taxa*0.75,0);
+      return `
+      <div class="slbl">${qNome} · ${fmtR(totalQ)}</div>
+      <div class="card"><div class="cb" style="padding:0">
+        ${COLS.map(n=>{
+          const bruto = tot[n]||0;
+          const cons = (cMap[n]||{})[qi===0?'1':' 2'] || 0;
+          const liq = bruto - cons;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--bord)">
+            <div>
+              <div style="font-size:13px;font-weight:600">${n.split(' ')[0]}</div>
+              ${cons>0?`<div style="font-size:11px;color:var(--er)">Consumo: -${fmtR(cons)}</div>`:''}
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:14px;font-weight:700;color:${liq>0?'var(--ok)':'var(--txt3)'}">${fmtR(liq)}</div>
+              ${cons>0?`<div style="font-size:10px;color:var(--txt3)">bruto ${fmtR(bruto)}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div></div>`;
+    }).join('')}`;
+  }
+
+  async function renderFecha() {
+    setTab('fecha');
+    const {data:lancs} = await db.from('taxa_lancamentos')
+      .select('*').eq('mes_ref', mesRef).order('data');
+    const {data:consumos} = await db.from('taxa_consumo')
+      .select('*').eq('mes_ref', mesRef);
+    if (!lancs||!lancs.length) {
+      document.getElementById('tx-content').innerHTML = `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para gerar email.</p>`;
+      return;
+    }
+    const cMap = {};
+    (consumos||[]).forEach(c => { if(!cMap[c.colaborador_nome])cMap[c.colaborador_nome]={}; cMap[c.colaborador_nome][c.quinzena]=c.valor; });
+
+    function calcQ(dias) {
+      const t={}; COLS.forEach(n=>t[n]=0);
+      dias.forEach(l=>{ const aus=l.ausentes||[]; const pres=COLS.filter(n=>!aus.includes(n)); if(!pres.length)return; const s=(l.valor_taxa*0.75)/pres.length; pres.forEach(n=>t[n]+=s); });
+      return t;
+    }
+    const q1=lancs.filter(l=>parseInt(l.data.split('-')[2])<=15);
+    const q2=lancs.filter(l=>parseInt(l.data.split('-')[2])>15);
+    const t1=calcQ(q1), t2=calcQ(q2);
+    const [yy,mm]=mesRef.split('-');
+    const mesNomeArr=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const mesNome = mesNomeArr[parseInt(mm)-1].toUpperCase();
+    const DEST = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
+
+    document.getElementById('tx-content').innerHTML = `
+    <div class="slbl">Consumo por colaborador (opcional)</div>
+    <div class="card"><div class="cb">
+      ${COLS.map((n,i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)">
+        <div style="flex:1;font-size:13px;font-weight:500">${n.split(' ')[0]}</div>
+        <div style="display:flex;gap:6px">
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--txt3);margin-bottom:2px">1ª quin</div>
+            <input type="number" id="cons-${i}-1" placeholder="0,00" min="0" step="0.01" value="${(cMap[n]||{})['1']||''}"
+              style="width:70px;padding:5px 7px;border:1.5px solid var(--bord);border-radius:8px;font-size:12px;background:var(--surf2)">
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--txt3);margin-bottom:2px">2ª quin</div>
+            <input type="number" id="cons-${i}-2" placeholder="0,00" min="0" step="0.01" value="${(cMap[n]||{})[' 2']||''}"
+              style="width:70px;padding:5px 7px;border:1.5px solid var(--bord);border-radius:8px;font-size:12px;background:var(--surf2)">
+          </div>
+        </div>
+      </div>`).join('')}
+      <button class="btn-p" style="margin-top:12px" onclick="window._txSalvarConsumo()">Salvar consumos</button>
+    </div></div>
+
+    <div class="slbl" style="margin-top:8px">Prévia do email</div>
+    ${['1','2'].map(qi=>{
+      const tot = qi==='1'?t1:t2;
+      const dias = qi==='1'?q1:q2;
+      if(!dias.length) return '';
+      const taxaFunc = dias.reduce((s,l)=>s+l.valor_taxa*0.75,0);
+      const totalCons = COLS.reduce((s,n)=>s+((cMap[n]||{})[qi==='1'?'1':' 2']||0),0);
+      const liqFunc = taxaFunc - totalCons;
+      const subj = `TAXA DE SERVIÇO ${qi==='1'?'1ª':'2ª'} QUINZENA ${mesNome}/${yy.slice(2)} — FORNILHA`;
+      const linhas = COLS.map(n=>{
+        const bruto=tot[n]||0; const cons=(cMap[n]||{})[qi==='1'?'1':' 2']||0; const liq=bruto-cons;
+        return `· ${n.split(' ')[0]} ${n.split(' ').slice(1,3).join(' ')}: ${fmtR(bruto)}${cons>0?' - consumo '+fmtR(cons)+' = '+fmtR(liq):''}`;
+      }).join('\n');
+      const body = `Prezados,\n\nSegue taxa de serviço referente à ${qi==='1'?'1ª':'2ª'} quinzena de ${mesNome}/${yy}:\n\n· Taxa equipe (75%): ${fmtR(taxaFunc)}\n· Total consumo: ${fmtR(totalCons)}\n· Líquido a pagar: ${fmtR(liqFunc)}\n\nDivisão individual:\n${linhas}\n\nAtenciosamente,\nFornilha Restaurante & Pizzaria`;
+      const mailto = `mailto:${DEST}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+      return `<div class="card"><div class="cb">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">${qi==='1'?'1ª':'2ª'} Quinzena · ${fmtR(liqFunc)} líquido</div>
+        <pre style="font-size:11px;color:var(--txt2);white-space:pre-wrap;line-height:1.5;background:var(--surf2);padding:10px;border-radius:8px;border:1px solid var(--bord)">${body}</pre>
+        <a href="${mailto}" style="display:block;margin-top:10px">
+          <button class="btn-p" style="background:linear-gradient(135deg,var(--ok),#0F6E56)">✉️ Enviar email ${qi==='1'?'1ª':'2ª'} quinzena</button>
+        </a>
+      </div></div>`;
+    }).join('')}`;
+  }
+
+  window._txTab = id => {
+    if (id==='lanc') renderLanc();
+    else if (id==='resumo') renderResumo();
+    else renderFecha();
+  };
+
+  window._txSalvar = async () => {
+    const data = document.getElementById('tx-data')?.value;
+    const val = parseFloat(document.getElementById('tx-val')?.value||'0');
+    if (!data||!val) { showT('Preencha data e valor.'); return; }
+    const ausentes = COLS.filter((_,i)=>document.getElementById('tx-aus-'+i)?.checked);
+    const {error} = await db.from('taxa_lancamentos').upsert({
+      data, mes_ref:mesRef, valor_taxa:val, ausentes, created_by:nome
+    },{onConflict:'data'});
+    if (error) { showT('Erro ao salvar: '+error.message); return; }
+    showT('Lançamento salvo!');
+    renderLanc();
+  };
+
+  window._txSalvarConsumo = async () => {
+    const ops = [];
+    COLS.forEach((n,i)=>{
+      ['1',' 2'].forEach((q,qi)=>{
+        const v = parseFloat(document.getElementById(`cons-${i}-${qi+1}`)?.value||'0');
+        if (v>0) ops.push({mes_ref:mesRef, colaborador_nome:n, quinzena:q, valor:v});
+      });
+    });
+    if (!ops.length) { showT('Nenhum consumo informado.'); return; }
+    await db.from('taxa_consumo').delete().eq('mes_ref',mesRef);
+    const {error} = await db.from('taxa_consumo').insert(ops);
+    if (error) { showT('Erro: '+error.message); return; }
+    showT('Consumos salvos!');
+    renderFecha();
+  };
+
+  renderLanc();
+},
 
 };
 
