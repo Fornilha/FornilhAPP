@@ -938,9 +938,9 @@ async inicio(a) {
   <div class="slbl">Indicadores ${mesLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
-      <span class="ind-lbl">Acumulado mês</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round(ref.fat/ref.fat25*100),100)}%;background:${corMargem}"></div></div>
-      <span class="ind-val" style="color:${corMargem}">${fmt(ref.fat)}</span>
+      <span class="ind-lbl">Acumulado ${nomeMes}</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round((acumuladoMes||ref.fat)/ref.fat25*100),100)}%;background:${corMargem}"></div></div>
+      <span class="ind-val" style="color:${corMargem}">${acumuladoMes > 0 ? fmt(acumuladoMes) : fmt(ref.fat)}</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Folha</span>
@@ -1387,76 +1387,66 @@ estoque(a) {
   rEst();
 },
 
-vendas(a) {
-  const hoje=new Date('2026-06-25T12:00:00');
-  const mesIdx=hoje.getMonth();
-  const anoAtual=hoje.getFullYear();
-  const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const mesNome=MESES[mesIdx]+'/'+String(anoAtual).slice(2);
+async vendas(a) {
+  const hoje = new Date();
+  const mesIdx = hoje.getMonth();
+  const anoAtual = hoje.getFullYear();
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const mesNome = MESES[mesIdx] + '/' + String(anoAtual).slice(2);
+  const mesRef = hoje.toISOString().slice(0,7);
+  const diasNoMes = new Date(anoAtual, mesIdx+1, 0).getDate();
 
-  // Tarefas de caixa concluídas do mês vigente
-  const caixaMes=tarefas.filter(t=>{
-    if(t.tipo!=='caixa'||t.status!=='concluida')return false;
-    const d=new Date((t.prazo||'')+'T12:00:00');
-    return d.getMonth()===mesIdx&&d.getFullYear()===anoAtual;
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Carrega lançamentos do mês vigente do Supabase
+  const { data: lancMes } = await db.from('lancamentos_diarios')
+    .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
+  const dias = lancMes || [];
+  const semDados = dias.length === 0;
+
+  // Acumulados do mês (Supabase) — fallback para DADOS_2026 se mês já fechado
+  const dadosMes = DADOS_2026[mesIdx];
+  const acumMes = dias.length > 0
+    ? dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0)
+    : (dadosMes?.fat || 0);
+
+  // Acumulado ano: meses anteriores fechados + mês vigente
+  const acumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + d.fat, 0) + acumMes;
+
+  // Taxa por quinzena do mês vigente (Supabase)
+  const q1dias = dias.filter(d => parseInt(d.data.split('-')[2]) <= 15);
+  const q2dias = dias.filter(d => parseInt(d.data.split('-')[2]) > 15);
+  const taxaBrutoQ1 = q1dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
+  const taxaBrutoQ2 = q2dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
+  const taxaQ1 = semDados ? (dadosMes?.taxa_q1||0) * 0.75 : taxaBrutoQ1 * 0.75;
+  const taxaQ2 = semDados ? (dadosMes?.taxa_q2||0) * 0.75 : taxaBrutoQ2 * 0.75;
+  const taxaTotal = taxaQ1 + taxaQ2;
+  const taxaAcumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + ((d.taxa_q1||0)+(d.taxa_q2||0)), 0) * 0.75 + taxaTotal;
+
+  // Histórico mensal — injeta acumulado do mês vigente se ainda aberto
+  const dadosHist = DADOS_2026.map((d,i) => {
+    if (i === mesIdx && dias.length > 0) return {...d, fat: acumMes, margem: null};
+    return d;
   });
-  const dias=caixaMes.length;
-  const semDados=dias===0;
-  const diasNoMes=new Date(anoAtual,mesIdx+1,0).getDate();
-
-  // Acumulados
-  const acumMesTasks=caixaMes.reduce((s,t)=>s+(t.dados?.fat||0),0);
-  const dadosMes=DADOS_2026[mesIdx];
-  const acumMes=acumMesTasks>0?acumMesTasks:(dadosMes?.fat||0);
-  const acumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+d.fat,0)+acumMes;
-
-  // Taxas por quinzena (usa tarefas de caixa se existirem, senão histórico do DADOS_2026)
-  const taxaQ1Tasks=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()<=15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
-  const taxaQ2Tasks=caixaMes.filter(t=>new Date((t.prazo||'')+'T12:00:00').getDate()>15).reduce((s,t)=>s+(t.dados?.taxa||0),0);
-  const semTaxaTasks=taxaQ1Tasks===0&&taxaQ2Tasks===0;
-  const taxaQ1=(semTaxaTasks?(dadosMes?.taxa_q1||0):taxaQ1Tasks)*0.75;
-  const taxaQ2=(semTaxaTasks?(dadosMes?.taxa_q2||0):taxaQ2Tasks)*0.75;
-  const taxaTotal=taxaQ1+taxaQ2;
-
-  // Taxa acumulada no ano: meses anteriores (histórico bruto ×0.75) + mês vigente
-  const taxaAcumAno=DADOS_2026.slice(0,mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75+taxaTotal;
-
-  // Vendas por vendedor (usa histórico quando sem tarefas de caixa)
-  const vh=dadosMes?.vendas_hist||{};
-  const vendsGarcon=GARCONS.map(g=>({
-    nome:g.nome.split(' ')[0],
-    total:semDados?(vh[g.nome.split(' ')[0].toLowerCase()]||0):caixaMes.reduce((s,t)=>s+(t.dados?.['v_'+g.nome]||0),0)
-  }));
-  const totalPatricia=semDados?(vh.patricia||0):caixaMes.reduce((s,t)=>s+(t.dados?.['v_Patricia Jesus']||0),0);
-  const somaVendedores=vendsGarcon.reduce((s,v)=>s+v.total,0)+totalPatricia;
-  const totalBalcao=semDados?Math.max(0,acumMes-somaVendedores):caixaMes.reduce((s,t)=>s+(t.dados?.balcao||0),0);
-  const totalVendedores=somaVendedores+totalBalcao;
-
-  // Mesas e TM
-  const totalMesas=caixaMes.reduce((s,t)=>s+(t.dados?.mesas||0),0);
-  const tmMedio=totalMesas>0?acumMesTasks/totalMesas:0;
-
-  const aviso=semDados?`<div style="font-size:12px;color:var(--txt3);text-align:center;padding:18px 0">Nenhuma Conferência de Caixa lançada em ${mesNome} ainda.<br>Os dados aparecerão aqui conforme as tarefas forem concluídas.</div>`:'';
-
-  // Histórico mensal
-  const dadosValidos=DADOS_2026.filter(d=>d.fat>0);
-  const maxFat=Math.max(...dadosValidos.map(d=>d.fat));
-  const mesesRows=DADOS_2026.map(d=>{
-    if(d.fat===0)return`<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
-    const pct=Math.round(d.fat/maxFat*100);
-    const vr=Math.round((d.fat/d.fat25-1)*100);
-    const cor=d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A';
-    return`<div class="mes-row"><span class="mes-nome" style="font-weight:600">${d.mes}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span><span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span></div>`;
+  const dadosValidos = dadosHist.filter(d => d.fat > 0);
+  const maxFat = Math.max(...dadosValidos.map(d => d.fat));
+  const mesesRows = dadosHist.map((d,i) => {
+    if (d.fat === 0) return `<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
+    const pct = Math.round(d.fat / maxFat * 100);
+    const isVigente = i === mesIdx && dias.length > 0;
+    const cor = isVigente ? '#185FA5' : (d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A');
+    const varStr = isVigente
+      ? `<span class="mes-var" style="color:var(--acc)">${dias.length}d</span>`
+      : (() => { const vr=Math.round((d.fat/d.fat25-1)*100); return `<span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span>`; })();
+    return `<div class="mes-row"><span class="mes-nome" style="font-weight:600;${isVigente?'color:var(--acc)':''}">${d.mes}${isVigente?' ●':''}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span>${varStr}</div>`;
   }).join('');
 
-  const kpiCard=(label,val,sub,cor='var(--acc)')=>`
+  const kpiCard = (label,val,sub,cor='var(--acc)') => `
     <div style="background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
       <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${label}</div>
       <div style="font-size:22px;font-weight:800;color:${cor};line-height:1.1">${val}</div>
       ${sub?`<div style="font-size:11px;color:var(--txt3);margin-top:3px">${sub}</div>`:''}
     </div>`;
-
-  const fmtR=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   a.innerHTML=`
   <div class="mcard" style="margin-bottom:12px">
@@ -1468,14 +1458,22 @@ vendas(a) {
   </div>
 
   <div class="slbl">Mês vigente — ${mesNome}</div>
+  ${semDados ? `<div class="card" style="margin-bottom:12px"><div class="cb" style="text-align:center;padding:18px 8px;color:var(--txt3);font-size:13px">Nenhum lançamento em ${mesNome} ainda.<br><span style="font-size:11px">Use o botão Lançar na tela Início.</span></div></div>` : `
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
-    ${kpiCard('Acumulado '+mesNome, fmt(acumMes), dias>0?`${dias} dia${dias>1?'s':''} lançado${dias>1?'s':''}`:'')}
-    ${kpiCard('Mesas atendidas', totalMesas||'—', tmMedio>0?'TM: '+fmtR(tmMedio):'')}
+    ${kpiCard('Acumulado '+mesNome, fmt(acumMes), `${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}`)}
+    ${kpiCard('Dias lançados', dias.length, hoje.getDate() > dias.length ? `${hoje.getDate()-dias.length} sem dado` : 'Em dia ✅', dias.length < hoje.getDate() ? 'var(--av)' : 'var(--ok)')}
   </div>
+  <div class="slbl">Faturamento dia a dia — ${mesNome}</div>
+  <div class="card" style="margin-bottom:12px"><div class="cb" style="padding-top:4px">
+    ${dias.slice().reverse().map(d => {
+      const dt = new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+      return `<div class="alrt"><span class="alrt-ico">💰</span><span class="alrt-txt">${dt}</span><strong>${fmt(Number(d.faturamento_bruto))}</strong></div>`;
+    }).join('')}
+  </div></div>`}
 
   <div class="slbl">Taxa de serviço (equipe 75%) — ${mesNome}</div>
   <div class="card" style="margin-bottom:12px"><div class="cb">
-    ${semDados?`<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos — Conferência de Caixa ainda não lançada em ${mesNome}</div>`:''}
+    ${semDados ? `<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos de ${mesNome}</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
       <span style="font-size:13px">1ª Quinzena (1–15/${mesNome.slice(0,3)})</span>
       <strong>${fmtR(taxaQ1)}</strong>
@@ -1492,45 +1490,6 @@ vendas(a) {
       <span style="font-size:13px;font-weight:700">Acumulado taxa 2026</span>
       <strong style="color:var(--ok)">${fmtR(taxaAcumAno)}</strong>
     </div>
-  </div></div>
-
-  <div class="slbl">Vendas por vendedor — ${mesNome}</div>
-  <div class="card" style="margin-bottom:12px"><div class="cb">
-    ${semDados?`<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos — Conferência de Caixa ainda não lançada em ${mesNome}</div>`:''}
-    ${[
-      ...vendsGarcon.map(v=>{
-        if(v.total===0)return'';
-        const pct=totalVendedores>0?Math.round(v.total/totalVendedores*100):0;
-        return`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
-          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-            <span style="font-size:13px">👤 ${v.nome}</span>
-            <strong>${fmtR(v.total)}</strong>
-          </div>
-          <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:var(--acc);width:${pct}%;height:5px;border-radius:4px"></div></div>
-          <div style="font-size:10px;color:var(--txt3);margin-top:2px">${pct}% do total</div>
-        </div>`;
-      }),
-      totalPatricia>0?`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:13px">👤 Patrícia</span>
-          <strong>${fmtR(totalPatricia)}</strong>
-        </div>
-        <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:#3C3489;width:${totalVendedores>0?Math.round(totalPatricia/totalVendedores*100):0}%;height:5px;border-radius:4px"></div></div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:2px">${totalVendedores>0?Math.round(totalPatricia/totalVendedores*100):0}% do total</div>
-      </div>`:'',
-      totalBalcao>0?`<div style="padding:10px 0;border-bottom:1px solid var(--bord)">
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:13px">🏠 Balcão</span>
-          <strong>${fmtR(totalBalcao)}</strong>
-        </div>
-        <div style="background:var(--bord);border-radius:4px;height:5px"><div style="background:#EF9F27;width:${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}%;height:5px;border-radius:4px"></div></div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:2px">${totalVendedores>0?Math.round(totalBalcao/totalVendedores*100):0}% do total</div>
-      </div>`:'',
-      `<div style="display:flex;justify-content:space-between;padding:10px 0">
-        <span style="font-weight:700">Total vendas</span>
-        <strong style="color:var(--acc)">${fmtR(totalVendedores)}</strong>
-      </div>`
-    ].join('')}
   </div></div>
 
   <div class="slbl">Histórico mensal 2026 vs 2025</div>
