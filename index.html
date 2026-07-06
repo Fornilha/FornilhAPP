@@ -918,7 +918,7 @@ async inicio(a) {
       <div class="kpi-s">${temDadosParciais ? 'Sem CMV e salários base' : 'Aguardando lançamentos'}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Taxa s/ fat. ${nomeMes}</div>
+      <div class="kpi-l">Folha ${mesLabel} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
       <div class="kpi-v" style="color:${temDadosParciais?indCor(folhaParcPct,META_FOLHA,true):'var(--txt3)'}">${temDadosParciais ? folhaParcPct.toFixed(1)+'%' : '—'}</div>
       <div class="kpi-s">${temDadosParciais ? fmt(taxaFuncAcum)+' func.' : 'Aguardando taxa'}</div>
     </div>
