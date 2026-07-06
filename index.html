@@ -832,7 +832,7 @@ async inicio(a) {
   const podeLancar = perfil === 'admin' || perfil === 'caixa';
 
   // ── Checklist diário (só admin/caixa) ──
-  function itemChecklist({ok, ico, titulo, detalhe, acao, fn}) {
+  function itemChecklist({ok, ico, titulo, detalhe, acao, onclick}) {
     if (ok) return `
       <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--bord)">
         <div style="width:34px;height:34px;border-radius:50%;background:var(--ok-l);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">${ico}</div>
@@ -849,17 +849,17 @@ async inicio(a) {
           <div style="font-size:13px;font-weight:600;color:var(--txt)">${titulo}</div>
           <div style="font-size:11px;color:var(--av);margin-top:1px">Pendente</div>
         </div>
-        <button onclick="${fn}()" style="background:var(--verm);color:#fff;border:none;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">${acao}</button>
+        <button onclick="${onclick}" style="background:var(--verm);color:#fff;border:none;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">${acao}</button>
       </div>`;
   }
 
   const itensChecklist = [
     { ok: !!fatHoje, ico: '💰', titulo: 'Faturamento bruto',
-      detalhe: fatHoje ? fmt(fatHoje.faturamento_bruto) : '',
-      acao: 'Lançar', fn: 'window._lancarFaturamento' },
+      detalhe: fatHoje ? fmt(Number(fatHoje.faturamento_bruto)) : '',
+      acao: 'Lançar', onclick: 'window._lancarFaturamento()' },
     { ok: !!taxaHoje, ico: '🪙', titulo: 'Taxa de serviço 10%',
       detalhe: taxaHoje ? `R$ ${Number(taxaHoje.valor_taxa).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '',
-      acao: 'Lançar', fn: '()=>goTo("taxa")' },
+      acao: 'Lançar', onclick: "goTo('taxa')" },
   ];
 
   const totalItens = itensChecklist.length;
