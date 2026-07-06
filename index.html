@@ -299,7 +299,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="ni" id="ni-vendas" onclick="goTo('vendas')"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
     <button class="ni" id="ni-financeiro" onclick="goTo('financeiro')" style="display:none"><span class="ni-ico">💳</span><span class="ni-lbl">Financeiro</span></button>
     <button class="ni" id="ni-rh" onclick="goTo('rh')" style="display:none"><span class="ni-ico">👥</span><span class="ni-lbl">RH</span></button>
-    <button class="ni" id="ni-taxa" onclick="goTo('taxa')" style="display:none"><span class="ni-ico">🪙</span><span class="ni-lbl">Taxa 10%</span></button>
   </nav>
 </div>
 </div>
@@ -737,8 +736,6 @@ async function mostrarApp() {
   if (btnFin) btnFin.style.display = perfil === 'admin' ? '' : 'none';
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
-  const btnTaxa = document.getElementById('ni-taxa');
-  if (btnTaxa) btnTaxa.style.display = (perfil === 'admin' || perfil === 'caixa') ? '' : 'none';
   goTo('inicio');
 }
 
@@ -1399,105 +1396,128 @@ async vendas(a) {
   const mesNome = MESES[mesIdx] + '/' + String(anoAtual).slice(2);
   const mesRef = hoje.toISOString().slice(0,7);
   const diasNoMes = new Date(anoAtual, mesIdx+1, 0).getDate();
-
   const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  // Carrega lançamentos do mês vigente do Supabase
-  const { data: lancMes } = await db.from('lancamentos_diarios')
-    .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
-  const dias = lancMes || [];
-  const semDados = dias.length === 0;
-
-  // Acumulados do mês (Supabase) — fallback para DADOS_2026 se mês já fechado
-  const dadosMes = DADOS_2026[mesIdx];
-  const acumMes = dias.length > 0
-    ? dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0)
-    : (dadosMes?.fat || 0);
-
-  // Acumulado ano: meses anteriores fechados + mês vigente
-  const acumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + d.fat, 0) + acumMes;
-
-  // Taxa por quinzena do mês vigente (Supabase)
-  const q1dias = dias.filter(d => parseInt(d.data.split('-')[2]) <= 15);
-  const q2dias = dias.filter(d => parseInt(d.data.split('-')[2]) > 15);
-  const taxaBrutoQ1 = q1dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
-  const taxaBrutoQ2 = q2dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
-  const taxaQ1 = semDados ? (dadosMes?.taxa_q1||0) * 0.75 : taxaBrutoQ1 * 0.75;
-  const taxaQ2 = semDados ? (dadosMes?.taxa_q2||0) * 0.75 : taxaBrutoQ2 * 0.75;
-  const taxaTotal = taxaQ1 + taxaQ2;
-  const taxaAcumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + ((d.taxa_q1||0)+(d.taxa_q2||0)), 0) * 0.75 + taxaTotal;
-
-  // Histórico mensal — injeta acumulado do mês vigente se ainda aberto
-  const dadosHist = DADOS_2026.map((d,i) => {
-    if (i === mesIdx && dias.length > 0) return {...d, fat: acumMes, margem: null};
-    return d;
-  });
-  const dadosValidos = dadosHist.filter(d => d.fat > 0);
-  const maxFat = Math.max(...dadosValidos.map(d => d.fat));
-  const mesesRows = dadosHist.map((d,i) => {
-    if (d.fat === 0) return `<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
-    const pct = Math.round(d.fat / maxFat * 100);
-    const isVigente = i === mesIdx && dias.length > 0;
-    const cor = isVigente ? '#185FA5' : (d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A');
-    const varStr = isVigente
-      ? `<span class="mes-var" style="color:var(--acc)">${dias.length}d</span>`
-      : (() => { const vr=Math.round((d.fat/d.fat25-1)*100); return `<span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span>`; })();
-    return `<div class="mes-row"><span class="mes-nome" style="font-weight:600;${isVigente?'color:var(--acc)':''}">${d.mes}${isVigente?' ●':''}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span>${varStr}</div>`;
-  }).join('');
-
-  const kpiCard = (label,val,sub,cor='var(--acc)') => `
-    <div style="background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
-      <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${label}</div>
-      <div style="font-size:22px;font-weight:800;color:${cor};line-height:1.1">${val}</div>
-      ${sub?`<div style="font-size:11px;color:var(--txt3);margin-top:3px">${sub}</div>`:''}
-    </div>`;
-
-  a.innerHTML=`
-  <div class="mcard" style="margin-bottom:12px">
-    <div class="ml">Faturamento acumulado 2026</div>
-    <div class="mv">${fmt(acumAno)}</div>
-    <div class="ms">Meta 2030: R$ 5M</div>
-    <div class="mp"><div class="mpf" style="width:${Math.min(100,Math.round(acumAno/5000000*100))}%"></div></div>
-    <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px">${Math.round(acumAno/5000000*100)}% da meta</div>
+  // Estrutura de tabs — content renderizado no #vnd-content
+  a.innerHTML = `
+  <div style="display:flex;gap:6px;padding:12px 0 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+    <button id="vnd-tab-fat" onclick="window._vndTab('fat')"
+      style="flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--verm);background:var(--verm);color:#fff;font-size:12px;font-weight:700;cursor:pointer">
+      📊 Faturamento</button>
+    <button id="vnd-tab-taxa" onclick="window._vndTab('taxa')"
+      style="flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--bord);background:var(--surf);color:var(--txt);font-size:12px;font-weight:700;cursor:pointer">
+      🪙 Taxa 10%</button>
   </div>
+  <div id="vnd-content"></div>`;
 
-  <div class="slbl">Mês vigente — ${mesNome}</div>
-  ${semDados ? `<div class="card" style="margin-bottom:12px"><div class="cb" style="text-align:center;padding:18px 8px;color:var(--txt3);font-size:13px">Nenhum lançamento em ${mesNome} ainda.<br><span style="font-size:11px">Use o botão Lançar na tela Início.</span></div></div>` : `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
-    ${kpiCard('Acumulado '+mesNome, fmt(acumMes), `${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}`)}
-    ${kpiCard('Dias lançados', dias.length, hoje.getDate() > dias.length ? `${hoje.getDate()-dias.length} sem dado` : 'Em dia ✅', dias.length < hoje.getDate() ? 'var(--av)' : 'var(--ok)')}
-  </div>
-  <div class="slbl">Faturamento dia a dia — ${mesNome}</div>
-  <div class="card" style="margin-bottom:12px"><div class="cb" style="padding-top:4px">
-    ${dias.slice().reverse().map(d => {
-      const dt = new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
-      return `<div class="alrt"><span class="alrt-ico">💰</span><span class="alrt-txt">${dt}</span><strong>${fmt(Number(d.faturamento_bruto))}</strong></div>`;
-    }).join('')}
-  </div></div>`}
+  function setVndTab(id) {
+    ['fat','taxa'].forEach(t => {
+      const b = document.getElementById('vnd-tab-'+t);
+      if (!b) return;
+      const active = t === id;
+      b.style.background = active ? 'var(--verm)' : 'var(--surf)';
+      b.style.color = active ? '#fff' : 'var(--txt)';
+      b.style.borderColor = active ? 'var(--verm)' : 'var(--bord)';
+    });
+  }
 
-  <div class="slbl">Taxa de serviço (equipe 75%) — ${mesNome}</div>
-  <div class="card" style="margin-bottom:12px"><div class="cb">
-    ${semDados ? `<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos de ${mesNome}</div>` : ''}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
-      <span style="font-size:13px">1ª Quinzena (1–15/${mesNome.slice(0,3)})</span>
-      <strong>${fmtR(taxaQ1)}</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
-      <span style="font-size:13px">2ª Quinzena (16–${diasNoMes}/${mesNome.slice(0,3)})</span>
-      <strong>${fmtR(taxaQ2)}</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
-      <span style="font-size:13px;font-weight:700">Total taxa ${mesNome}</span>
-      <strong style="color:var(--acc)">${fmtR(taxaTotal)}</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
-      <span style="font-size:13px;font-weight:700">Acumulado taxa 2026</span>
-      <strong style="color:var(--ok)">${fmtR(taxaAcumAno)}</strong>
-    </div>
-  </div></div>
+  async function renderFaturamento() {
+    setVndTab('fat');
+    const content = document.getElementById('vnd-content');
+    if (!content) return;
 
-  <div class="slbl">Histórico mensal 2026 vs 2025</div>
-  <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>`;
+    const { data: lancMes } = await db.from('lancamentos_diarios')
+      .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
+    const dias = lancMes || [];
+    const semDados = dias.length === 0;
+
+    const dadosMes = DADOS_2026[mesIdx];
+    const acumMes = dias.length > 0
+      ? dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0)
+      : (dadosMes?.fat || 0);
+    const acumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + d.fat, 0) + acumMes;
+
+    const q1dias = dias.filter(d => parseInt(d.data.split('-')[2]) <= 15);
+    const q2dias = dias.filter(d => parseInt(d.data.split('-')[2]) > 15);
+    const taxaQ1 = semDados ? (dadosMes?.taxa_q1||0)*0.75 : q1dias.reduce((s,d)=>s+Number(d.valor_taxa),0)*0.75;
+    const taxaQ2 = semDados ? (dadosMes?.taxa_q2||0)*0.75 : q2dias.reduce((s,d)=>s+Number(d.valor_taxa),0)*0.75;
+    const taxaTotal = taxaQ1 + taxaQ2;
+    const taxaAcumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75 + taxaTotal;
+
+    const dadosHist = DADOS_2026.map((d,i) => i===mesIdx&&dias.length>0 ? {...d,fat:acumMes,margem:null} : d);
+    const maxFat = Math.max(...dadosHist.filter(d=>d.fat>0).map(d=>d.fat));
+    const mesesRows = dadosHist.map((d,i) => {
+      if (d.fat===0) return `<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
+      const pct=Math.round(d.fat/maxFat*100);
+      const isV=i===mesIdx&&dias.length>0;
+      const cor=isV?'#185FA5':(d.margem>=30?'#1D9E75':d.margem>=20?'#EF9F27':'#E24B4A');
+      const varStr=isV?`<span class="mes-var" style="color:var(--acc)">${dias.length}d</span>`:
+        (()=>{const vr=Math.round((d.fat/d.fat25-1)*100);return`<span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span>`;})();
+      return `<div class="mes-row"><span class="mes-nome" style="font-weight:600;${isV?'color:var(--acc)':''}">${d.mes}${isV?' ●':''}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span>${varStr}</div>`;
+    }).join('');
+
+    const kpiCard=(label,val,sub,cor='var(--acc)')=>`
+      <div style="background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${label}</div>
+        <div style="font-size:22px;font-weight:800;color:${cor};line-height:1.1">${val}</div>
+        ${sub?`<div style="font-size:11px;color:var(--txt3);margin-top:3px">${sub}</div>`:''}
+      </div>`;
+
+    content.innerHTML = `
+    <div class="mcard" style="margin-bottom:12px">
+      <div class="ml">Faturamento acumulado 2026</div>
+      <div class="mv">${fmt(acumAno)}</div>
+      <div class="ms">Meta 2030: R$ 5M</div>
+      <div class="mp"><div class="mpf" style="width:${Math.min(100,Math.round(acumAno/5000000*100))}%"></div></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px">${Math.round(acumAno/5000000*100)}% da meta</div>
+    </div>
+
+    <div class="slbl">Mês vigente — ${mesNome}</div>
+    ${semDados ? `<div class="card" style="margin-bottom:12px"><div class="cb" style="text-align:center;padding:18px 8px;color:var(--txt3);font-size:13px">Nenhum lançamento em ${mesNome} ainda.<br><span style="font-size:11px">Use o botão Lançar na tela Início.</span></div></div>` : `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
+      ${kpiCard('Acumulado '+mesNome, fmt(acumMes), `${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}`)}
+      ${kpiCard('Dias lançados', dias.length, hoje.getDate()>dias.length?`${hoje.getDate()-dias.length} sem dado`:'Em dia ✅', dias.length<hoje.getDate()?'var(--av)':'var(--ok)')}
+    </div>
+    <div class="slbl">Faturamento dia a dia — ${mesNome}</div>
+    <div class="card" style="margin-bottom:12px"><div class="cb" style="padding-top:4px">
+      ${dias.slice().reverse().map(d=>{
+        const dt=new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+        return `<div class="alrt"><span class="alrt-ico">💰</span><span class="alrt-txt">${dt}</span><strong>${fmt(Number(d.faturamento_bruto))}</strong></div>`;
+      }).join('')}
+    </div></div>`}
+
+    <div class="slbl">Taxa de serviço (equipe 75%) — ${mesNome}</div>
+    <div class="card" style="margin-bottom:12px"><div class="cb">
+      ${semDados?`<div style="font-size:11px;color:var(--txt3);padding:6px 0 10px">Dados históricos de ${mesNome}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+        <span style="font-size:13px">1ª Quinzena (1–15/${mesNome.slice(0,3)})</span><strong>${fmtR(taxaQ1)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+        <span style="font-size:13px">2ª Quinzena (16–${diasNoMes}/${mesNome.slice(0,3)})</span><strong>${fmtR(taxaQ2)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord)">
+        <span style="font-size:13px;font-weight:700">Total taxa ${mesNome}</span><strong style="color:var(--acc)">${fmtR(taxaTotal)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
+        <span style="font-size:13px;font-weight:700">Acumulado taxa 2026</span><strong style="color:var(--ok)">${fmtR(taxaAcumAno)}</strong>
+      </div>
+    </div></div>
+
+    <div class="slbl">Histórico mensal 2026 vs 2025</div>
+    <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>`;
+  }
+
+  window._vndTab = async (tab) => {
+    if (tab === 'fat') {
+      await renderFaturamento();
+    } else {
+      setVndTab('taxa');
+      const content = document.getElementById('vnd-content');
+      if (content) await renders.taxa(content);
+    }
+  };
+
+  await renderFaturamento();
 },
 
 msgs(a) {
