@@ -853,13 +853,11 @@ async inicio(a) {
       </div>`;
   }
 
+  const diaCompleto = !!fatHoje && !!taxaHoje;
   const itensChecklist = [
-    { ok: !!fatHoje, ico: '💰', titulo: 'Faturamento bruto',
-      detalhe: fatHoje ? fmt(Number(fatHoje.faturamento_bruto)) : '',
-      acao: 'Lançar', onclick: 'window._lancarFaturamento()' },
-    { ok: !!taxaHoje, ico: '🪙', titulo: 'Taxa de serviço 10%',
-      detalhe: taxaHoje ? `R$ ${Number(taxaHoje.valor_taxa).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '',
-      acao: 'Lançar', onclick: "goTo('taxa')" },
+    { ok: diaCompleto, ico: '📋', titulo: 'Lançamento do dia',
+      detalhe: diaCompleto ? `${fmt(Number(fatHoje.faturamento_bruto))} · Taxa ${fmt(Number(taxaHoje.valor_taxa))}` : '',
+      acao: 'Lançar', onclick: 'window._lancarDia()' },
   ];
 
   const totalItens = itensChecklist.length;
@@ -981,48 +979,94 @@ async inicio(a) {
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 
-  // Modal: lançar faturamento
-  window._lancarFaturamento = function(dataEdit, valEdit) {
-    const isEdit = !!dataEdit;
+  // Modal: lançamento unificado do dia
+  window._lancarDia = function() {
+    const fatVal = fatHoje ? Number(fatHoje.faturamento_bruto) : '';
+    const taxaVal = taxaHoje ? Number(taxaHoje.valor_taxa) : '';
+    const ausentesAtuais = taxaHoje ? (taxaHoje.ausentes || []) : [];
+
+    const checkboxes = COLABORADORES_FIN.map(c => `
+      <label style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--bord);cursor:pointer">
+        <input type="checkbox" value="${c.nome}" ${ausentesAtuais.includes(c.nome)?'checked':''}
+          onchange="window._atualizarPreviewTaxa()"
+          style="width:17px;height:17px;cursor:pointer;accent-color:var(--verm)">
+        <span style="font-size:13px;color:var(--txt)">${c.nome.split(' ').slice(0,2).join(' ')}</span>
+        <span style="font-size:11px;color:var(--txt3);margin-left:auto">${c.cargo}</span>
+      </label>`).join('');
+
     document.getElementById('modal-inner').innerHTML = `
-      <h3>${isEdit ? 'Editar' : 'Lançar'} faturamento</h3>
-      <p>Valor bruto do dia — antes de taxa e descontos</p>
+      <h3>Lançamento do dia</h3>
+      <p>Faturamento, taxa e presenças</p>
       <div class="fld"><label>Data</label>
-        <input type="date" id="fat-data" value="${dataEdit||hojeStr}" max="${hojeStr}">
+        <input type="date" id="ld-data" value="${hojeStr}" max="${hojeStr}">
       </div>
-      <div class="fld"><label>Faturamento bruto (R$)</label>
-        <input type="number" id="fat-val" placeholder="0,00" step="0.01" min="0" value="${valEdit||''}">
+      <div class="row2">
+        <div class="fld"><label>Faturamento bruto (R$)</label>
+          <input type="number" id="ld-fat" placeholder="0,00" step="0.01" min="0" value="${fatVal}" oninput="window._atualizarPreviewTaxa()">
+        </div>
+        <div class="fld"><label>Taxa 10% total (R$)</label>
+          <input type="number" id="ld-taxa" placeholder="0,00" step="0.01" min="0" value="${taxaVal}" oninput="window._atualizarPreviewTaxa()">
+        </div>
       </div>
-      <div id="fat-err" style="color:var(--er);font-size:12px;margin-bottom:8px;display:none"></div>
+      <div class="fld"><label>Ausentes hoje</label>
+        <div style="border:1px solid var(--bord);border-radius:8px;padding:0 10px;max-height:200px;overflow-y:auto">${checkboxes}</div>
+      </div>
+      <div id="ld-preview" style="background:var(--surf2);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--txt2);margin-bottom:8px;display:none"></div>
+      <div id="ld-err" style="color:var(--er);font-size:12px;margin-bottom:8px;display:none"></div>
       <div class="mbtns">
         <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-        <button class="btn-ok" id="fat-btn" onclick="window._salvarFaturamento()">Salvar</button>
+        <button class="btn-ok" id="ld-btn" onclick="window._salvarDia()">Salvar</button>
       </div>`;
     document.getElementById('modal-bg').classList.add('open');
-    setTimeout(() => document.getElementById('fat-val')?.focus(), 100);
+    window._atualizarPreviewTaxa();
+    setTimeout(() => document.getElementById('ld-fat')?.focus(), 100);
   };
 
-  window._salvarFaturamento = async function() {
-    const btn = document.getElementById('fat-btn');
-    const errEl = document.getElementById('fat-err');
-    const dataVal = document.getElementById('fat-data').value;
-    const fatVal = parseFloat(document.getElementById('fat-val').value);
-    if (!dataVal || isNaN(fatVal) || fatVal <= 0) {
-      errEl.textContent = 'Preencha a data e o valor corretamente.';
+  window._atualizarPreviewTaxa = function() {
+    const taxa = parseFloat(document.getElementById('ld-taxa')?.value) || 0;
+    if (!taxa) { document.getElementById('ld-preview').style.display='none'; return; }
+    const ausentes = [...document.querySelectorAll('#modal-inner input[type=checkbox]:checked')].map(c=>c.value);
+    const total = COLABORADORES_FIN.length;
+    const presentes = total - ausentes.length;
+    if (presentes <= 0) { document.getElementById('ld-preview').style.display='none'; return; }
+    const taxaFunc = taxa * 0.75;
+    const porPessoa = taxaFunc / presentes;
+    const prev = document.getElementById('ld-preview');
+    prev.style.display = 'block';
+    prev.innerHTML = `<strong>Presentes: ${presentes}/${total}</strong> · Taxa funcionários: R$ ${taxaFunc.toLocaleString('pt-BR',{minimumFractionDigits:2})} · <strong>Por pessoa: R$ ${porPessoa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong>`;
+  };
+
+  window._salvarDia = async function() {
+    const btn = document.getElementById('ld-btn');
+    const errEl = document.getElementById('ld-err');
+    const dataVal = document.getElementById('ld-data').value;
+    const fatVal = parseFloat(document.getElementById('ld-fat').value);
+    const taxaVal = parseFloat(document.getElementById('ld-taxa').value);
+    const ausentes = [...document.querySelectorAll('#modal-inner input[type=checkbox]:checked')].map(c=>c.value);
+    if (!dataVal || isNaN(fatVal) || fatVal <= 0 || isNaN(taxaVal) || taxaVal <= 0) {
+      errEl.textContent = 'Preencha a data, faturamento e taxa corretamente.';
       errEl.style.display = 'block'; return;
     }
     btn.disabled = true; btn.textContent = 'Salvando...';
-    const { error } = await db.from('faturamento_diario').upsert(
-      { data: dataVal, mes_ref: dataVal.slice(0,7), faturamento_bruto: fatVal },
-      { onConflict: 'data' }
-    );
-    if (error) {
-      errEl.textContent = 'Erro: ' + error.message;
+    const mesRefSave = dataVal.slice(0,7);
+    const [r1, r2] = await Promise.all([
+      db.from('faturamento_diario').upsert(
+        { data: dataVal, mes_ref: mesRefSave, faturamento_bruto: fatVal },
+        { onConflict: 'data' }
+      ),
+      db.from('taxa_lancamentos').upsert(
+        { data: dataVal, mes_ref: mesRefSave, valor_taxa: taxaVal, ausentes, created_by: nome },
+        { onConflict: 'data' }
+      ),
+    ]);
+    const err = r1.error || r2.error;
+    if (err) {
+      errEl.textContent = 'Erro: ' + err.message;
       errEl.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Salvar'; return;
     }
     fecharModal();
-    showToast('Faturamento salvo ✅');
+    showToast('Lançamento salvo ✅');
     renders.inicio(document.getElementById('content'));
   };
 },
@@ -1678,10 +1722,39 @@ notif(a) {
   rNotif();
 },
 
-perfil(a) {
+async perfil(a) {
   const ini = nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
   const cargos={admin:'Administrador',caixa:'Caixa',garcom:'Garçom / Vendedor',bar:'Bar',pizzaria:'Pizzaria',cozinha:'Cozinha'};
   const cores={admin:'#8B1A1A',caixa:'#3C3489',bar:'#0F6E56',garcom:'#185FA5',pizzaria:'#993C1D',cozinha:'#BA7517'};
+
+  // Encontrar este colaborador no COLABORADORES_FIN pelo nome
+  const nomePartes = nome.toLowerCase().split(' ');
+  const colaborador = COLABORADORES_FIN.find(c => {
+    const cp = c.nome.toLowerCase().split(' ');
+    return cp[0] === nomePartes[0] && cp[1] === nomePartes[1];
+  });
+
+  // Carregar taxa do mês atual se for colaborador
+  let taxaQ1 = 0, taxaQ2 = 0, taxaDias = [];
+  if (colaborador) {
+    const hoje = new Date();
+    const mesRef = hoje.toISOString().slice(0,7);
+    const { data: lancamentos } = await db.from('taxa_lancamentos')
+      .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
+    taxaDias = lancamentos || [];
+    taxaDias.forEach(d => {
+      const ausentes = d.ausentes || [];
+      if (ausentes.includes(colaborador.nome)) return;
+      const presentes = COLABORADORES_FIN.length - ausentes.length;
+      if (presentes <= 0) return;
+      const valor = (Number(d.valor_taxa) * 0.75) / presentes;
+      const dia = parseInt(d.data.split('-')[2]);
+      if (dia <= 15) taxaQ1 += valor; else taxaQ2 += valor;
+    });
+  }
+  const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const hoje2 = new Date();
+  const nomeMesAtual = hoje2.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 
   const USUARIOS = [
     {num:1, perfil:'admin', label:'Administrador', cor:'#8B1A1A'},
@@ -1746,6 +1819,30 @@ perfil(a) {
     <div class="slbl">Usuários do sistema (${USUARIOS.length})</div>
     <div id="lista-usuarios">${renderUsuarios()}</div>
     ` : `
+    ${colaborador ? `
+    <div class="slbl">Minha taxa de serviço — ${nomeMesAtual}</div>
+    <div class="kgrid" style="margin-bottom:13px">
+      <div class="kpi dest">
+        <div class="kpi-l">Total acumulado</div>
+        <div class="kpi-v">${fmtR(taxaQ1 + taxaQ2)}</div>
+        <div class="kpi-s">${taxaDias.length} dia${taxaDias.length!==1?'s':''} lançados</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l">1ª quinzena (1–15)</div>
+        <div class="kpi-v" style="font-size:16px">${fmtR(taxaQ1)}</div>
+        <div class="kpi-s">Dias 1 a 15</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l">2ª quinzena (16–fim)</div>
+        <div class="kpi-v" style="font-size:16px">${fmtR(taxaQ2)}</div>
+        <div class="kpi-s">Dias 16 ao fim</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l">Chave PIX</div>
+        <div class="kpi-v" style="font-size:12px;word-break:break-all;line-height:1.3">${colaborador.pixChave}</div>
+        <div class="kpi-s">${colaborador.pixTipo}</div>
+      </div>
+    </div>` : ''}
     <div class="card"><div class="cb" style="padding:0">
       <div class="mi" onclick="modalAlterarSenha()"><div class="mi-ic" style="background:#EEF2FF">🔑</div><span class="mi-txt">Alterar minha senha</span><span style="color:var(--txt3)">›</span></div>
       <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
