@@ -900,19 +900,19 @@ async inicio(a) {
       <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Margem ${mesLabel}</div>
-      <div class="kpi-v" style="color:${corMargem}">${ref.margem.toFixed(1)}%</div>
-      <div class="kpi-s">Meta: ${META_MARGEM}%</div>
+      <div class="kpi-l">Margem ${nomeMes}</div>
+      <div class="kpi-v" style="color:var(--txt3)">—</div>
+      <div class="kpi-s">Aguardando despesas</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Folha ${mesLabel}</div>
-      <div class="kpi-v" style="color:${corFolha}">${ref.folha_pct}%</div>
-      <div class="kpi-s">Limite: ${META_FOLHA}%</div>
+      <div class="kpi-l">Folha ${nomeMes}</div>
+      <div class="kpi-v" style="color:var(--txt3)">—</div>
+      <div class="kpi-s">Aguardando salários</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
-      <div class="kpi-v" style="color:${corVar}">${ref.desp_var_pct}%</div>
-      <div class="kpi-s">Meta: ≤${META_VAR}%</div>
+      <div class="kpi-l">Desp. Variáveis ${nomeMes}</div>
+      <div class="kpi-v" style="color:var(--txt3)">—</div>
+      <div class="kpi-s">Aguardando lançamentos</div>
     </div>
   </div>
 
