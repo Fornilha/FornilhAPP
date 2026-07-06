@@ -293,7 +293,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="content" id="content"></div>
   <nav class="bnav">
     <button class="ni active" id="ni-inicio" onclick="goTo('inicio')"><span class="ni-ico">🏠</span><span class="ni-lbl">Início</span></button>
-    <button class="ni" id="ni-feed" onclick="goTo('feed')"><span class="ni-ico">📢</span><span class="ni-lbl">Posts</span></button>
     <button class="ni" id="ni-tarefas" onclick="goTo('tarefas')"><span class="ni-ico">✅</span><span class="ni-lbl">Tarefas</span></button>
     <button class="ni" id="ni-estoque" onclick="goTo('estoque')"><span class="ni-ico">📦</span><span class="ni-lbl">Estoque</span></button>
     <button class="ni" id="ni-vendas" onclick="goTo('vendas')"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
@@ -1062,54 +1061,6 @@ async inicio(a) {
     showToast('Lançamento salvo ✅');
     renders.inicio(document.getElementById('content'));
   };
-},
-
-feed(a) {
-  function renderMedia(p) {
-    if (!p.mediaUrl) return '';
-    const url = p.mediaUrl;
-    // YouTube
-    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([^&\n?#]+)/);
-    if (ytMatch) {
-      return `<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin-top:10px">
-        <iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:8px"></iframe>
-      </div>`;
-    }
-    // Instagram
-    if (url.includes('instagram.com')) {
-      return `<a href="${url}" target="_blank" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:10px;padding:12px 14px;margin-top:10px;text-decoration:none">
-        <span style="font-size:22px">📷</span>
-        <div><div style="color:#fff;font-size:13px;font-weight:700">Ver no Instagram</div><div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:2px">${url.replace('https://','').slice(0,45)}...</div></div>
-      </a>`;
-    }
-    // Arquivo / documento / outro link
-    const ext = url.split('.').pop().toLowerCase().split('?')[0];
-    const icons = {pdf:'📄',xlsx:'📊',xls:'📊',docx:'📝',doc:'📝',jpg:'🖼️',png:'🖼️',jpeg:'🖼️',mp4:'🎬',mov:'🎬'};
-    const icon = icons[ext] || '📎';
-    const nomeArq = p.mediaName || url.split('/').pop().slice(0,40) || 'Arquivo';
-    return `<a href="${url}" target="_blank" style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:12px 14px;margin-top:10px;text-decoration:none">
-      <span style="font-size:22px">${icon}</span>
-      <div><div style="color:var(--txt);font-size:13px;font-weight:600">${nomeArq}</div><div style="color:var(--txt2);font-size:11px;margin-top:2px">Toque para abrir</div></div>
-    </a>`;
-  }
-  const setorCores = {Todos:'#555',Cozinha:'#BA7517',Pizzaria:'#993C1D',Bar:'#0F6E56',Salão:'#185FA5',Gestão:'#8B1A1A'};
-  a.innerHTML = posts.map(p=>`
-  <div class="post">
-    <div class="ph">
-      <div class="av" style="background:${p.cor}">${p.autor.slice(0,2).toUpperCase()}</div>
-      <div style="flex:1">
-        <div class="pa">${p.autor} <span style="font-weight:400;color:var(--txt2)">· ${p.cargo}</span></div>
-        <div class="pt">${p.time}${p.setor&&p.setor!=='Todos'?` · <span style="color:${setorCores[p.setor]||'#555'};font-weight:600">${p.setor}</span>`:''}</div>
-      </div>
-      <span class="ptb ${p.badge}">${p.bl}</span>
-    </div>
-    <div class="pb">${p.txt}${renderMedia(p)}${p.extra?`<div class="phl">${p.extra}</div>`:''}</div>
-    <div class="pacts">
-      <button class="pact" onclick="showT('👍 Curtido!')">👍 Curtir</button>
-      <button class="pact" onclick="showT('💬 Em breve!')">💬 Comentar</button>
-    </div>
-  </div>`).join('')+
-  (perfil==='admin'?`<button class="btn-p" style="margin-top:4px" onclick="abrirNovoPost()">+ Novo post</button>`:'');
 },
 
 tarefas(a) {
@@ -2966,7 +2917,7 @@ window.pubPost=()=>{
     setor, txt, mediaUrl, mediaName,
     extra:'', time:'Agora'
   });
-  fecharModal();goTo('feed');showT('✅ Post publicado para ' + setor + '!');
+  fecharModal();showT('✅ Post publicado para ' + setor + '!');
 };
 
 function abrirNovaTarefa(){
