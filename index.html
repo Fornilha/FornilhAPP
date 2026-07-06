@@ -738,7 +738,7 @@ async function mostrarApp() {
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
   const btnTaxa = document.getElementById('ni-taxa');
-  if (btnTaxa) btnTaxa.style.display = perfil === 'admin' ? '' : 'none';
+  if (btnTaxa) btnTaxa.style.display = (perfil === 'admin' || perfil === 'caixa') ? '' : 'none';
   goTo('inicio');
 }
 
@@ -2741,7 +2741,7 @@ async rh(a) {
 },
 
 async taxa(a) {
-  if (perfil !== 'admin') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
+  if (perfil !== 'admin' && perfil !== 'caixa') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
 
   const COLS = COLABORADORES_FIN.map(c => c.nome);
   const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
