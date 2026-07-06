@@ -1013,7 +1013,7 @@ async inicio(a) {
     }
     btn.disabled = true; btn.textContent = 'Salvando...';
     const { error } = await db.from('faturamento_diario').upsert(
-      { data: dataVal, mes_ref: dataVal.slice(0,7), faturamento_bruto: fatVal, created_by: nome },
+      { data: dataVal, mes_ref: dataVal.slice(0,7), faturamento_bruto: fatVal },
       { onConflict: 'data' }
     );
     if (error) {
