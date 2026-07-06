@@ -926,15 +926,6 @@ async inicio(a) {
     <div class="ai-loading" id="ai-load"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Analisando...</span></div>
   </div>
 
-  ${dias.length > 0 ? `
-  <div class="slbl">Faturamento — ${nomeMes} dia a dia</div>
-  <div class="card"><div class="cb" style="padding-top:13px">
-    ${dias.slice().reverse().map(d => {
-      const dataFmt = new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
-      return `<div class="alrt"><span class="alrt-ico">💰</span><span class="alrt-txt">${dataFmt}</span><span style="font-size:14px;font-weight:700;color:var(--txt)">${fmt(Number(d.faturamento_bruto))}</span></div>`;
-    }).join('')}
-  </div></div>` : ''}
-
   <div class="slbl">Indicadores ${mesLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
