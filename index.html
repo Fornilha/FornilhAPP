@@ -1303,13 +1303,15 @@ tarefas(a) {
     }
     t.status='concluida';
     t.dados=dados;
-    updateTarefa(t.id, { status: 'concluida', dados });
+    await updateTarefa(t.id, { status: 'concluida', dados });
     const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
     posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
       badge:'tag-g',bl:'Concluído',setor:t.setor,
       txt:`${tp.icon} <strong>${t.titulo}</strong> concluída por ${t.resp}.`,
       mediaUrl:'',mediaName:'',extra:'',time:'Agora'});
-    fecharModal(); rList(); showT('Enviado com sucesso!');
+    fecharModal();
+    if (t.tipo === 'estoque') { showT('✅ Estoque atualizado!'); goTo('estoque'); }
+    else { rList(); showT('Enviado com sucesso!'); }
   };
 
   rList();
