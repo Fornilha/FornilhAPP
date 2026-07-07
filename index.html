@@ -976,11 +976,6 @@ async inicio(a) {
       <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">CMV ${mesLabel}</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.cmv_pct/META_CMV*100,100)}%;background:${corCMV}"></div></div>
-      <span class="ind-val" style="color:${corCMV}">${ref.cmv_pct}% ${indIcon(ref.cmv_pct,META_CMV,true)}</span>
-    </div>
-    <div class="ind-row">
       <span class="ind-lbl">Desp. Variáveis ${nomeMes}</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div>
       <span class="ind-val" style="color:var(--txt3)">— aguardando</span>
@@ -995,6 +990,15 @@ async inicio(a) {
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
       <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
     </div>
+    <div class="ind-row">
+      <span class="ind-lbl">CMV ${mesLabel}</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.cmv_pct/META_CMV*100,100)}%;background:${corCMV}"></div></div>
+      <span class="ind-val" style="color:${corCMV}">${ref.cmv_pct}% ${indIcon(ref.cmv_pct,META_CMV,true)}</span>
+    </div>
+  </div></div>
+
+  <div class="slbl">Resultado ${mesLabel} vs metas</div>
+  <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
       <span class="ind-lbl">Margem Líquida ${nomeMes}</span>
       ${margemParcPct !== null
