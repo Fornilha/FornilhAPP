@@ -724,9 +724,28 @@ function aplicarEstoqueDosTasks() {
   saveEstoqueState();
 }
 
+async function sincronizarLancamentosDosTasks() {
+  // Garante que toda tarefa de caixa concluída tenha lançamento em lancamentos_diarios
+  const tarefasCaixa = tarefas.filter(t => t.tipo === 'caixa' && t.status === 'concluida' && t.dados?.data);
+  if (!tarefasCaixa.length) return;
+  const datas = tarefasCaixa.map(t => t.dados.data);
+  const { data: existentes } = await db.from('lancamentos_diarios').select('data').in('data', datas);
+  const datasExistentes = new Set((existentes || []).map(r => r.data));
+  for (const t of tarefasCaixa) {
+    if (datasExistentes.has(t.dados.data)) continue;
+    const d = t.dados;
+    await db.from('lancamentos_diarios').upsert({
+      data: d.data, mes_ref: d.data.slice(0,7),
+      faturamento_bruto: d.fat || 0, valor_taxa: d.taxa || 0,
+      ausentes: d.ausentes || [], created_by: t.resp
+    }, { onConflict: 'data' });
+  }
+}
+
 async function mostrarApp() {
   await loadTarefas();
   aplicarEstoqueDosTasks();
+  await sincronizarLancamentosDosTasks();
   document.getElementById('scr-loading').classList.remove('active');
   document.getElementById('scr-login').classList.remove('active');
   document.getElementById('scr-app').classList.add('active');
