@@ -440,7 +440,7 @@ const COLABORADORES_FIN = [
   {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO',      pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
   {nome:'Patricia Jesus dos Santos',       cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'86615647516'},
   {nome:'Douglas Silva Santos',            cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'14747157700'},
-  {nome:'Bruno Da Silva Felix',            cargo:'AJUD. PIZZAIOLO', pixTipo:'Cel',      pixChave:'silvabrunoda748@gmail.com'},
+  // Bruno Da Silva Felix saiu em 30/06/2026 — removido da equipe ativa a partir de 01/07/2026
 ];
 let pagamentos = [];
 async function loadPagamentos() {
@@ -978,11 +978,13 @@ async inicio(a) {
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 
-  // Modal: lançamento unificado do dia
-  window._lancarDia = function() {
-    const fatVal = fatHoje ? Number(fatHoje.faturamento_bruto) : '';
-    const taxaVal = taxaHoje ? Number(taxaHoje.valor_taxa) : '';
-    const ausentesAtuais = taxaHoje ? (taxaHoje.ausentes || []) : [];
+  // Modal: lançamento unificado do dia (aceita lancamento existente para edição)
+  window._lancarDia = function(lanc) {
+    const isEdit = !!lanc;
+    const dataDefault = isEdit ? lanc.data : hojeStr;
+    const fatVal = isEdit ? Number(lanc.faturamento_bruto) : (fatHoje ? Number(fatHoje.faturamento_bruto) : '');
+    const taxaVal = isEdit ? Number(lanc.valor_taxa) : (taxaHoje ? Number(taxaHoje.valor_taxa) : '');
+    const ausentesAtuais = isEdit ? (lanc.ausentes || []) : (taxaHoje ? (taxaHoje.ausentes || []) : []);
 
     const checkboxes = COLABORADORES_FIN.map(c => `
       <label style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--bord);cursor:pointer">
@@ -994,10 +996,10 @@ async inicio(a) {
       </label>`).join('');
 
     document.getElementById('modal-inner').innerHTML = `
-      <h3>Lançamento do dia</h3>
-      <p>Faturamento, taxa e presenças</p>
+      <h3>${isEdit ? 'Editar lançamento' : 'Lançamento do dia'}</h3>
+      <p>${isEdit ? 'Corrija os dados e salve.' : 'Faturamento, taxa e presenças'}</p>
       <div class="fld"><label>Data</label>
-        <input type="date" id="ld-data" value="${hojeStr}" max="${hojeStr}">
+        <input type="date" id="ld-data" value="${dataDefault}" max="${hojeStr}" ${isEdit ? '' : ''}>
       </div>
       <div class="row2">
         <div class="fld"><label>Faturamento bruto (R$)</label>
@@ -2729,16 +2731,25 @@ async taxa(a) {
         const presentes = COLS.length - aus.length;
         const taxaFunc = l.valor_taxa * 0.75;
         const porPessoa = presentes > 0 ? taxaFunc/presentes : 0;
-        return `<div class="card"><div class="cb" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div>
-            <div style="font-size:14px;font-weight:600">${fmtD(l.data)}</div>
-            <div style="font-size:11px;color:var(--txt2);margin-top:2px">${presentes} presentes · ${fmtR(porPessoa)}/pessoa</div>
-            ${aus.length ? `<div style="font-size:11px;color:var(--er);margin-top:1px">Ausentes: ${aus.map(n=>n.split(' ')[0]).join(', ')}</div>` : ''}
+        const lancJson = encodeURIComponent(JSON.stringify(l));
+        return `<div class="card"><div class="cb">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div>
+              <div style="font-size:14px;font-weight:600">${fmtD(l.data)}</div>
+              <div style="font-size:11px;color:var(--txt2);margin-top:2px">${presentes} presentes · ${fmtR(porPessoa)}/pessoa</div>
+              ${aus.length ? `<div style="font-size:11px;color:var(--er);margin-top:1px">Ausentes: ${aus.map(n=>n.split(' ')[0]).join(', ')}</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:15px;font-weight:700;color:var(--verm)">${fmtR(l.valor_taxa)}</div>
+              <div style="font-size:10px;color:var(--txt3)">taxa total</div>
+            </div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:15px;font-weight:700;color:var(--verm)">${fmtR(l.valor_taxa)}</div>
-            <div style="font-size:10px;color:var(--txt3)">taxa total</div>
-          </div>
+          ${perfil==='admin' ? `<div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">
+            <button onclick="window._lancarDia(JSON.parse(decodeURIComponent('${lancJson}')))"
+              style="flex:1;padding:6px;border:1.5px solid var(--acc);color:var(--acc);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✏️ Editar</button>
+            <button onclick="window._deletarLancamento('${l.data}','${mesRef}',renderLanc)"
+              style="flex:1;padding:6px;border:1.5px solid var(--er);color:var(--er);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">🗑️ Excluir</button>
+          </div>` : ''}
         </div></div>`;
       }).join('')
     }`;
@@ -2865,6 +2876,14 @@ async taxa(a) {
 function fecharModal(){document.getElementById('modal-bg').classList.remove('open')}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')fecharModal()});
 function showT(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+
+window._deletarLancamento = async function(data, mesRef, callback) {
+  if (!confirm(`Excluir lançamento de ${new Date(data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}? Esta ação não pode ser desfeita.`)) return;
+  const { error } = await db.from('lancamentos_diarios').delete().eq('data', data);
+  if (error) { showT('Erro ao excluir: ' + error.message); return; }
+  showT('Lançamento excluído.');
+  if (typeof callback === 'function') callback();
+};
 
 function abrirNovoPost(){
   document.getElementById('modal-inner').innerHTML=`
