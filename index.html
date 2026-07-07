@@ -2747,7 +2747,7 @@ async taxa(a) {
           ${perfil==='admin' ? `<div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">
             <button onclick="window._lancarDia(JSON.parse(decodeURIComponent('${lancJson}')))"
               style="flex:1;padding:6px;border:1.5px solid var(--acc);color:var(--acc);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✏️ Editar</button>
-            <button onclick="window._deletarLancamento('${l.data}','${mesRef}',renderLanc)"
+            <button onclick="window._deletarLancamento('${l.data}')"
               style="flex:1;padding:6px;border:1.5px solid var(--er);color:var(--er);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">🗑️ Excluir</button>
           </div>` : ''}
         </div></div>`;
@@ -2877,12 +2877,14 @@ function fecharModal(){document.getElementById('modal-bg').classList.remove('ope
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')fecharModal()});
 function showT(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 
-window._deletarLancamento = async function(data, mesRef, callback) {
-  if (!confirm(`Excluir lançamento de ${new Date(data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}? Esta ação não pode ser desfeita.`)) return;
+window._deletarLancamento = async function(data) {
+  const dataFmt = new Date(data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  if (!confirm(`Excluir lançamento de ${dataFmt}?\nEsta ação não pode ser desfeita.`)) return;
   const { error } = await db.from('lancamentos_diarios').delete().eq('data', data);
   if (error) { showT('Erro ao excluir: ' + error.message); return; }
   showT('Lançamento excluído.');
-  if (typeof callback === 'function') callback();
+  if (window._vndTab) window._vndTab('taxa');
+  else renders.inicio(document.getElementById('content'));
 };
 
 function abrirNovoPost(){
