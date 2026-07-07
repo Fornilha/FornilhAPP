@@ -2215,7 +2215,6 @@ async rh(a) {
     {id:'folha',    ico:'📋', lbl:'Folha'},
     {id:'admissao', ico:'✅', lbl:'Admissão'},
     {id:'rescisao', ico:'🔴', lbl:'Rescisão'},
-    {id:'simulacao',ico:'🔎', lbl:'Simulação Rescisão'},
     {id:'ferias',   ico:'🏖️', lbl:'Aviso de Férias'},
   ];
 
@@ -2366,7 +2365,6 @@ async rh(a) {
     if (id==='folha')    c.innerHTML = formFolha();
     if (id==='admissao') c.innerHTML = formAdmissao();
     if (id==='rescisao') c.innerHTML = formRescisao(false);
-    if (id==='simulacao')c.innerHTML = formRescisao(true);
     if (id==='ferias')   c.innerHTML = formFerias();
   };
 
