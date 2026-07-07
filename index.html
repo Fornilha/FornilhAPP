@@ -2731,7 +2731,7 @@ async taxa(a) {
   const tabs = [
     {id:'lanc', ico:'📝', lbl:'Lançamento'},
     {id:'resumo', ico:'📊', lbl:'Resumo'},
-    {id:'fecha', ico:'✉️', lbl:'Fechamento'},
+    ...(perfil === 'admin' ? [{id:'fecha', ico:'✉️', lbl:'Fechamento'}] : []),
   ];
 
   a.innerHTML = `
