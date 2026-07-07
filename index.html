@@ -328,7 +328,6 @@ const EQUIPE_LOCAL = [
   {nome:'Douglas da Silva',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:'5524981150965'},
   {nome:'Antonio Carlos José Franco Junior',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:''},
   {nome:'Joelson Santos',cargo:'Pizzaiolo',perfil:'pizzaria',cor:'#993C1D',tel:'5524999237441'},
-  {nome:'Bruno da Silva Felix',cargo:'Aj. Pizzaiolo',perfil:'pizzaria',cor:'#993C1D',tel:''},
   {nome:'Tiago Brito',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524999684094'},
   {nome:'Rosenilda Campos',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524998722460'},
 ];
@@ -706,17 +705,23 @@ async function updateTarefa(id, changes) {
 }
 
 function aplicarEstoqueDosTasks() {
-  // Para cada setor, pega a tarefa de estoque concluída mais recente e aplica as quantidades
   Object.keys(ESTOQUE).forEach(setor => {
     const concluidas = tarefas
       .filter(t => t.tipo === 'estoque' && t.setor === setor && t.status === 'concluida')
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      .sort((a, b) => new Date(b.created_at||b.prazo) - new Date(a.created_at||a.prazo));
     if (!concluidas.length) return;
-    const dados = concluidas[0].dados || {};
+    const task = concluidas[0];
+    const dados = task.dados || {};
+    const ts = task.updated_at || task.created_at || null;
     ESTOQUE[setor].forEach(it => {
-      if (dados[it.n] !== undefined) it.q = dados[it.n];
+      if (dados[it.n] !== undefined) {
+        it.prev_q = it.q;
+        it.q = dados[it.n];
+        it.last_count = ts;
+      }
     });
   });
+  saveEstoqueState();
 }
 
 async function mostrarApp() {
@@ -816,8 +821,12 @@ async inicio(a) {
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
   // Despesas fixas % sobre o faturamento acumulado até agora
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
-  // Margem parcial = fat - desp_fixas - taxa_total (sem CMV e salários base — subestimado)
-  const margemParcPct = temDadosParciais ? ((acumuladoMes - DESP_FIXAS_MES - taxaAcumMes) / acumuladoMes * 100) : null;
+  // Margem = fat - folha - desp.variáveis - desp.fixas - impostos (variáveis e impostos = 0 até módulo lançado)
+  const despVarAcum = 0;   // futuro módulo de despesas variáveis
+  const impostosAcum = 0;  // futuro módulo de impostos
+  const margemParcPct = temDadosParciais
+    ? ((acumuladoMes - taxaFuncAcum - despVarAcum - DESP_FIXAS_MES - impostosAcum) / acumuladoMes * 100)
+    : null;
 
   function indCor(val,meta,inv=false){
     if(inv) return val<=meta*0.9?'#1D9E75':val<=meta?'#EF9F27':'#E24B4A';
@@ -915,8 +924,8 @@ async inicio(a) {
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
-      <div class="kpi-v" style="color:${corVar}">${ref.desp_var_pct}%</div>
-      <div class="kpi-s">Meta: ≤${META_VAR}%</div>
+      <div class="kpi-v" style="color:var(--txt3)">—</div>
+      <div class="kpi-s">Aguardando lançamentos</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
@@ -948,9 +957,14 @@ async inicio(a) {
       <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">CMV / Variáveis</span>
+      <span class="ind-lbl">CMV ${mesLabel}</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.cmv_pct/META_CMV*100,100)}%;background:${corCMV}"></div></div>
       <span class="ind-val" style="color:${corCMV}">${ref.cmv_pct}% ${indIcon(ref.cmv_pct,META_CMV,true)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Desp. Variáveis ${nomeMes}</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div>
+      <span class="ind-val" style="color:var(--txt3)">— aguardando</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Despesas fixas</span>
@@ -963,9 +977,10 @@ async inicio(a) {
       <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Margem Líquida</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(ref.margem,0)/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
-      <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
+      <span class="ind-lbl">Margem Líquida ${nomeMes}</span>
+      ${margemParcPct !== null
+        ? (() => { const corM = indCor(margemParcPct, META_MARGEM); return `<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(margemParcPct,0)/META_MARGEM*100,100)}%;background:${corM}"></div></div><span class="ind-val" style="color:${corM}">${margemParcPct.toFixed(1)}% ${indIcon(margemParcPct,META_MARGEM)}</span>`; })()
+        : `<div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" style="color:var(--txt3)">— aguardando</span>`}
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Acumulado ano</span>
@@ -976,10 +991,10 @@ async inicio(a) {
 
   <div class="slbl">Alertas operacionais</div>
   <div class="card"><div class="cb" style="padding-top:13px">
-    ${ref.cmv_pct > META_CMV ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas variáveis em ${ref.cmv_pct}% em ${mesLabel} — limite crítico: ${META_CMV}%</span><span class="tag tag-r">Crítico</span></div>` : ''}
+    ${ref.cmv_pct > META_CMV ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">CMV em ${ref.cmv_pct}% em ${mesLabel} — limite crítico: ${META_CMV}%</span><span class="tag tag-r">Crítico</span></div>` : ''}
     ${ref.fix_pct > META_FIX ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas fixas em ${ref.fix_pct}% em ${mesLabel} — acima da meta de ${META_FIX}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
     ${ref.folha_pct > META_FOLHA ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha em ${ref.folha_pct}% em ${mesLabel} — limite crítico: ${META_FOLHA}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
-    ${ref.margem < 20 ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Margem em ${ref.margem.toFixed(1)}% em ${mesLabel} — abaixo do mínimo de 20%</span><span class="tag tag-r">Crítico</span></div>` : ''}
+    ${margemParcPct !== null && margemParcPct < 20 ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Margem parcial em ${margemParcPct.toFixed(1)}% em ${nomeMes} — abaixo do mínimo de 20%</span><span class="tag tag-r">Crítico</span></div>` : ''}
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 
@@ -1123,7 +1138,7 @@ tarefas(a) {
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
   window.cancelarTarefa=async(id)=>{
     if(!confirm('Cancelar esta tarefa?')) return;
-    const t=tarefas.find(x=>x.id===id); if(!t) return;
+    const t=tarefas.find(x=>String(x.id)===String(id)); if(!t) return;
     t.status='cancelada';
     await updateTarefa(id,{status:'cancelada'});
     rList();
@@ -1145,7 +1160,7 @@ tarefas(a) {
   };
 
   window.abrirTarefa=(id)=>{
-    const t=tarefas.find(x=>x.id===id); if(!t)return;
+    const t=tarefas.find(x=>String(x.id)===String(id)); if(!t)return;
     const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
     const isAdmin=perfil==='admin';
     const concluida=t.status==='concluida';
@@ -1154,16 +1169,13 @@ tarefas(a) {
       let resumo='';
       const d=t.dados||{};
       if(t.tipo==='caixa'){
-        const tm=d.tm?'R$ '+d.tm.toFixed(2).replace('.',','):(d.mesas>0?'R$ '+(d.fat/d.mesas).toFixed(2).replace('.',','):'—');
-        const vends=GARCONS.map(g=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${g.nome.split(' ')[0]}</span><strong>R$ ${(d['v_'+g.nome]||0).toFixed(2).replace('.',',')}</strong></div>`).join('');
         const dataFmt=d.data?new Date(d.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
-        resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>Data</span><strong>${dataFmt}</strong></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Taxa de serviço (equipe 75%)</span><strong>R$ ${((d.taxa||0)*0.75).toFixed(2).replace('.',',')}</strong></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--txt3);font-size:12px">Taxa bruta (100%)</span><span style="color:var(--txt3);font-size:12px">R$ ${(d.taxa||0).toFixed(2).replace('.',',')}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Mesas atendidas</span><strong>${d.mesas||0}</strong></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Ticket médio</span><strong>${tm}</strong></div>
-        <div style="font-size:12px;font-weight:600;color:var(--txt2);margin:8px 0 4px">Vendas por garçom:</div>${vends}`;
+        const ausentes=(d.ausentes||[]).map(n=>n.split(' ')[0]).join(', ')||'Nenhum';
+        resumo=`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bord)"><span>Data</span><strong>${dataFmt}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bord)"><span>Faturamento</span><strong>R$ ${(d.fat||0).toFixed(2).replace('.',',')}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bord)"><span>Taxa de serviço (equipe 75%)</span><strong>R$ ${((d.taxa||0)*0.75).toFixed(2).replace('.',',')}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--txt3);font-size:12px">Taxa bruta (100%)</span><span style="color:var(--txt3);font-size:12px">R$ ${(d.taxa||0).toFixed(2).replace('.',',')}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Ausentes</span><strong>${ausentes}</strong></div>`;
       } else if(t.tipo==='producao'){
         if(t.setor==='Cozinha'){
           resumo=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
@@ -1188,18 +1200,16 @@ tarefas(a) {
 
     let formHtml='';
     if(t.tipo==='caixa'){
-      const vFields=GARCONS.map(g=>`
-        <div class="fld"><label>Vendas — ${g.nome.split(' ')[0]}</label>
-          <input type="number" id="vend_${g.nome.replace(/\s/g,'_')}" placeholder="0,00" min="0" step="0.01">
-        </div>`).join('');
+      const ausFields=COLABORADORES_FIN.map(c=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="aus_${c.nome.replace(/\s/g,'_')}" style="width:16px;height:16px">
+          ${c.nome.split(' ')[0]}
+        </label>`).join('');
       formHtml=`
         <div class="fld"><label>Data do movimento</label><input type="date" id="cf-data" value="${new Date().toISOString().slice(0,10)}"></div>
-        <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01" oninput="calcTM()"></div>
+        <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
-        ${vFields}
-        <div class="fld"><label>Vendas Balcão (R$)</label><input type="number" id="cf-balcao" placeholder="0,00" min="0" step="0.01"></div>
-        <div class="fld"><label>Mesas atendidas</label><input type="number" id="cf-mesas" placeholder="0" min="0" oninput="calcTM()"></div>
-        <div class="fld"><label>Ticket médio (R$) <span style="color:var(--txt3);font-weight:400;font-size:12px" id="cf-tm-hint"></span></label><input type="number" id="cf-tm" placeholder="Calculado automaticamente" min="0" step="0.01" oninput="calcTM(false)"></div>`;
+        <div class="fld"><label>Ausentes no dia</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:4px">${ausFields}</div></div>`;
     } else if(t.tipo==='producao'){
       if(t.setor==='Cozinha'){
         formHtml=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
@@ -1231,17 +1241,13 @@ tarefas(a) {
   };
 
   window.concluirTarefa=(id)=>{
-    const t=tarefas.find(x=>x.id===id); if(!t)return;
+    const t=tarefas.find(x=>String(x.id)===String(id)); if(!t)return;
     const dados={};
     if(t.tipo==='caixa'){
       dados.data=document.getElementById('cf-data').value||new Date().toISOString().slice(0,10);
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
-      dados.balcao=parseFloat(document.getElementById('cf-balcao').value)||0;
-      dados.mesas=parseInt(document.getElementById('cf-mesas').value)||0;
-      dados.tm=parseFloat(document.getElementById('cf-tm').value)||0;
-      if(!dados.tm && dados.mesas>0) dados.tm=parseFloat((dados.fat/dados.mesas).toFixed(2));
-      GARCONS.forEach(g=>{ dados['v_'+g.nome]=parseFloat(document.getElementById('vend_'+g.nome.replace(/\s/g,'_'))?.value)||0; });
+      dados.ausentes=COLABORADORES_FIN.filter(c=>document.getElementById('aus_'+c.nome.replace(/\s/g,'_'))?.checked).map(c=>c.nome);
     } else if(t.tipo==='producao'){
       if(t.setor==='Cozinha'){
         Object.entries(PRODUCAO_COZINHA).forEach(([massa,sabs])=>{
@@ -1251,11 +1257,16 @@ tarefas(a) {
         PRODUCAO_PIZZARIA.forEach(it=>{ dados[it.n]=parseFloat(document.getElementById('prod_'+it.n.replace(/\s/g,'_'))?.value)||0; });
       }
     } else if(t.tipo==='estoque'){
+      const agora = new Date().toISOString();
       (ESTOQUE[t.setor]||[]).forEach(it=>{
         const v=parseFloat(document.getElementById('est_'+it.n.replace(/[\s\/]/g,'_'))?.value);
-        dados[it.n]=isNaN(v)?it.q:v;
-        it.q=dados[it.n];
+        const novoQ = isNaN(v) ? it.q : v;
+        dados[it.n] = novoQ;
+        it.prev_q = it.q;
+        it.q = novoQ;
+        it.last_count = agora;
       });
+      saveEstoqueState();
     } else {
       dados.obs=document.getElementById('outro-obs')?.value||'';
     }
@@ -2682,7 +2693,6 @@ async rh(a) {
 },
 
 async taxa(a) {
-  if (perfil !== 'admin' && perfil !== 'caixa') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
 
   const COLS = COLABORADORES_FIN.map(c => c.nome);
   const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -3006,7 +3016,7 @@ window.atualizaRespProd=(setor)=>{
   el.innerHTML=EQUIPE_LOCAL.filter(e=>e.perfil===p).map(e=>`<option value="${e.nome}|${e.tel}">${e.nome.split(' ')[0]}</option>`).join('');
 };
 
-window.criarTar=(tipo,setorFixed,respFixed)=>{
+window.criarTar=async(tipo,setorFixed,respFixed)=>{
   const prazo=document.getElementById('nt-prazo').value;
   const prazoFmt=new Date(prazo+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
   let setor,resp,tel,titulo;
@@ -3028,7 +3038,7 @@ window.criarTar=(tipo,setorFixed,respFixed)=>{
   }
   const novo={id:Date.now(),tipo,titulo,setor,resp,tel,prazo,status:'pendente',dados:{}};
   tarefas.unshift(novo);
-  saveTarefa(novo);
+  await saveTarefa(novo);
   const tp=TIPOS_TAR[tipo];
   posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
     badge:'tag-a',bl:'Tarefa',setor,
