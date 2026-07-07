@@ -2057,7 +2057,7 @@ async financeiro(a) {
         <div class="fld"><label>Data de pagamento (vencimento)</label><input type="date" id="fin-venc" value="${hojeISO}"></div>
         <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:0 12px;margin-bottom:8px">${campos}</div>`;
       comuns.innerHTML = '';
-    } else if (['Extra','Venda Folga','Rescisão','Reembolso'].includes(tipo)) {
+    } else if (['Extra','Venda Folga','Reembolso'].includes(tipo)) {
       extra.innerHTML = `
         <div class="fld"><label>Colaborador</label>
           <select id="fin-forn">${COLABORADORES_FIN.map(c=>`<option value="${c.nome}">${c.nome.split(' ')[0]} — ${c.cargo}</option>`).join('')}</select>
@@ -2066,24 +2066,6 @@ async financeiro(a) {
         <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Diária extra — 28/06"></div>
         <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
-    } else if (tipo === 'Folha de Pagamento') {
-      window._folhaCount = window._folhaCount || 1;
-      extra.innerHTML = `
-        <div class="row2" style="margin-bottom:8px">
-          <div class="fld" style="margin:0"><label>Subtipo</label>
-            <select id="fin-subtipo" onchange="window._finAtualizaFolha()">
-              <option value="FUNC. REGISTRADOS">Func. Registrados (CLT)</option>
-              <option value="ACERTO POR FORA">Acerto por Fora</option>
-            </select>
-          </div>
-          <div class="fld" style="margin:0"><label>Mês de referência</label>
-            <input id="fin-mes-ref" placeholder="JUN/26" value="${mesAtual}">
-          </div>
-        </div>
-        <div id="fin-folha-funcs"></div>
-        <button class="btn-p" id="fin-btn-add-func" style="width:100%;background:var(--surf);color:var(--txt);border:1px solid var(--bord);margin-top:4px" onclick="window._finAdicionaFunc()">+ Adicionar funcionário</button>`;
-      comuns.innerHTML = '';
-      setTimeout(() => { window._folhaCount = 1; window._finAtualizaFolha(); }, 30);
     } else {
       extra.innerHTML = `<div class="fld"><label>Fornecedor / Beneficiário</label><input id="fin-forn" placeholder="Ex: Gás Litoral"></div>`;
       comuns.innerHTML = `
@@ -2092,107 +2074,7 @@ async financeiro(a) {
         <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
     }
 
-    // Atualiza label do botão de e-mail
-    const btnEmail = document.getElementById('fin-btn-email');
-    if (btnEmail) {
-      if (tipo === 'Folha de Pagamento') {
-        btnEmail.textContent = '✉️ Gerar e-mail para Contabilidade';
-      } else {
-        btnEmail.textContent = '✉️ Gerar e-mail para Flaviane';
-      }
-    }
   };
-
-  function renderFuncCard(i) {
-    return `<div id="fin-func-${i}" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:12px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong style="font-size:13px">Funcionário ${i+1}</strong>
-        ${i>0?`<button onclick="window._finRemoveFunc(${i})" style="background:none;border:none;color:var(--verm);cursor:pointer;font-size:13px">✕ Remover</button>`:''}
-      </div>
-      <div class="row2">
-        <div class="fld" style="margin:0"><label style="font-size:11px">Nome completo</label><input id="ff-nome-${i}" placeholder="Nome do colaborador"></div>
-        <div class="fld" style="margin:0"><label style="font-size:11px">Cargo</label><input id="ff-cargo-${i}" placeholder="Ex: Cozinheiro"></div>
-      </div>
-      <div class="row2" style="margin-top:6px">
-        <div class="fld" style="margin:0"><label style="font-size:11px">Salário base (R$)</label><input type="number" id="ff-sal-${i}" placeholder="0,00" step="0.01" min="0"></div>
-        <div class="fld" style="margin:0"><label style="font-size:11px">Data de início</label><input type="date" id="ff-ini-${i}"></div>
-      </div>
-      <div class="row2" style="margin-top:6px">
-        <div class="fld" style="margin:0"><label style="font-size:11px">Último dia</label><input type="date" id="ff-fim-${i}"></div>
-        <div class="fld" style="margin:0"><label style="font-size:11px">Dias trabalhados</label><input type="number" id="ff-dias-${i}" placeholder="0" min="0"></div>
-      </div>
-      <div class="row2" style="margin-top:6px">
-        <div class="fld" style="margin:0"><label style="font-size:11px">Horas c/ adic. noturno</label><input id="ff-hnoturno-${i}" placeholder="00:00"></div>
-        <div class="fld" style="margin:0"><label style="font-size:11px">Hora extra</label><input id="ff-hextra-${i}" placeholder="00:00"></div>
-      </div>
-      <div class="row2" style="margin-top:6px">
-        <div class="fld" style="margin:0"><label style="font-size:11px">Feriados a compensar</label><input type="number" id="ff-feriado-${i}" placeholder="0" min="0" value="0"></div>
-        <div class="fld" style="margin:0"><label style="font-size:11px">Domingos a compensar</label><input type="number" id="ff-domingo-${i}" placeholder="0" min="0" value="0"></div>
-      </div>
-      <div class="fld" style="margin-top:6px"><label style="font-size:11px">Faltas no mês</label><input type="number" id="ff-faltas-${i}" placeholder="0" min="0" value="0"></div>
-    </div>`;
-  }
-
-  window._finAtualizaFolha = () => {
-    const n = window._folhaCount || 1;
-    const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
-    const wrap = document.getElementById('fin-folha-funcs');
-    if (!wrap) return;
-    wrap.innerHTML = Array.from({length:n}, (_,i) => renderFuncCard(i)).join('');
-    const btnAdd = document.getElementById('fin-btn-add-func');
-    if (btnAdd) btnAdd.style.display = subtipo === 'FUNC. REGISTRADOS' ? '' : 'none';
-  };
-
-  window._finAdicionaFunc = () => {
-    window._folhaCount = (window._folhaCount||1) + 1;
-    window._finAtualizaFolha();
-  };
-
-  window._finRemoveFunc = (idx) => {
-    // Collect current values, remove idx, rebuild
-    const n = window._folhaCount || 1;
-    const dados = [];
-    for (let i=0; i<n; i++) {
-      if (i === idx) continue;
-      dados.push({
-        nome: document.getElementById('ff-nome-'+i)?.value||'',
-        cargo: document.getElementById('ff-cargo-'+i)?.value||'',
-        sal: document.getElementById('ff-sal-'+i)?.value||'',
-        ini: document.getElementById('ff-ini-'+i)?.value||'',
-        fim: document.getElementById('ff-fim-'+i)?.value||'',
-        dias: document.getElementById('ff-dias-'+i)?.value||'',
-        hnoturno: document.getElementById('ff-hnoturno-'+i)?.value||'',
-        hextra: document.getElementById('ff-hextra-'+i)?.value||'',
-        feriado: document.getElementById('ff-feriado-'+i)?.value||'0',
-        domingo: document.getElementById('ff-domingo-'+i)?.value||'0',
-        faltas: document.getElementById('ff-faltas-'+i)?.value||'0',
-      });
-    }
-    window._folhaCount = Math.max(1, n-1);
-    window._finAtualizaFolha();
-    dados.forEach((d,i) => {
-      ['nome','cargo','sal','ini','fim','dias','hnoturno','hextra','feriado','domingo','faltas'].forEach(k => {
-        const el = document.getElementById(`ff-${k}-${i}`);
-        if (el) el.value = d[k];
-      });
-    });
-  };
-
-  function getFuncDados(i) {
-    return {
-      nome:    document.getElementById('ff-nome-'+i)?.value||'',
-      cargo:   document.getElementById('ff-cargo-'+i)?.value||'',
-      sal:     parseFloat(document.getElementById('ff-sal-'+i)?.value||0),
-      ini:     document.getElementById('ff-ini-'+i)?.value||'',
-      fim:     document.getElementById('ff-fim-'+i)?.value||'',
-      dias:    parseInt(document.getElementById('ff-dias-'+i)?.value||0),
-      hnoturno:document.getElementById('ff-hnoturno-'+i)?.value||'00:00',
-      hextra:  document.getElementById('ff-hextra-'+i)?.value||'00:00',
-      feriado: parseInt(document.getElementById('ff-feriado-'+i)?.value||0),
-      domingo: parseInt(document.getElementById('ff-domingo-'+i)?.value||0),
-      faltas:  parseInt(document.getElementById('ff-faltas-'+i)?.value||0),
-    };
-  }
 
   window._finPreenchePix = () => {
     const sel = document.getElementById('fin-forn');
@@ -2241,38 +2123,6 @@ async financeiro(a) {
       }).filter(Boolean);
       corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
 
-    } else if (tipo === 'Folha de Pagamento') {
-      const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
-      const mesRef  = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
-      const [mesAbrev] = mesRef.split('/');
-      const mesNome = MESES_NOME[MESES_PT.indexOf(mesAbrev.charAt(0)+mesAbrev.slice(1).toLowerCase())] || mesAbrev;
-      const n = window._folhaCount || 1;
-
-      if (subtipo === 'FUNC. REGISTRADOS') {
-        assunto = `Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesRef}.`;
-        const linhas = Array.from({length:n}, (_,i) => {
-          const d = getFuncDados(i);
-          if (!d.nome) return '';
-          const compens = [];
-          if (d.feriado > 0) compens.push(`· Compensar ${d.feriado} (${numExtenso(d.feriado)}) FERIADO;`);
-          if (d.domingo > 0) compens.push(`· Compensar ${d.domingo} (${numExtenso(d.domingo)}) Domingo do mês;`);
-          return `${i+1}- ${d.nome} - ${d.cargo.toUpperCase()}\n· Cargo: ${d.cargo}\n· Salário base: R$ ${d.sal.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n· Data de Início: ${d.ini ? fmtDataBr(d.ini) : '__/__/____'}\n· Último dia de trabalho ${d.fim ? fmtDataBr(d.fim) : '__/__/____'}\n· Dias trabalhados: ${d.dias} Dias\n· Horas com adicional noturno: ${d.hnoturno}hs;\n· Hora extra no mês de ${mesNome.toUpperCase()}: ${d.hextra}hs;\n${compens.join('\n')}${compens.length?'\n':''}· ${faltasTxt(d.faltas)}`;
-        }).filter(Boolean);
-        corpo = linhas.join('\n\n');
-        window.open(`mailto:${DEST_CONTAB}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
-        return;
-      } else {
-        // ACERTO POR FORA — abre um mailto por funcionário
-        for (let i=0; i<n; i++) {
-          const d = getFuncDados(i);
-          if (!d.nome) continue;
-          assunto = `Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${d.nome} - ${mesRef}`;
-          corpo = `Olá Luciana.\n\nFavor nos enviar o acerto por fora referente ao mês de ${mesRef} - ${d.nome}.\n\nSegue informações para o Acerto por Fora (folha de pagamento):\n· Cargo: ${d.cargo}\n· Salário base: R$ ${d.sal.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n· Data de Início: ${d.ini ? fmtDataBr(d.ini) : '__/__/____'}\n· Último dia de trabalho ${d.fim ? fmtDataBr(d.fim) : '__/__/____'}\n· Dias trabalhados: ${d.dias} Dias.\n· Hora extra no mês de ${mesNome} com adicional noturno: ${d.hnoturno}hs;\n· Hora extra no mês de ${mesNome}: ${d.hextra}hs;\n· ${faltasTxt(d.faltas)}`;
-          window.open(`mailto:${DEST_CONTAB}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
-        }
-        return;
-      }
-
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
@@ -2314,12 +2164,6 @@ async financeiro(a) {
       const venc   = document.getElementById('fin-venc')?.value || '';
       const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
       await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1});
-    } else if (tipo === 'Folha de Pagamento') {
-      const subtipo = document.getElementById('fin-subtipo')?.value || 'FUNC. REGISTRADOS';
-      const mesRef  = document.getElementById('fin-mes-ref')?.value || mesAtual;
-      const n = window._folhaCount || 1;
-      const nomes = Array.from({length:n}, (_,i) => document.getElementById('ff-nome-'+i)?.value||'').filter(Boolean).join(', ');
-      await savePagamento({tipo, fornecedor: subtipo, item: `Folha ${mesRef} — ${nomes}`, valor: 0, vencimento: null, cc: 'Fornilha', parcelas: n});
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
@@ -2583,16 +2427,16 @@ async rh(a) {
       if (tipo === 'reg') {
         const fer = parseInt(document.getElementById(`f-feriados-${i}`)?.value||0);
         const dom = parseInt(document.getElementById(`f-domingos-${i}`)?.value||0);
-        let bloco = `${registrados.length+1}- ${c.nome} - ${c.cargo}%0A`;
-        bloco += `· Cargo: ${c.cargo}%0A`;
-        bloco += `· Salário base: R$ ${salFmt}%0A`;
-        bloco += `· Data de Início: ${ini}%0A`;
-        bloco += `· Último dia de trabalho ${ult}%0A`;
-        bloco += `· Dias trabalhados: ${dias} Dias%0A`;
-        bloco += `· Horas com adicional noturno: ${hn}hs;%0A`;
-        bloco += `· Hora extra no mês de ${mesN}: ${hex}hs;%0A`;
-        if (fer>0) bloco += `· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};%0A`;
-        if (dom>0) bloco += `· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;%0A`;
+        let bloco = `${registrados.length+1}- ${c.nome} - ${c.cargo}\n`;
+        bloco += `· Cargo: ${c.cargo}\n`;
+        bloco += `· Salário base: R$ ${salFmt}\n`;
+        bloco += `· Data de Início: ${ini}\n`;
+        bloco += `· Último dia de trabalho ${ult}\n`;
+        bloco += `· Dias trabalhados: ${dias} Dias\n`;
+        bloco += `· Horas com adicional noturno: ${hn}hs;\n`;
+        bloco += `· Hora extra no mês de ${mesN}: ${hex}hs;\n`;
+        if (fer>0) bloco += `· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};\n`;
+        if (dom>0) bloco += `· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;\n`;
         bloco += `· ${faltasTxt(falt)}`;
         registrados.push(bloco);
       } else {
@@ -2605,18 +2449,18 @@ async rh(a) {
     // e-mail único para registrados
     if (registrados.length > 0) {
       const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesA}/${anoAbr2}.`);
-      const body = registrados.join('%0A%0A');
+      const body = encodeURIComponent(registrados.join('\n\n'));
       window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
     }
 
     // e-mail individual para cada acerto por fora
     acertos.forEach(({c, salFmt, dias, ini, ult, hn, hex, falt, fer, dom}) => {
       const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - ACERTO POR FORA - ${c.nome} - ${mesA}/${anoAbr2}`);
-      let body = `Olá Luciana.%0AFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.%0ASegue informações para o Acerto por Fora (folha de pagamento):%0A· Cargo: ${c.cargo}%0A· Salário base: R$ ${salFmt}%0A· Data de Início: ${ini}%0A· Último dia de trabalho ${ult}%0A· Dias trabalhados: ${dias} Dias.%0A· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;%0A· Hora extra no mês de ${mesN}: ${hex}hs;`;
-      if (fer>0) body += `%0A· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''};`;
-      if (dom>0) body += `%0A· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;`;
-      body += `%0A· ${falt} (${falt>0?numExtenso(falt):'ZERO'}) FALTA${falt!==1?'S':''}`;
-      window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
+      let bodyStr = `Olá Luciana.\nFavor nos enviar o acerto por fora referente ao mês de ${mesN}/${anoAbr2} - ${c.nome}.\nSegue informações para o Acerto por Fora (folha de pagamento):\n· Cargo: ${c.cargo}\n· Salário base: R$ ${salFmt}\n· Data de Início: ${ini}\n· Último dia de trabalho ${ult}\n· Dias trabalhados: ${dias} Dias.\n· Hora extra no mês de ${mesN} com adicional noturno: ${hn}hs;\n· Hora extra no mês de ${mesN}: ${hex}hs;`;
+      if (fer>0) bodyStr += `\n· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''}`;
+      if (dom>0) bodyStr += `\n· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;`;
+      bodyStr += `\n· ${faltasTxt(falt)}`;
+      window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${encodeURIComponent(bodyStr)}`);
     });
 
     if (registrados.length === 0 && acertos.length === 0) showT('⚠️ Nenhum colaborador preenchido');
@@ -2637,7 +2481,7 @@ async rh(a) {
     const salFmt = salario.toLocaleString('pt-BR',{minimumFractionDigits:2});
     const inicioFmt = inicio ? new Date(inicio+'T12:00:00').toLocaleDateString('pt-BR') : '';
     const subj = encodeURIComponent(`Admissão de Funcionário - ${nomeF}.`);
-    const body = `Olá,%0A%0ASegue informações para admissão de funcionário:%0A%0AFuncionário: ${nomeF}.%0AInício: ${inicioFmt}%0ASalário: R$${salFmt}%0AFunção: ${cargoF.toUpperCase()}%0AEmpresa: FORNILHA RESTAURANTE E PIZZARIA LTDA`;
+    const body = encodeURIComponent(`Olá,\n\nSegue informações para admissão de funcionário:\n\nFuncionário: ${nomeF}.\nInício: ${inicioFmt}\nSalário: R$${salFmt}\nFunção: ${cargoF.toUpperCase()}\nEmpresa: FORNILHA RESTAURANTE E PIZZARIA LTDA`);
     window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
   };
 
@@ -2679,11 +2523,11 @@ async rh(a) {
       fornecedorLinha = nomeF;
     }
 
-    let body = `Olá !%0A%0AItem: ${itemLinha}%0ACentro de Custo/Lucro: Fornilha%0AFornecedor: ${fornecedorLinha}%0A%0ASegue informações para o Acerto Rescisão:%0A%0A· Tempo de Serviço: ${inicio} à ${ultimo}%0A· Último dia Trabalhado: ${ultimo}%0A· Dias Trabalhados ${mesUltFmt}: ${''} dias%0A· Salário Base R$ ${salFmt}%0A· Ad. Noturno ${mesNoturno}: ${adNoturno} Horas%0A· Décimo Terceiro Prop. ${avos13} Avos%0A· Repouso Remunerado`;
-    if (feriados>0) body += `%0A· Compensar ${feriados} (${numExtenso(feriados)}) FERIADO${feriados>1?'S':''}`;
-    if (faltas>0)   body += `%0A· TEVE ${faltas} (${numExtenso(faltas)}) FALTA${faltas>1?'S':''}`;
-    body += `%0A· Férias Prop. ${avosFer} Avos%0A· 1/3 Férias`;
-    if (obs) body += `%0A%0AOBS: ${obs}`;
+    let bodyStr = `Olá !\n\nItem: ${itemLinha}\nCentro de Custo/Lucro: Fornilha\nFornecedor: ${fornecedorLinha}\n\nSegue informações para o Acerto Rescisão:\n\n· Tempo de Serviço: ${inicio} à ${ultimo}\n· Último dia Trabalhado: ${ultimo}\n· Dias Trabalhados ${mesUltFmt}:  dias\n· Salário Base R$ ${salFmt}\n· Ad. Noturno ${mesNoturno}: ${adNoturno} Horas\n· Décimo Terceiro Prop. ${avos13} Avos\n· Repouso Remunerado`;
+    if (feriados>0) bodyStr += `\n· Compensar ${feriados} (${numExtenso(feriados)}) FERIADO${feriados>1?'S':''}`;
+    if (faltas>0)   bodyStr += `\n· TEVE ${faltas} (${numExtenso(faltas)}) FALTA${faltas>1?'S':''}`;
+    bodyStr += `\n· Férias Prop. ${avosFer} Avos\n· 1/3 Férias`;
+    if (obs) bodyStr += `\n\nOBS: ${obs}`;
 
     let subj;
     if (simulacao) {
@@ -2691,7 +2535,7 @@ async rh(a) {
     } else {
       subj = encodeURIComponent(`Rescisão funcionário - ${nomeCurto} - FORNILHA - VENC. ${vencFmt}`);
     }
-    window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
+    window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${encodeURIComponent(bodyStr)}`);
   };
 
   window._rhFerias = () => {
@@ -2716,7 +2560,7 @@ async rh(a) {
     const vencFmt     = inicioDate ? `${String(inicioDate.getDate()).padStart(2,'0')}.${String(inicioDate.getMonth()+1).padStart(2,'0')}` : 'DD.MM';
     const duracao     = document.getElementById('fer-duracao').value||'30';
     const subj = encodeURIComponent(`AVISO DE FÉRIAS COLABORADOR - ${nomeCurto} - FORNILHA - VENC ${vencFmt}`);
-    const body = `Olá !%0A%0ASolicito a inclusão de FÉRIAS ao colaborador ${nomeF}.%0A%0AItem: FÉRIAS - ${cargoF.toUpperCase()} - ${mesA}/${anoAbr2}%0ACentro de Custo/Lucro: Fornilha%0AFornecedor: ${nomeF}%0A%0AINÍCIO: ${inicioFmt}%0ATEMPO: ${duracao} DIAS`;
+    const body = encodeURIComponent(`Olá !\n\nSolicito a inclusão de FÉRIAS ao colaborador ${nomeF}.\n\nItem: FÉRIAS - ${cargoF.toUpperCase()} - ${mesA}/${anoAbr2}\nCentro de Custo/Lucro: Fornilha\nFornecedor: ${nomeF}\n\nINÍCIO: ${inicioFmt}\nTEMPO: ${duracao} DIAS`);
     window.open(`mailto:${DEST_CONTAB}?subject=${subj}&body=${body}`);
   };
 
