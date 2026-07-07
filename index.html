@@ -1704,12 +1704,10 @@ async perfil(a) {
   const cargos={admin:'Administrador',caixa:'Caixa',garcom:'Garçom / Vendedor',bar:'Bar',pizzaria:'Pizzaria',cozinha:'Cozinha'};
   const cores={admin:'#8B1A1A',caixa:'#3C3489',bar:'#0F6E56',garcom:'#185FA5',pizzaria:'#993C1D',cozinha:'#BA7517'};
 
-  // Encontrar este colaborador no COLABORADORES_FIN pelo nome
-  const nomePartes = nome.toLowerCase().split(' ');
-  const colaborador = COLABORADORES_FIN.find(c => {
-    const cp = c.nome.toLowerCase().split(' ');
-    return cp[0] === nomePartes[0] && cp[1] === nomePartes[1];
-  });
+  // Encontrar este colaborador no COLABORADORES_FIN pelo primeiro nome (normalizado)
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const nomeFirst = norm(nome.split(' ')[0]);
+  const colaborador = COLABORADORES_FIN.find(c => norm(c.nome.split(' ')[0]) === nomeFirst);
 
   // Carregar taxa do mês atual se for colaborador
   let taxaQ1 = 0, taxaQ2 = 0, taxaDias = [];
@@ -1722,7 +1720,7 @@ async perfil(a) {
     taxaDias.forEach(d => {
       const ausentes = d.ausentes || [];
       if (ausentes.includes(colaborador.nome)) return;
-      const presentes = COLABORADORES_FIN.length - ausentes.length;
+      const presentes = COLABORADORES_FIN.filter(c => !ausentes.includes(c.nome)).length;
       if (presentes <= 0) return;
       const valor = (Number(d.valor_taxa) * 0.75) / presentes;
       const dia = parseInt(d.data.split('-')[2]);
