@@ -1240,7 +1240,7 @@ tarefas(a) {
     document.getElementById('modal-bg').classList.add('open');
   };
 
-  window.concluirTarefa=(id)=>{
+  window.concluirTarefa=async(id)=>{
     const t=tarefas.find(x=>String(x.id)===String(id)); if(!t)return;
     const dados={};
     if(t.tipo==='caixa'){
@@ -1248,6 +1248,14 @@ tarefas(a) {
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
       dados.ausentes=COLABORADORES_FIN.filter(c=>document.getElementById('aus_'+c.nome.replace(/\s/g,'_'))?.checked).map(c=>c.nome);
+      // Salva também em lancamentos_diarios para refletir em Início e Vendas
+      const mesRef=dados.data.slice(0,7);
+      const { error: lancErr } = await db.from('lancamentos_diarios').upsert({
+        data: dados.data, mes_ref: mesRef,
+        faturamento_bruto: dados.fat, valor_taxa: dados.taxa,
+        ausentes: dados.ausentes, created_by: nome
+      }, { onConflict: 'data' });
+      if (lancErr) showT('⚠️ Erro ao salvar lançamento: ' + lancErr.message);
     } else if(t.tipo==='producao'){
       if(t.setor==='Cozinha'){
         Object.entries(PRODUCAO_COZINHA).forEach(([massa,sabs])=>{
