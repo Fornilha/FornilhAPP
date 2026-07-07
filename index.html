@@ -909,19 +909,14 @@ async inicio(a) {
       <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Margem ${nomeMes} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
-      <div class="kpi-v" style="color:${temDadosParciais?(margemParcPct>=0?'var(--ok)':'var(--er)'):'var(--txt3)'}">${temDadosParciais ? margemParcPct.toFixed(1)+'%' : '—'}</div>
-      <div class="kpi-s">${temDadosParciais ? 'Sem CMV e salários base' : 'Aguardando lançamentos'}</div>
-    </div>
-    <div class="kpi">
       <div class="kpi-l">Folha ${mesLabel} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
       <div class="kpi-v" style="color:${temDadosParciais?indCor(folhaParcPct,META_FOLHA,true):'var(--txt3)'}">${temDadosParciais ? folhaParcPct.toFixed(1)+'%' : '—'}</div>
       <div class="kpi-s">${temDadosParciais ? fmt(taxaFuncAcum)+' func.' : 'Aguardando taxa'}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Desp. Fixas ${nomeMes}</div>
-      <div class="kpi-v" style="color:${temDadosParciais?indCor(fixParcPct,META_FIX,true):'var(--txt3)'}">${temDadosParciais ? fixParcPct.toFixed(1)+'%' : '—'}</div>
-      <div class="kpi-s">${temDadosParciais ? 'R$ 21.230 fixo/mês' : 'Aguardando faturamento'}</div>
+      <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
+      <div class="kpi-v" style="color:${corVar}">${ref.desp_var_pct}%</div>
+      <div class="kpi-s">Meta: ≤${META_VAR}%</div>
     </div>
   </div>
 
