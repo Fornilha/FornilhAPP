@@ -918,6 +918,11 @@ async inicio(a) {
       <div class="kpi-v" style="color:${corVar}">${ref.desp_var_pct}%</div>
       <div class="kpi-s">Meta: ≤${META_VAR}%</div>
     </div>
+    <div class="kpi">
+      <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
+      <div class="kpi-v" style="color:${corFix}">${ref.fix_pct}%</div>
+      <div class="kpi-s">Meta: ≤${META_FIX}%</div>
+    </div>
   </div>
 
   <div class="ai-card">
@@ -956,6 +961,11 @@ async inicio(a) {
       <span class="ind-lbl">Impostos</span>
       <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
       <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Margem Líquida</span>
+      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(ref.margem,0)/META_MARGEM*100,100)}%;background:${corMargem}"></div></div>
+      <span class="ind-val" style="color:${corMargem}">${ref.margem.toFixed(1)}% ${indIcon(ref.margem,META_MARGEM)}</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Acumulado ano</span>
