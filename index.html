@@ -1235,7 +1235,7 @@ tarefas(a) {
       ${formHtml}
       <div class="mbtns">
         <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-        <button class="btn-ok" onclick="concluirTarefa(${id})">Enviar</button>
+        <button class="btn-ok" onclick="concluirTarefa('${id}')">Enviar</button>
       </div>`;
     document.getElementById('modal-bg').classList.add('open');
   };
