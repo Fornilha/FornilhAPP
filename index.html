@@ -1034,7 +1034,7 @@ async inicio(a) {
       const pct = (total / acumuladoMes * 100).toFixed(1);
       elV.textContent = pct + '%';
       elV.style.color = '#E24B4A';
-      elS.textContent = fmtVal(total) + ' em pagamentos';
+      elS.textContent = fmt(total) + ' em pagamentos';
     } else if (total > 0) {
       elV.textContent = fmtVal(total);
       elV.style.color = '#E24B4A';
