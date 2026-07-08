@@ -2359,13 +2359,7 @@ async rh(a) {
 
   const colaboradores = COLABORADORES_FIN;
 
-  // Carrega ausentes do mês para pré-preencher faltas na Folha
-  const mesRefRH = new Date().toISOString().slice(0,7);
-  const { data: lancsRH } = await db.from('lancamentos_diarios').select('ausentes').eq('mes_ref', mesRefRH);
-  const faltasMapRH = {};
-  (lancsRH||[]).forEach(l => (l.ausentes||[]).forEach(n => { faltasMapRH[n] = (faltasMapRH[n]||0) + 1; }));
-
-  function formFolha(faltasMap = {}) {
+  function formFolha() {
     const hoje = new Date().toLocaleDateString('pt-BR');
     const cols = colaboradores.map((c,i)=>`
     <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -2387,7 +2381,7 @@ async rh(a) {
         <div class="fld"><label>H. Extra (HH:MM)</label><input id="f-hextra-${i}" placeholder="00:00"></div>
         <div id="f-feriados-wrap-${i}" class="fld"><label>Feriados a comp.</label><input id="f-feriados-${i}" type="number" placeholder="0" min="0"></div>
         <div id="f-domingos-wrap-${i}" class="fld"><label>Domingos a comp.</label><input id="f-domingos-${i}" type="number" placeholder="0" min="0"></div>
-        <div class="fld" style="grid-column:span 2"><label>Faltas ${faltasMap[c.nome]>0?'<span style="font-size:10px;color:#1D9E75">✅ preenchido pelo caixa</span>':''}</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0" value="${faltasMap[c.nome]||''}"></div>
+        <div class="fld" style="grid-column:span 2"><label>Faltas</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0"></div>
       </div>
     </div>`).join('');
 
@@ -2496,7 +2490,7 @@ async rh(a) {
     });
     const c = document.getElementById('rh-content');
     if (id==='folha') {
-      c.innerHTML = formFolha(faltasMapRH);
+      c.innerHTML = formFolha();
       colaboradores.forEach((_,i) => window._rhFolhaTipo?.(i,'reg'));
     }
     if (id==='admissao') c.innerHTML = formAdmissao();
