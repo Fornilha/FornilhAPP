@@ -449,7 +449,7 @@ async function loadPagamentos() {
 async function savePagamento(p) {
   const { data, error } = await db.from('pagamentos').insert(p).select().single();
   if (error) { showT('⚠️ Erro ao salvar: ' + error.message); return null; }
-  if (data) pagamentos.unshift(data);
+  if (data) { pagamentos.unshift(data); window._atualizarDespVarInicio?.(); }
   return data;
 }
 const TIPOS_TAR = {
