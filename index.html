@@ -1038,11 +1038,20 @@ async inicio(a) {
     const total = pagamentos
       .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
       .reduce((s,p) => s+Number(p.valor||0), 0);
-    elV.textContent = total > 0 ? fmtVal(total) : '—';
-    elV.style.color = total > 0 ? '#E24B4A' : 'var(--txt3)';
-    elS.textContent = total > 0
-      ? (acumuladoMes > 0 ? (total/acumuladoMes*100).toFixed(1)+'% do faturamento' : 'Do mês')
-      : 'Sem lançamentos no mês';
+    if (total > 0 && acumuladoMes > 0) {
+      const pct = (total / acumuladoMes * 100).toFixed(1);
+      elV.textContent = pct + '%';
+      elV.style.color = '#E24B4A';
+      elS.textContent = fmtVal(total) + ' em pagamentos';
+    } else if (total > 0) {
+      elV.textContent = fmtVal(total);
+      elV.style.color = '#E24B4A';
+      elS.textContent = 'Do mês';
+    } else {
+      elV.textContent = '—';
+      elV.style.color = 'var(--txt3)';
+      elS.textContent = 'Sem lançamentos no mês';
+    }
   };
   window._atualizarDespVarInicio();
 
