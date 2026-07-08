@@ -443,8 +443,9 @@ const COLABORADORES_FIN = [
 ];
 let pagamentos = [];
 async function loadPagamentos() {
-  const { data } = await db.from('pagamentos').select('*').order('created_at', { ascending: false });
-  if (data) pagamentos = data;
+  const { data, error } = await db.from('pagamentos').select('*').order('created_at', { ascending: false });
+  if (error) { showT('⚠️ pagamentos erro: ' + error.message); return; }
+  if (data) { pagamentos = data; showT('✅ pagamentos: ' + data.length + ' registros'); }
 }
 async function savePagamento(p) {
   const { data, error } = await db.from('pagamentos').insert(p).select().single();
