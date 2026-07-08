@@ -1985,8 +1985,7 @@ async financeiro(a) {
       <div id="fin-campos-extra"></div>
       <div id="fin-campos-comuns"></div>
       <div id="fin-btns" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-        <div class="fld" style="margin:0"><label>Data do pagamento</label><input type="date" id="fin-data-pag" value="${hojeISO}"></div>
-        <div class="fld" style="margin:0">
+<div class="fld" style="margin:0">
           <label>Anexo (foto ou arquivo)</label>
           <label id="fin-anexo-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--surf2);border:1px dashed var(--bord);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--txt2)">
             <span style="font-size:18px">📎</span>
@@ -2215,7 +2214,6 @@ async financeiro(a) {
 
   window._finSalvar = async () => {
     const tipo = document.getElementById('fin-tipo').value;
-    const dataPag = document.getElementById('fin-data-pag')?.value || hojeISO;
 
     // Upload de anexo (comum a todos os tipos)
     let anexo_url = null;
@@ -2242,12 +2240,12 @@ async financeiro(a) {
         if (i===0) primeiroVenc = document.getElementById('fin-parc-venc-0')?.value || '';
       }
       if (!forn) { showT('⚠️ Informe o fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, data_pagamento:dataPag, anexo_url});
+      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, anexo_url});
     } else if (tipo === 'Salário') {
       const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
       const venc   = document.getElementById('fin-venc')?.value || '';
       const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
-      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, data_pagamento:dataPag, anexo_url});
+      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, anexo_url});
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
@@ -2256,7 +2254,7 @@ async financeiro(a) {
       const cc    = document.getElementById('fin-cc')?.value || '';
       const venc  = document.getElementById('fin-venc')?.value || '';
       if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, data_pagamento:dataPag, anexo_url});
+      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, anexo_url});
     }
     showT('✅ Pagamento salvo no histórico!');
     window._finTab('hist');
