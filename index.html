@@ -843,7 +843,10 @@ async inicio(a) {
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
   // Despesas variáveis = soma dos pagamentos do Financeiro com vencimento no mês atual
   const despVarAcum = pagamentos
-    .filter(p => (p.vencimento||'').slice(0,7) === mesRef)
+    .filter(p => {
+      const d = p.vencimento || (p.created_at||'').slice(0,10);
+      return d.slice(0,7) === mesRef;
+    })
     .reduce((s,p) => s + Number(p.valor||0), 0);
   const impostosAcum = 0;  // futuro módulo de impostos
   const margemParcPct = temDadosParciais
