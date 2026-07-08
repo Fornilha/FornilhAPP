@@ -2389,19 +2389,12 @@ async rh(a) {
     return `
     <div class="card"><div class="cb">
       <div style="font-size:14px;font-weight:700;margin-bottom:10px">📋 Folha de Pagamento</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px">
-        <div class="fld"><label>Mês/Ano de Referência</label>
-          <select id="f-mes">
-            ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
-          </select>
-        </div>
-        <div class="fld"><label>Temporada</label>
-          <select id="f-temporada" onchange="window._rhRecalcNoturno()">
-            <option value="2">🌙 Baixa (2h/dia)</option>
-            <option value="3">🌟 Alta (3h/dia)</option>
-          </select>
-        </div>
+      <div class="fld"><label>Mês/Ano de Referência</label>
+        <select id="f-mes">
+          ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
+        </select>
       </div>
+      <div style="font-size:11px;color:var(--txt2);margin-bottom:10px">🌙 ${[11,0,1,2].includes(cm)?'Alta temporada — 3h noturno/dia':'Baixa temporada — 2h noturno/dia'}</div>
       ${cols}
       <button class="btn-p" onclick="window._rhEnviarFolha(${ca})">📧 Gerar e-mails da Folha</button>
     </div></div>`;
@@ -2509,7 +2502,8 @@ async rh(a) {
 
   window._rhCalcNoturno = (i) => {
     const dias = parseInt(document.getElementById(`f-dias-${i}`)?.value) || 0;
-    const hPorDia = parseInt(document.getElementById('f-temporada')?.value) || 2;
+    const mesAtivo = parseInt(document.getElementById('f-mes')?.value ?? cm);
+    const hPorDia = [11,0,1,2].includes(mesAtivo) ? 3 : 2;
     const totalMin = dias * hPorDia * 60;
     const hh = Math.floor(totalMin / 60);
     const mm = String(totalMin % 60).padStart(2,'0');
