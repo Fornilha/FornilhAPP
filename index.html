@@ -744,7 +744,7 @@ async function sincronizarLancamentosDosTasks() {
 
 async function mostrarApp() {
   await loadTarefas();
-  try { await loadPagamentos(); } catch(e) {}
+  loadPagamentos().catch(()=>{});
   aplicarEstoqueDosTasks();
   await sincronizarLancamentosDosTasks();
   document.getElementById('scr-loading').classList.remove('active');
@@ -841,13 +841,19 @@ async inicio(a) {
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
   // Despesas fixas % sobre o faturamento acumulado até agora
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
-  // Despesas variáveis = soma dos pagamentos do Financeiro com vencimento no mês atual
-  const despVarAcum = pagamentos
-    .filter(p => {
-      const d = p.vencimento || (p.created_at||'').slice(0,10);
-      return d.slice(0,7) === mesRef;
-    })
-    .reduce((s,p) => s + Number(p.valor||0), 0);
+  // Despesas variáveis = soma dos pagamentos do Financeiro no mês atual
+  let despVarAcum = 0;
+  try {
+    const { data: pagMes } = await db.from('pagamentos').select('valor,vencimento,created_at');
+    if (pagMes) {
+      despVarAcum = pagMes
+        .filter(p => {
+          const d = p.vencimento || (p.created_at||'').slice(0,10);
+          return d.slice(0,7) === mesRef;
+        })
+        .reduce((s,p) => s + Number(p.valor||0), 0);
+    }
+  } catch(e) {}
   const impostosAcum = 0;  // futuro módulo de impostos
   const margemParcPct = temDadosParciais
     ? ((acumuladoMes - taxaFuncAcum - despVarAcum - DESP_FIXAS_MES - impostosAcum) / acumuladoMes * 100)
