@@ -2375,7 +2375,7 @@ async rh(a) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
         <div class="fld"><label>Salário Base</label><input id="f-sal-${i}" type="number" step="0.01" value="${c.salario||''}"></div>
-        <div class="fld"><label>Dias Trabalhados</label><input id="f-dias-${i}" type="number" placeholder="30"></div>
+        <div class="fld"><label>Dias Trabalhados</label><input id="f-dias-${i}" type="number" placeholder="30" oninput="window._rhCalcNoturno(${i})"></div>
         <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="f-inicio-${i}" placeholder="01/01/2026"></div>
         <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="f-ultimo-${i}" placeholder="${hoje}"></div>
         <div class="fld"><label>H. Noturno (HH:MM)</label><input id="f-hnoturno-${i}" placeholder="00:00"></div>
@@ -2389,10 +2389,18 @@ async rh(a) {
     return `
     <div class="card"><div class="cb">
       <div style="font-size:14px;font-weight:700;margin-bottom:10px">📋 Folha de Pagamento</div>
-      <div class="fld"><label>Mês/Ano de Referência</label>
-        <select id="f-mes">
-          ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
-        </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px">
+        <div class="fld"><label>Mês/Ano de Referência</label>
+          <select id="f-mes">
+            ${MESES_NOME.map((mn,i)=>`<option value="${i}" ${i===cm?'selected':''}>${mn.toUpperCase()}/${ca}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fld"><label>Temporada</label>
+          <select id="f-temporada" onchange="window._rhRecalcNoturno()">
+            <option value="2">🌙 Baixa (2h/dia)</option>
+            <option value="3">🌟 Alta (3h/dia)</option>
+          </select>
+        </div>
       </div>
       ${cols}
       <button class="btn-p" onclick="window._rhEnviarFolha(${ca})">📧 Gerar e-mails da Folha</button>
@@ -2497,6 +2505,19 @@ async rh(a) {
     if (id==='admissao') c.innerHTML = formAdmissao();
     if (id==='rescisao') c.innerHTML = formRescisao(false);
     if (id==='ferias')   c.innerHTML = formFerias();
+  };
+
+  window._rhCalcNoturno = (i) => {
+    const dias = parseInt(document.getElementById(`f-dias-${i}`)?.value) || 0;
+    const hPorDia = parseInt(document.getElementById('f-temporada')?.value) || 2;
+    const totalMin = dias * hPorDia * 60;
+    const hh = Math.floor(totalMin / 60);
+    const mm = String(totalMin % 60).padStart(2,'0');
+    const el = document.getElementById(`f-hnoturno-${i}`);
+    if (el) el.value = `${hh}:${mm}`;
+  };
+  window._rhRecalcNoturno = () => {
+    colaboradores.forEach((_,i) => window._rhCalcNoturno(i));
   };
 
   // tipo: 'reg' ou 'acerto' — apenas alterna visual do toggle
