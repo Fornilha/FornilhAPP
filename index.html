@@ -2360,6 +2360,7 @@ async rh(a) {
   const colaboradores = COLABORADORES_FIN;
 
   function formFolha() {
+    const {m:cm,a:ca} = mesAnoAtual();
     const hoje = new Date().toLocaleDateString('pt-BR');
     const cols = colaboradores.map((c,i)=>`
     <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:10px">
