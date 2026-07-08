@@ -432,14 +432,14 @@ const FORNECEDORES_FIN = [
   {nome:'Litoral Costa Verde',   tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gás',       cc:'Cozinha'},
 ];
 const COLABORADORES_FIN = [
-  {nome:'Joelson Santos da Silva',         cargo:'PIZZAIOLO',       pixTipo:'telefone', pixChave:'24999237441'},
-  {nome:'Antônio Carlos José Franco Junior',cargo:'GARÇOM',         pixTipo:'CEL',      pixChave:'21988498394'},
-  {nome:'Amado Alexandre de Souza Júnior', cargo:'BARMAN',          pixTipo:'CPF',      pixChave:'07726150556'},
-  {nome:'Vinicius Querino Alves Santos',   cargo:'GERENTE',         pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
-  {nome:'Rosenilda Davi Campos',           cargo:'COZINHEIRA',      pixTipo:'CPF',      pixChave:'700.562.952-3'},
-  {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO',      pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
-  {nome:'Patricia Jesus dos Santos',       cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'86615647516'},
-  {nome:'Douglas Silva Santos',            cargo:'GARÇOM',          pixTipo:'CPF',      pixChave:'14747157700'},
+  {nome:'Joelson Santos da Silva',         cargo:'PIZZAIOLO',  salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
+  {nome:'Antônio Carlos José Franco Junior',cargo:'GARÇOM',    salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394'},
+  {nome:'Amado Alexandre de Souza Júnior', cargo:'BARMAN',     salario:2212.04, pixTipo:'CPF',      pixChave:'07726150556'},
+  {nome:'Vinicius Querino Alves Santos',   cargo:'GERENTE',    salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
+  {nome:'Rosenilda Davi Campos',           cargo:'COZINHEIRA', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3'},
+  {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
+  {nome:'Patricia Jesus dos Santos',       cargo:'CAIXA',      salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516'},
+  {nome:'Douglas Silva Santos',            cargo:'GARÇOM',     salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700'},
   // Bruno Da Silva Felix saiu em 30/06/2026 — removido da equipe ativa a partir de 01/07/2026
 ];
 let pagamentos = [];
@@ -2359,8 +2359,7 @@ async rh(a) {
 
   const colaboradores = COLABORADORES_FIN;
 
-  function formFolha() {
-    const {m:cm,a:ca} = mesAnoAtual();
+  function formFolha(faltasMap = {}) {
     const hoje = new Date().toLocaleDateString('pt-BR');
     const cols = colaboradores.map((c,i)=>`
     <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -2374,7 +2373,7 @@ async rh(a) {
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-        <div class="fld"><label>Salário Base</label><input id="f-sal-${i}" type="number" placeholder="0.00" step="0.01"></div>
+        <div class="fld"><label>Salário Base</label><input id="f-sal-${i}" type="number" step="0.01" value="${c.salario||''}"></div>
         <div class="fld"><label>Dias Trabalhados</label><input id="f-dias-${i}" type="number" placeholder="30"></div>
         <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="f-inicio-${i}" placeholder="01/01/2026"></div>
         <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="f-ultimo-${i}" placeholder="${hoje}"></div>
@@ -2382,7 +2381,7 @@ async rh(a) {
         <div class="fld"><label>H. Extra (HH:MM)</label><input id="f-hextra-${i}" placeholder="00:00"></div>
         <div id="f-feriados-wrap-${i}" class="fld"><label>Feriados a comp.</label><input id="f-feriados-${i}" type="number" placeholder="0" min="0"></div>
         <div id="f-domingos-wrap-${i}" class="fld"><label>Domingos a comp.</label><input id="f-domingos-${i}" type="number" placeholder="0" min="0"></div>
-        <div class="fld" style="grid-column:span 2"><label>Faltas</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0"></div>
+        <div class="fld" style="grid-column:span 2"><label>Faltas ${faltasMap[c.nome]>0?'<span style="font-size:10px;color:#1D9E75">✅ preenchido pelo caixa</span>':''}</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0" value="${faltasMap[c.nome]||''}"></div>
       </div>
     </div>`).join('');
 
@@ -2480,7 +2479,7 @@ async rh(a) {
     </div></div>`;
   }
 
-  window._rhTab = (id) => {
+  window._rhTab = async (id) => {
     tabs.forEach(t => {
       const btn = document.getElementById('rh-tab-'+t.id);
       if (btn) {
@@ -2490,7 +2489,15 @@ async rh(a) {
       }
     });
     const c = document.getElementById('rh-content');
-    if (id==='folha')    c.innerHTML = formFolha();
+    if (id==='folha') {
+      c.innerHTML = '<p style="text-align:center;padding:20px;color:var(--txt2)">Carregando faltas...</p>';
+      const mesRef = new Date().toISOString().slice(0,7);
+      const { data: lancs } = await db.from('lancamentos_diarios').select('ausentes').eq('mes_ref', mesRef);
+      const faltasMap = {};
+      (lancs||[]).forEach(l => (l.ausentes||[]).forEach(nome => { faltasMap[nome] = (faltasMap[nome]||0) + 1; }));
+      c.innerHTML = formFolha(faltasMap);
+      window._rhFolhaTipo && colaboradores.forEach((_,i) => window._rhFolhaTipo(i,'reg'));
+    }
     if (id==='admissao') c.innerHTML = formAdmissao();
     if (id==='rescisao') c.innerHTML = formRescisao(false);
     if (id==='ferias')   c.innerHTML = formFerias();
