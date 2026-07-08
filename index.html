@@ -743,7 +743,8 @@ async function sincronizarLancamentosDosTasks() {
 }
 
 async function mostrarApp() {
-  await Promise.all([loadTarefas(), loadPagamentos()]);
+  await loadTarefas();
+  try { await loadPagamentos(); } catch(e) {}
   aplicarEstoqueDosTasks();
   await sincronizarLancamentosDosTasks();
   document.getElementById('scr-loading').classList.remove('active');
