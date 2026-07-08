@@ -841,15 +841,16 @@ async inicio(a) {
   const taxaAcumMes = dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
   const taxaFuncAcum = taxaAcumMes * 0.75; // 75% da taxa vai para os funcionários
   const temDadosParciais = acumuladoMes > 0;
-  // Folha parcial = apenas a taxa de serviço acumulada (salários base serão adicionados quando lançados)
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
-  // Despesas fixas % sobre o faturamento acumulado até agora
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
-  const despVarAcum = 0;
-  const impostosAcum = 0;  // futuro módulo de impostos
-  const margemParcPct = temDadosParciais
-    ? ((acumuladoMes - taxaFuncAcum - despVarAcum - DESP_FIXAS_MES - impostosAcum) / acumuladoMes * 100)
+  const calcDespVarAcum = () => pagamentos
+    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
+    .reduce((s,p) => s+Number(p.valor||0), 0);
+  const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
+  const calcMargemParcPct = () => temDadosParciais
+    ? ((acumuladoMes - taxaFuncAcum - calcDespVarAcum() - DESP_FIXAS_MES - calcImpostosAcum()) / acumuladoMes * 100)
     : null;
+  const margemParcPct = calcMargemParcPct();
 
   function indCor(val,meta,inv=false){
     if(inv) return val<=meta*0.9?'#1D9E75':val<=meta?'#EF9F27':'#E24B4A';
@@ -1006,8 +1007,8 @@ async inicio(a) {
     <div class="ind-row">
       <span class="ind-lbl">Margem Líquida ${nomeMes}</span>
       ${margemParcPct !== null
-        ? (() => { const corM = indCor(margemParcPct, META_MARGEM); return `<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(margemParcPct,0)/META_MARGEM*100,100)}%;background:${corM}"></div></div><span class="ind-val" style="color:${corM}">${margemParcPct.toFixed(1)}% ${indIcon(margemParcPct,META_MARGEM)}</span>`; })()
-        : `<div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" style="color:var(--txt3)">— aguardando</span>`}
+        ? (() => { const corM = indCor(margemParcPct, META_MARGEM); return `<div class="ind-bar-w"><div class="ind-bar" id="ini-margem-bar" style="width:${Math.min(Math.max(margemParcPct,0)/META_MARGEM*100,100)}%;background:${corM}"></div></div><span class="ind-val" id="ini-margem-ind" style="color:${corM}">${margemParcPct.toFixed(1)}% ${indIcon(margemParcPct,META_MARGEM)}</span>`; })()
+        : `<div class="ind-bar-w"><div class="ind-bar" id="ini-margem-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" id="ini-margem-ind" style="color:var(--txt3)">— aguardando</span>`}
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Margem Acum. ano</span>
@@ -1035,24 +1036,32 @@ async inicio(a) {
     const elS   = document.getElementById('ini-despvar-s');
     const elBar = document.getElementById('ini-despvar-bar');
     const elInd = document.getElementById('ini-despvar-ind');
+    const elMBar = document.getElementById('ini-margem-bar');
+    const elMInd = document.getElementById('ini-margem-ind');
     if (!elV || !elS) { window._atualizarDespVarInicio = null; return; }
-    const total = pagamentos
-      .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
-      .reduce((s,p) => s+Number(p.valor||0), 0);
-    if (total > 0 && acumuladoMes > 0) {
-      const pct = total / acumuladoMes * 100;
-      const pctStr = pct.toFixed(1);
+
+    // Desp. Variáveis
+    const despVar = calcDespVarAcum();
+    if (despVar > 0 && acumuladoMes > 0) {
+      const pct = despVar / acumuladoMes * 100;
       const cor = pct <= META_VAR ? '#1D9E75' : pct <= META_VAR * 1.5 ? '#BA7517' : '#E24B4A';
-      const ico = pct <= META_VAR ? '✅' : '⚠️';
-      elV.textContent = pctStr + '%';
+      elV.textContent = pct.toFixed(1) + '%';
       elV.style.color = '#E24B4A';
-      elS.textContent = fmt(total) + ' em pagamentos';
+      elS.textContent = fmt(despVar) + ' em pagamentos';
       if (elBar) { elBar.style.width = Math.min(pct/META_VAR*100,100)+'%'; elBar.style.background = cor; }
-      if (elInd) { elInd.textContent = pctStr+'% '+ico; elInd.style.color = cor; }
+      if (elInd) { elInd.textContent = pct.toFixed(1)+'% '+(pct<=META_VAR?'🟢':pct<=META_VAR*1.5?'🟡':'🔴'); elInd.style.color = cor; }
     } else {
-      elV.textContent = '—';
-      elV.style.color = 'var(--txt3)';
+      elV.textContent = '—'; elV.style.color = 'var(--txt3)';
       elS.textContent = 'Sem lançamentos no mês';
+    }
+
+    // Margem Líquida parcial (recalcula com todas as despesas)
+    const mPct = calcMargemParcPct();
+    if (mPct !== null && (elMBar || elMInd)) {
+      const corM = mPct >= META_MARGEM*0.9 ? '#1D9E75' : mPct >= META_MARGEM*0.7 ? '#EF9F27' : '#E24B4A';
+      const icoM = mPct >= META_MARGEM ? '🟢' : mPct >= META_MARGEM*0.7 ? '🟡' : '🔴';
+      if (elMBar) { elMBar.style.width = Math.min(Math.max(mPct,0)/META_MARGEM*100,100)+'%'; elMBar.style.background = corM; }
+      if (elMInd) { elMInd.textContent = mPct.toFixed(1)+'% '+icoM; elMInd.style.color = corM; }
     }
   };
   window._atualizarDespVarInicio();
