@@ -914,13 +914,13 @@ async inicio(a) {
       </div>
       <div style="padding:0 15px 4px">
         ${itensChecklist.map(i => itemChecklist(i)).join('')}
-        <div style="display:flex;align-items:center;gap:11px;padding:11px 0">
-          <div style="width:34px;height:34px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;opacity:.5">📦</div>
+        <div style="display:flex;align-items:center;gap:11px;padding:11px 0;cursor:pointer" onclick="goTo('financeiro')">
+          <div style="width:34px;height:34px;border-radius:50%;background:#185FA522;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">💳</div>
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--txt3)">Despesas do dia</div>
-            <div style="font-size:11px;color:var(--txt3);margin-top:1px">Notas e PIX — em breve</div>
+            <div style="font-size:13px;font-weight:600;color:var(--txt)">Financeiro</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:1px">Registrar pagamento ou boleto</div>
           </div>
-          <span style="font-size:11px;color:var(--txt3);padding:4px 9px;border:1px solid var(--bord);border-radius:20px">Em breve</span>
+          <span style="font-size:11px;color:#185FA5;padding:4px 9px;border:1px solid #185FA5;border-radius:20px">Abrir</span>
         </div>
       </div>
     </div>` : '';
@@ -943,8 +943,8 @@ async inicio(a) {
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
-      <div class="kpi-v" style="color:var(--txt3)" id="kpi-despvar-val">—</div>
-      <div class="kpi-s" id="kpi-despvar-sub">Aguardando lançamentos</div>
+      <div class="kpi-v" style="color:var(--txt3)">—</div>
+      <div class="kpi-s">Aguardando lançamentos</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
@@ -1106,26 +1106,6 @@ async inicio(a) {
     showToast('Lançamento salvo ✅');
     renders.inicio(document.getElementById('content'));
   };
-
-  // Atualiza Desp. Variáveis em background após renderizar
-  (async () => {
-    try {
-      const mesR = new Date().toISOString().slice(0,7);
-      const { data } = await db.from('pagamentos').select('valor,vencimento,created_at');
-      if (!data) return;
-      const total = data
-        .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesR; })
-        .reduce((s,p) => s+Number(p.valor||0), 0);
-      const elVal = document.getElementById('kpi-despvar-val');
-      const elSub = document.getElementById('kpi-despvar-sub');
-      if (!elVal || !elSub) return;
-      if (total > 0) {
-        elVal.style.color = '#E24B4A';
-        elVal.textContent = fmtVal(total);
-        elSub.textContent = 'Lançamentos do mês';
-      }
-    } catch(e) {}
-  })();
 },
 
 tarefas(a) {
