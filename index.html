@@ -1960,7 +1960,10 @@ async financeiro(a) {
           <div style="font-size:13px;font-weight:600;color:var(--txt)">${p.item||p.fornecedor||'—'}</div>
           <div style="font-size:11px;color:var(--txt2)">${p.tipo}${parcInfo} · ${p.fornecedor||''} · ${dtLabel}</div>
         </div>
-        <div style="font-size:13px;font-weight:700;color:${cor};white-space:nowrap">${fmtVal(p.valor)}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${p.anexo_url ? `<a href="${p.anexo_url}" target="_blank" style="font-size:18px;text-decoration:none" title="Ver anexo">📎</a>` : ''}
+          <div style="font-size:13px;font-weight:700;color:${cor};white-space:nowrap">${fmtVal(p.valor)}</div>
+        </div>
       </div>`;
     }).join('');
 
@@ -1983,6 +1986,14 @@ async financeiro(a) {
       <div id="fin-campos-comuns"></div>
       <div id="fin-btns" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
         <div class="fld" style="margin:0"><label>Data do pagamento</label><input type="date" id="fin-data-pag" value="${hojeISO}"></div>
+        <div class="fld" style="margin:0">
+          <label>Anexo (foto ou arquivo)</label>
+          <label id="fin-anexo-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--surf2);border:1px dashed var(--bord);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--txt2)">
+            <span style="font-size:18px">📎</span>
+            <span id="fin-anexo-nome">Toque para selecionar ou tirar foto</span>
+            <input type="file" id="fin-anexo" accept="image/*,application/pdf" capture="environment" style="display:none" onchange="window._finAnexoChange(this)">
+          </label>
+        </div>
         <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
         <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
       </div>
@@ -2015,6 +2026,11 @@ async financeiro(a) {
       const mes = document.getElementById('fin-hist-mes')?.value || hojeISO.slice(0,7);
       document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mes);
     }
+  };
+
+  window._finAnexoChange = (input) => {
+    const f = input.files?.[0];
+    document.getElementById('fin-anexo-nome').textContent = f ? f.name : 'Toque para selecionar ou tirar foto';
   };
 
   window._finAtualizaHist = () => {
@@ -2199,6 +2215,21 @@ async financeiro(a) {
 
   window._finSalvar = async () => {
     const tipo = document.getElementById('fin-tipo').value;
+    const dataPag = document.getElementById('fin-data-pag')?.value || hojeISO;
+
+    // Upload de anexo (comum a todos os tipos)
+    let anexo_url = null;
+    const file = document.getElementById('fin-anexo')?.files?.[0];
+    if (file) {
+      showT('⏳ Enviando anexo...');
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data: upData, error: upErr } = await db.storage.from('fin-anexos').upload(path, file);
+      if (upErr) { showT('⚠️ Erro no anexo: ' + upErr.message); return; }
+      const { data: urlData } = db.storage.from('fin-anexos').getPublicUrl(upData.path);
+      anexo_url = urlData.publicUrl;
+    }
+
     if (tipo === 'Boleto') {
       const forn = document.getElementById('fin-forn')?.value || '';
       const item = document.getElementById('fin-item')?.value || '';
@@ -2211,14 +2242,12 @@ async financeiro(a) {
         if (i===0) primeiroVenc = document.getElementById('fin-parc-venc-0')?.value || '';
       }
       if (!forn) { showT('⚠️ Informe o fornecedor'); return; }
-      const dataPag = document.getElementById('fin-data-pag')?.value || hojeISO;
-      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, data_pagamento:dataPag});
+      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, data_pagamento:dataPag, anexo_url});
     } else if (tipo === 'Salário') {
       const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
       const venc   = document.getElementById('fin-venc')?.value || '';
       const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
-      const dataPag = document.getElementById('fin-data-pag')?.value || hojeISO;
-      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, data_pagamento:dataPag});
+      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, data_pagamento:dataPag, anexo_url});
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
       const fornEl = document.getElementById('fin-forn');
@@ -2226,9 +2255,8 @@ async financeiro(a) {
       const val   = parseFloat(document.getElementById('fin-valor')?.value||0);
       const cc    = document.getElementById('fin-cc')?.value || '';
       const venc  = document.getElementById('fin-venc')?.value || '';
-      const dataPag = document.getElementById('fin-data-pag')?.value || hojeISO;
       if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, data_pagamento:dataPag});
+      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, data_pagamento:dataPag, anexo_url});
     }
     showT('✅ Pagamento salvo no histórico!');
     window._finTab('hist');
