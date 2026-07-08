@@ -448,9 +448,11 @@ async function loadPagamentos() {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
     const data = await res.json();
-    if (Array.isArray(data)) { pagamentos = data; showT('✅ pagamentos: ' + data.length); }
-    else showT('⚠️ pagamentos: ' + JSON.stringify(data).slice(0,80));
-  } catch(e) { showT('⚠️ pagamentos fetch: ' + e.message); }
+    if (Array.isArray(data)) {
+      pagamentos = data;
+      window._atualizarDespVarInicio?.();
+    }
+  } catch(e) {}
 }
 async function savePagamento(p) {
   const { data, error } = await db.from('pagamentos').insert(p).select().single();
@@ -949,9 +951,9 @@ async inicio(a) {
       <div class="kpi-s">${temDadosParciais ? fmt(taxaFuncAcum)+' func.' : 'Aguardando taxa'}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
+      <div class="kpi-l">Desp. Variáveis ${nomeMes.slice(0,3).charAt(0).toUpperCase()+nomeMes.slice(1,3)}/26</div>
       <div class="kpi-v" style="color:var(--txt3)" id="ini-despvar-v">—</div>
-      <div class="kpi-s" id="ini-despvar-s">Aguardando lançamentos</div>
+      <div class="kpi-s" id="ini-despvar-s">Carregando...</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
@@ -1028,30 +1030,21 @@ async inicio(a) {
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
 
-  // Atualiza Desp. Variáveis usando o array global pagamentos (carregado no mostrarApp)
-  const _atualizarDespVar = () => {
+  // Atualiza Desp. Variáveis — chamado imediatamente e também pelo loadPagamentos quando terminar
+  window._atualizarDespVarInicio = () => {
     const elV = document.getElementById('ini-despvar-v');
     const elS = document.getElementById('ini-despvar-s');
-    if (!elV || !elS) return;
-    const meses = [...new Set(pagamentos.map(p => (p.vencimento||(p.created_at||'').slice(0,10)).slice(0,7)))];
+    if (!elV || !elS) { window._atualizarDespVarInicio = null; return; }
     const total = pagamentos
       .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
       .reduce((s,p) => s+Number(p.valor||0), 0);
-    if (pagamentos.length === 0) {
-      elS.textContent = `[debug] array vazio — mês: ${mesRef}`;
-    } else if (total > 0) {
-      elV.textContent = fmtVal(total);
-      elV.style.color = '#E24B4A';
-      elS.textContent = acumuladoMes > 0 ? (total/acumuladoMes*100).toFixed(1)+'% do faturamento' : 'Do mês';
-    } else {
-      elS.textContent = `[debug] ${pagamentos.length} reg, meses: ${meses.join(',')} | ref: ${mesRef}`;
-    }
+    elV.textContent = total > 0 ? fmtVal(total) : '—';
+    elV.style.color = total > 0 ? '#E24B4A' : 'var(--txt3)';
+    elS.textContent = total > 0
+      ? (acumuladoMes > 0 ? (total/acumuladoMes*100).toFixed(1)+'% do faturamento' : 'Do mês')
+      : 'Sem lançamentos no mês';
   };
-  if (pagamentos.length > 0) {
-    _atualizarDespVar();
-  } else {
-    setTimeout(_atualizarDespVar, 2500);
-  }
+  window._atualizarDespVarInicio();
 
   // Modal: lançamento unificado do dia (aceita lancamento existente para edição)
   window._lancarDia = function(lanc) {
