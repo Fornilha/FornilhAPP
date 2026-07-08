@@ -1030,25 +1030,27 @@ async inicio(a) {
 
   // Atualiza Desp. Variáveis usando o array global pagamentos (carregado no mostrarApp)
   const _atualizarDespVar = () => {
-    const total = pagamentos
-      .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
-      .reduce((s,p) => s+Number(p.valor||0), 0);
     const elV = document.getElementById('ini-despvar-v');
     const elS = document.getElementById('ini-despvar-s');
     if (!elV || !elS) return;
-    if (total > 0) {
+    const meses = [...new Set(pagamentos.map(p => (p.vencimento||(p.created_at||'').slice(0,10)).slice(0,7)))];
+    const total = pagamentos
+      .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
+      .reduce((s,p) => s+Number(p.valor||0), 0);
+    if (pagamentos.length === 0) {
+      elS.textContent = `[debug] array vazio — mês: ${mesRef}`;
+    } else if (total > 0) {
       elV.textContent = fmtVal(total);
       elV.style.color = '#E24B4A';
       elS.textContent = acumuladoMes > 0 ? (total/acumuladoMes*100).toFixed(1)+'% do faturamento' : 'Do mês';
     } else {
-      elV.textContent = fmtVal(0);
-      elS.textContent = 'Sem lançamentos no mês';
+      elS.textContent = `[debug] ${pagamentos.length} reg, meses: ${meses.join(',')} | ref: ${mesRef}`;
     }
   };
   if (pagamentos.length > 0) {
     _atualizarDespVar();
   } else {
-    setTimeout(_atualizarDespVar, 2000);
+    setTimeout(_atualizarDespVar, 2500);
   }
 
   // Modal: lançamento unificado do dia (aceita lancamento existente para edição)
