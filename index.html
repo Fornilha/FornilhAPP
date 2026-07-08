@@ -443,16 +443,8 @@ const COLABORADORES_FIN = [
 ];
 let pagamentos = [];
 async function loadPagamentos() {
-  try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/pagamentos?select=*&order=created_at.desc`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-    });
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      pagamentos = data;
-      window._atualizarDespVarInicio?.();
-    }
-  } catch(e) {}
+  const { data } = await db.from('pagamentos').select('*').order('created_at', { ascending: false });
+  if (data) { pagamentos = data; window._atualizarDespVarInicio?.(); }
 }
 async function savePagamento(p) {
   const { data, error } = await db.from('pagamentos').insert(p).select().single();
