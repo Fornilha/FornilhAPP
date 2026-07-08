@@ -744,7 +744,6 @@ async function sincronizarLancamentosDosTasks() {
 
 async function mostrarApp() {
   await loadTarefas();
-  await loadPagamentos().catch(()=>{});
   aplicarEstoqueDosTasks();
   await sincronizarLancamentosDosTasks();
   document.getElementById('scr-loading').classList.remove('active');
@@ -761,6 +760,10 @@ async function mostrarApp() {
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
   goTo('inicio');
+  // Carrega pagamentos em background e recarrega início quando pronto
+  loadPagamentos().then(() => {
+    if (window._paginaAtual === 'inicio') goTo('inicio');
+  }).catch(() => {});
 }
 
 async function sair() {
@@ -791,6 +794,7 @@ async function salvarNovaSenha() {
 
 // ─── NAVEGAÇÃO ───────────────────────────────────────────
 function goTo(tela) {
+  window._paginaAtual = tela;
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   const nav = document.getElementById('ni-'+tela);
   if (nav) nav.classList.add('active');
