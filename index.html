@@ -760,10 +760,6 @@ async function mostrarApp() {
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
   goTo('inicio');
-  // Carrega pagamentos em background e recarrega início quando pronto
-  loadPagamentos().then(() => {
-    if (window._paginaAtual === 'inicio') goTo('inicio');
-  }).catch(() => {});
 }
 
 async function sair() {
@@ -845,14 +841,7 @@ async inicio(a) {
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
   // Despesas fixas % sobre o faturamento acumulado até agora
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
-  const despVarAcum = pagamentos
-    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
-    .reduce((s,p) => s+Number(p.valor||0), 0);
-  const despVarStr  = despVarAcum > 0 ? fmtVal(despVarAcum) : '—';
-  const despVarCor  = despVarAcum > 0 ? '#E24B4A' : 'var(--txt3)';
-  const despVarSub  = (despVarAcum > 0 && acumuladoMes > 0)
-    ? ((despVarAcum/acumuladoMes*100).toFixed(1) + '% do faturamento')
-    : 'Aguardando lançamentos';
+  const despVarAcum = 0;
   const impostosAcum = 0;  // futuro módulo de impostos
   const margemParcPct = temDadosParciais
     ? ((acumuladoMes - taxaFuncAcum - despVarAcum - DESP_FIXAS_MES - impostosAcum) / acumuladoMes * 100)
@@ -954,8 +943,8 @@ async inicio(a) {
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Variáveis ${mesLabel}</div>
-      <div class="kpi-v" style="color:${despVarCor}">${despVarStr}</div>
-      <div class="kpi-s">${despVarSub}</div>
+      <div class="kpi-v" style="color:var(--txt3)" id="kpi-despvar-val">—</div>
+      <div class="kpi-s" id="kpi-despvar-sub">Aguardando lançamentos</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
@@ -1117,6 +1106,26 @@ async inicio(a) {
     showToast('Lançamento salvo ✅');
     renders.inicio(document.getElementById('content'));
   };
+
+  // Atualiza Desp. Variáveis em background após renderizar
+  (async () => {
+    try {
+      const mesR = new Date().toISOString().slice(0,7);
+      const { data } = await db.from('pagamentos').select('valor,vencimento,created_at');
+      if (!data) return;
+      const total = data
+        .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesR; })
+        .reduce((s,p) => s+Number(p.valor||0), 0);
+      const elVal = document.getElementById('kpi-despvar-val');
+      const elSub = document.getElementById('kpi-despvar-sub');
+      if (!elVal || !elSub) return;
+      if (total > 0) {
+        elVal.style.color = '#E24B4A';
+        elVal.textContent = fmtVal(total);
+        elSub.textContent = 'Lançamentos do mês';
+      }
+    } catch(e) {}
+  })();
 },
 
 tarefas(a) {
