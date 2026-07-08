@@ -2359,6 +2359,12 @@ async rh(a) {
 
   const colaboradores = COLABORADORES_FIN;
 
+  // Carrega ausentes do mês para pré-preencher faltas na Folha
+  const mesRefRH = new Date().toISOString().slice(0,7);
+  const { data: lancsRH } = await db.from('lancamentos_diarios').select('ausentes').eq('mes_ref', mesRefRH);
+  const faltasMapRH = {};
+  (lancsRH||[]).forEach(l => (l.ausentes||[]).forEach(n => { faltasMapRH[n] = (faltasMapRH[n]||0) + 1; }));
+
   function formFolha(faltasMap = {}) {
     const hoje = new Date().toLocaleDateString('pt-BR');
     const cols = colaboradores.map((c,i)=>`
@@ -2479,7 +2485,7 @@ async rh(a) {
     </div></div>`;
   }
 
-  window._rhTab = async (id) => {
+  window._rhTab = (id) => {
     tabs.forEach(t => {
       const btn = document.getElementById('rh-tab-'+t.id);
       if (btn) {
@@ -2490,13 +2496,8 @@ async rh(a) {
     });
     const c = document.getElementById('rh-content');
     if (id==='folha') {
-      c.innerHTML = '<p style="text-align:center;padding:20px;color:var(--txt2)">Carregando faltas...</p>';
-      const mesRef = new Date().toISOString().slice(0,7);
-      const { data: lancs } = await db.from('lancamentos_diarios').select('ausentes').eq('mes_ref', mesRef);
-      const faltasMap = {};
-      (lancs||[]).forEach(l => (l.ausentes||[]).forEach(nome => { faltasMap[nome] = (faltasMap[nome]||0) + 1; }));
-      c.innerHTML = formFolha(faltasMap);
-      window._rhFolhaTipo && colaboradores.forEach((_,i) => window._rhFolhaTipo(i,'reg'));
+      c.innerHTML = formFolha(faltasMapRH);
+      colaboradores.forEach((_,i) => window._rhFolhaTipo?.(i,'reg'));
     }
     if (id==='admissao') c.innerHTML = formAdmissao();
     if (id==='rescisao') c.innerHTML = formRescisao(false);
