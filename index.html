@@ -831,6 +831,9 @@ async inicio(a) {
   const var25 = mesesFechados.reduce((s,d) => s + d.fat25, 0);
   const varAno = Math.round((acumuladoAno/var25-1)*100);
   const varSinal = varAno >= 0 ? '+' : '';
+  const lucroAcumAno = mesesFechados.reduce((s,d) => s + d.lucro, 0);
+  const fatAcumFechado = mesesFechados.reduce((s,d) => s + d.fat, 0);
+  const margemAcumAnoPct = fatAcumFechado > 0 ? (lucroAcumAno / fatAcumFechado * 100) : null;
 
   // ── Indicadores parciais do mês vigente ──
   // Despesas fixas mensais conhecidas (aluguel, energia, internet, etc.)
@@ -1005,6 +1008,10 @@ async inicio(a) {
       ${margemParcPct !== null
         ? (() => { const corM = indCor(margemParcPct, META_MARGEM); return `<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(margemParcPct,0)/META_MARGEM*100,100)}%;background:${corM}"></div></div><span class="ind-val" style="color:${corM}">${margemParcPct.toFixed(1)}% ${indIcon(margemParcPct,META_MARGEM)}</span>`; })()
         : `<div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" style="color:var(--txt3)">— aguardando</span>`}
+    </div>
+    <div class="ind-row">
+      <span class="ind-lbl">Margem Acum. ano</span>
+      ${margemAcumAnoPct !== null ? (() => { const corM = indCor(margemAcumAnoPct, META_MARGEM); return `<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.max(margemAcumAnoPct,0)/META_MARGEM*100,100)}%;background:${corM}"></div></div><span class="ind-val" style="color:${corM}">${margemAcumAnoPct.toFixed(1)}% ${indIcon(margemAcumAnoPct,META_MARGEM)}</span>`; })() : `<div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" style="color:var(--txt3)">—</span>`}
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Acumulado ano</span>
