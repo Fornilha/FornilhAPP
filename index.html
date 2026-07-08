@@ -1929,6 +1929,7 @@ async financeiro(a) {
   const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Reembolso','Outro'];
   const DEST_FLAVIANE = 'financeirorestaurantelonier@gmail.com';
   const DEST_CONTAB = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
+  const ASSINATURA = `\n\n--\nVinicius Querino Alves Santos\nAssistente Financeiro — Fornilha Pizzaria\n📞 (24) 98135-3520\n✉️ financeiro.fornilha@gmail.com\n📍 Rua Santana nº 75 - Ilha Grande - RJ\n📸 @fornilha.oficial`;
   const MESES_NOME = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   function numExtenso(n) {
@@ -2223,7 +2224,7 @@ async financeiro(a) {
       const linhasParcelas = parcelas.map(p =>
         `Valor do Boleto: R$ ${p.val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\nVencimento dia ${p.venc ? fmtDataBr(p.venc).slice(0,5) : 'DD/MM'}`
       ).join('\n\n');
-      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}\n\nAtenciosamente,` + ASSINATURA + ``;
 
     } else if (tipo === 'Salário') {
       const mesRef = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
@@ -2235,7 +2236,7 @@ async financeiro(a) {
         if (!val) return '';
         return `${c.nome} - ${c.cargo}\nChave Pix: (${c.pixTipo}) - ${c.pixChave}${c.banco?`\nBanco: ${c.banco}`:''}\nNome: ${c.nome}\nValor de R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n`;
       }).filter(Boolean);
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,` + ASSINATURA + ``;
 
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
@@ -2252,7 +2253,7 @@ async financeiro(a) {
         if (f?.pixChave) dadosPix = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
       }
       assunto = `Lançar e Agendar - ${(item||forn).toUpperCase()} - FORNILHA - VENC. ${vencFmt}`;
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}\n\nAtenciosamente,` + ASSINATURA + ``;
     }
 
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
@@ -2593,7 +2594,7 @@ async rh(a) {
     // e-mail único para registrados
     if (registrados.length > 0) {
       const subj = encodeURIComponent(`Informação para Elaboração da Folha - FORNILHA - FUNC. REGISTRADOS - ${mesA}/${anoAbr2}.`);
-      const body = encodeURIComponent(`Olá, bom dia.\n\nSegue abaixo as informações para elaboração da folha de pagamento dos funcionários registrados ref. ao mês de ${mesN}/${anoAbr2}.\n\n${registrados.join('\n\n')}\n\nAtenciosamente,\nVinicius Querino — Fornilha Restaurante & Pizzaria`);
+      const body = encodeURIComponent(`Olá, bom dia.\n\nSegue abaixo as informações para elaboração da folha de pagamento dos funcionários registrados ref. ao mês de ${mesN}/${anoAbr2}.\n\n${registrados.join('\n\n')}\n\nAtenciosamente,` + ASSINATURA);
       window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_CONTAB)}&su=${subj}&body=${body}`);
     }
 
@@ -2604,6 +2605,7 @@ async rh(a) {
       if (fer>0) bodyStr += `\n· Compensar ${fer} (${numExtenso(fer)}) FERIADO${fer>1?'S':''}`;
       if (dom>0) bodyStr += `\n· Compensar ${dom} (${numExtenso(dom)}) Domingo${dom>1?'s':''} do mês;`;
       bodyStr += `\n· ${faltasTxt(falt)}`;
+      bodyStr += `\n\nAtenciosamente,` + ASSINATURA;
       window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_CONTAB)}&su=${subj}&body=${encodeURIComponent(bodyStr)}`);
     });
 
@@ -2625,7 +2627,7 @@ async rh(a) {
     const salFmt = salario.toLocaleString('pt-BR',{minimumFractionDigits:2});
     const inicioFmt = inicio ? new Date(inicio+'T12:00:00').toLocaleDateString('pt-BR') : '';
     const subj = encodeURIComponent(`Admissão de Funcionário - FORNILHA - ${nomeF}.`);
-    const body = encodeURIComponent(`Olá, bom dia.\n\nSegue informações para admissão de funcionário:\n\nFuncionário: ${nomeF}.\nInício: ${inicioFmt}\nSalário: R$${salFmt}\nFunção: ${cargoF.toUpperCase()}\nEmpresa: FORNILHA RESTAURANTE E PIZZARIA LTDA`);
+    const body = encodeURIComponent(`Olá, bom dia.\n\nSegue informações para admissão de funcionário:\n\nFuncionário: ${nomeF}.\nInício: ${inicioFmt}\nSalário: R$${salFmt}\nFunção: ${cargoF.toUpperCase()}\nEmpresa: FORNILHA RESTAURANTE E PIZZARIA LTDA\n\nAtenciosamente,` + ASSINATURA);
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_CONTAB)}&su=${subj}&body=${body}`);
   };
 
@@ -2672,6 +2674,7 @@ async rh(a) {
     if (faltas>0)   bodyStr += `\n· TEVE ${faltas} (${numExtenso(faltas)}) FALTA${faltas>1?'S':''}`;
     bodyStr += `\n· Férias Prop. ${avosFer} Avos\n· 1/3 Férias`;
     if (obs) bodyStr += `\n\nOBS: ${obs}`;
+    bodyStr += `\n\nAtenciosamente,` + ASSINATURA;
 
     let subj;
     if (simulacao) {
@@ -2704,7 +2707,7 @@ async rh(a) {
     const vencFmt     = inicioDate ? `${String(inicioDate.getDate()).padStart(2,'0')}.${String(inicioDate.getMonth()+1).padStart(2,'0')}` : 'DD.MM';
     const duracao     = document.getElementById('fer-duracao').value||'30';
     const subj = encodeURIComponent(`AVISO DE FÉRIAS COLABORADOR - ${nomeCurto} - FORNILHA - VENC ${vencFmt}`);
-    const body = encodeURIComponent(`Olá, bom dia.\n\nSolicito a inclusão de FÉRIAS ao colaborador ${nomeF}.\n\nItem: FÉRIAS - ${cargoF.toUpperCase()} - ${mesA}/${anoAbr2}\nCentro de Custo/Lucro: Fornilha\nFornecedor: ${nomeF}\n\nINÍCIO: ${inicioFmt}\nTEMPO: ${duracao} DIAS`);
+    const body = encodeURIComponent(`Olá, bom dia.\n\nSolicito a inclusão de FÉRIAS ao colaborador ${nomeF}.\n\nItem: FÉRIAS - ${cargoF.toUpperCase()} - ${mesA}/${anoAbr2}\nCentro de Custo/Lucro: Fornilha\nFornecedor: ${nomeF}\n\nINÍCIO: ${inicioFmt}\nTEMPO: ${duracao} DIAS\n\nAtenciosamente,` + ASSINATURA);
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_CONTAB)}&su=${subj}&body=${body}`);
   };
 
