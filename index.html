@@ -500,6 +500,29 @@ function loadEstoqueState(){
 }
 loadEstoqueState();
 
+function _wppEstoque(setor, dados, responsavel) {
+  const itens = ESTOQUE[setor] || [];
+  const hora  = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const data  = new Date().toLocaleDateString('pt-BR');
+  const zero=[], baixo=[], ok=[];
+  itens.forEach(it => {
+    const q = dados[it.n] !== undefined ? dados[it.n] : it.q;
+    const linha = `• ${it.n}: *${q} ${it.un}*  _(mín ${it.min})_`;
+    if (q === 0)        zero.push(linha);
+    else if (q <= it.min) baixo.push(linha);
+    else                ok.push(linha);
+  });
+  let msg = `📦 *CONTAGEM DE ESTOQUE — ${setor.toUpperCase()}*\n`;
+  msg += `🏪 Fornilha Pizzaria\n`;
+  msg += `📅 ${data} às ${hora}\n`;
+  msg += `👤 Realizado por: ${responsavel}\n`;
+  if (zero.length)  msg += `\n🔴 *SEM ESTOQUE:*\n${zero.join('\n')}`;
+  if (baixo.length) msg += `\n\n🟡 *ESTOQUE BAIXO:*\n${baixo.join('\n')}`;
+  if (ok.length)    msg += `\n\n✅ *OK:*\n${ok.join('\n')}`;
+  msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
+  window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
 // ─── MENSAGENS & LEMBRETES ────────────────────────────────
 let mensagens=[];
 let lembretes=[];
@@ -1383,6 +1406,8 @@ tarefas(a) {
     }
     t.status='concluida';
     t.dados=dados;
+    // Para estoque: abre WhatsApp ANTES do await (garante gesto do usuário ativo)
+    if (t.tipo === 'estoque') _wppEstoque(t.setor, dados, t.resp);
     await updateTarefa(t.id, { status: 'concluida', dados });
     const tp=TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
     posts.unshift({autor:nome,cargo:'Gestão',cor:EQUIPE_LOCAL.find(e=>e.nome===nome)?.cor||'#8B1A1A',
@@ -1390,35 +1415,8 @@ tarefas(a) {
       txt:`${tp.icon} <strong>${t.titulo}</strong> concluída por ${t.resp}.`,
       mediaUrl:'',mediaName:'',extra:'',time:'Agora'});
     fecharModal();
-    if (t.tipo === 'estoque') {
-      showT('✅ Estoque atualizado!');
-      goTo('estoque');
-      // Gera e abre WhatsApp com os dados reais da contagem
-      setTimeout(() => window._wppEstoque(t.setor, dados, t.resp), 400);
-    } else { rList(); showT('Enviado com sucesso!'); }
-  };
-
-  window._wppEstoque = (setor, dados, responsavel) => {
-    const itens = ESTOQUE[setor] || [];
-    const hora  = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const data  = new Date().toLocaleDateString('pt-BR');
-    const zero=[], baixo=[], ok=[];
-    itens.forEach(it => {
-      const q = dados[it.n] !== undefined ? dados[it.n] : it.q;
-      const linha = `• ${it.n}: *${q} ${it.un}*  _(mín ${it.min})_`;
-      if (q === 0)       zero.push(linha);
-      else if (q <= it.min) baixo.push(linha);
-      else               ok.push(linha);
-    });
-    let msg = `📦 *CONTAGEM DE ESTOQUE — ${setor.toUpperCase()}*\n`;
-    msg += `🏪 Fornilha Pizzaria\n`;
-    msg += `📅 ${data} às ${hora}\n`;
-    msg += `👤 Realizado por: ${responsavel}\n`;
-    if (zero.length)  msg += `\n🔴 *SEM ESTOQUE:*\n${zero.join('\n')}`;
-    if (baixo.length) msg += `\n\n🟡 *ESTOQUE BAIXO:*\n${baixo.join('\n')}`;
-    if (ok.length)    msg += `\n\n✅ *OK:*\n${ok.join('\n')}`;
-    msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
-    window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`,'_blank');
+    if (t.tipo === 'estoque') { showT('✅ Estoque atualizado!'); goTo('estoque'); }
+    else { rList(); showT('Enviado com sucesso!'); }
   };
 
   rList();
@@ -1529,7 +1527,7 @@ estoque(a) {
   window.envWpp=()=>{
     const dadosAtuais={};
     (ESTOQUE[sel]||[]).forEach(it=>{ dadosAtuais[it.n]=it.q; });
-    window._wppEstoque(sel, dadosAtuais, nome);
+    _wppEstoque(sel, dadosAtuais, nome);
   };
   rEst();
 },
