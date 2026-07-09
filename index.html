@@ -1334,16 +1334,10 @@ tarefas(a) {
         PRODUCAO_PIZZARIA.forEach(it=>{ dados[it.n]=parseFloat(document.getElementById('prod_'+it.n.replace(/\s/g,'_'))?.value)||0; });
       }
     } else if(t.tipo==='estoque'){
-      const agora = new Date().toISOString();
       (ESTOQUE[t.setor]||[]).forEach(it=>{
         const v=parseFloat(document.getElementById('est_'+it.n.replace(/[\s\/]/g,'_'))?.value);
-        const novoQ = isNaN(v) ? it.q : v;
-        dados[it.n] = novoQ;
-        it.prev_q = it.q;
-        it.q = novoQ;
-        it.last_count = agora;
+        dados[it.n] = isNaN(v) ? it.q : v;
       });
-      saveEstoqueState();
     } else {
       dados.obs=document.getElementById('outro-obs')?.value||'';
     }
@@ -1426,11 +1420,22 @@ estoque(a) {
   <button class="btn-p" style="background:linear-gradient(135deg,#25D366,#1aad53);margin-top:8px" onclick="envWpp()">📱 Enviar resumo por WhatsApp</button>`;
   window.selSet=(s,el)=>{sel=s;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');rEst()};
   window.envWpp=()=>{
-    const p=ESTOQUE[sel],zero=p.filter(x=>x.q===0).map(x=>x.n),baixo=p.filter(x=>x.q>0&&x.q<=x.min).map(x=>x.n);
-    let msg=`📦 *ESTOQUE ${sel.toUpperCase()} — FORNILHA*\n📅 ${new Date().toLocaleDateString('pt-BR')}\n\n✅ OK: ${p.filter(x=>x.q>x.min).length}\n🟡 Baixo: ${baixo.length}\n🔴 Zero: ${zero.length}`;
-    if(zero.length) msg+=`\n\n🔴 SEM ESTOQUE:\n${zero.map(i=>'• '+i).join('\n')}`;
-    if(baixo.length) msg+=`\n\n🟡 ESTOQUE BAIXO:\n${baixo.map(i=>'• '+i).join('\n')}`;
-    msg+=`\n\n_FornilhApp · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}_`;
+    const p=ESTOQUE[sel];
+    const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const data=new Date().toLocaleDateString('pt-BR');
+    let msg=`📦 *ESTOQUE ${sel.toUpperCase()} — FORNILHA*\n📅 ${data} às ${hora}\n`;
+    const zero=[], baixo=[], ok=[];
+    p.forEach(x=>{
+      const ico=x.q===0?'🔴':x.q<=x.min?'🟡':'✅';
+      const linha=`${ico} ${x.n}: *${x.q} ${x.un}* (mín ${x.min})`;
+      if(x.q===0) zero.push(linha);
+      else if(x.q<=x.min) baixo.push(linha);
+      else ok.push(linha);
+    });
+    if(zero.length)  msg+=`\n🔴 *SEM ESTOQUE:*\n${zero.join('\n')}`;
+    if(baixo.length) msg+=`\n\n🟡 *ESTOQUE BAIXO:*\n${baixo.join('\n')}`;
+    if(ok.length)    msg+=`\n\n✅ *OK:*\n${ok.join('\n')}`;
+    msg+=`\n\n_FornilhApp_`;
     window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`,'_blank');
   };
   rEst();
