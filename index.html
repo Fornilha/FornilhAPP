@@ -1214,6 +1214,30 @@ tarefas(a) {
     showT('Tarefa cancelada.');
   };
 
+  window.excluirContagem=async(id)=>{
+    if(!confirm('Excluir esta contagem? O estoque voltará ao estado anterior.')) return;
+    const t=tarefas.find(x=>String(x.id)===String(id)); if(!t) return;
+    // reverte ESTOQUE ao prev_q se for tarefa de estoque
+    if(t.tipo==='estoque'){
+      const dados=t.dados||{};
+      (ESTOQUE[t.setor]||[]).forEach(it=>{
+        if(dados[it.n]!==undefined){
+          it.q = it.prev_q!==undefined ? it.prev_q : it.q;
+          it.prev_q = null;
+          it.last_count = null;
+        }
+      });
+      // reaplicar a contagem anterior mais recente (se houver)
+      aplicarEstoqueDosTasks();
+    }
+    t.status='cancelada';
+    t.dados={};
+    await updateTarefa(id,{status:'cancelada',dados:{}});
+    fecharModal();
+    rList();
+    showT('Contagem excluída. Estoque revertido.');
+  };
+
   window.calcTM=(manual=true)=>{
     const fat=parseFloat(document.getElementById('cf-fat')?.value)||0;
     const mesas=parseFloat(document.getElementById('cf-mesas')?.value)||0;
@@ -1258,11 +1282,15 @@ tarefas(a) {
       } else {
         resumo=`<p style="color:var(--txt2)">${d.obs||'Sem observação.'}</p>`;
       }
+      const btnExcluir = (t.tipo==='estoque'||t.tipo==='producao')
+        ? `<button class="btn-cancel" style="width:100%;margin-top:8px;background:var(--verm);color:#fff" onclick="excluirContagem('${t.id}')">🗑 Excluir contagem</button>`
+        : '';
       document.getElementById('modal-inner').innerHTML=`
         <h3>${tp.icon} ${t.titulo}</h3>
         <p style="color:var(--ok);font-weight:600">Concluída · ${t.resp}</p>
         <div style="margin-top:8px">${resumo}</div>
-        <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="fecharModal()">Fechar</button>`;
+        <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="fecharModal()">Fechar</button>
+        ${btnExcluir}`;
       document.getElementById('modal-bg').classList.add('open');
       return;
     }
@@ -1334,10 +1362,16 @@ tarefas(a) {
         PRODUCAO_PIZZARIA.forEach(it=>{ dados[it.n]=parseFloat(document.getElementById('prod_'+it.n.replace(/\s/g,'_'))?.value)||0; });
       }
     } else if(t.tipo==='estoque'){
+      const agora = new Date().toISOString();
       (ESTOQUE[t.setor]||[]).forEach(it=>{
         const v=parseFloat(document.getElementById('est_'+it.n.replace(/[\s\/]/g,'_'))?.value);
-        dados[it.n] = isNaN(v) ? it.q : v;
+        const novoQ = isNaN(v) ? it.q : v;
+        dados[it.n] = novoQ;
+        it.prev_q = it.q;
+        it.q = novoQ;
+        it.last_count = agora;
       });
+      saveEstoqueState();
     } else {
       dados.obs=document.getElementById('outro-obs')?.value||'';
     }
@@ -1412,13 +1446,53 @@ estoque(a) {
       (zero?`<span style="color:#E24B4A">🔴 ${zero} zerado</span>&nbsp;&nbsp;`:'')+
       (semCount?`<span style="color:var(--txt3)">📋 ${semCount} sem contagem</span>`:'');
   }
+  function rProd(){
+    const taskProd = [...tarefas]
+      .filter(t=>t.tipo==='producao' && t.status==='concluida')
+      .sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
+    const html = document.getElementById('est-lista');
+    const last = document.getElementById('est-last');
+    const resumo = document.getElementById('est-resumo');
+    if(!taskProd.length){
+      if(last) last.textContent='Nenhuma produção registrada ainda';
+      if(resumo) resumo.textContent='';
+      if(html) html.innerHTML='<div style="text-align:center;padding:24px;color:var(--txt3);font-size:13px">Nenhuma tarefa de produção concluída.</div>';
+      return;
+    }
+    const t = taskProd[0];
+    const d = t.dados||{};
+    const dataFmt = new Date(t.updated_at||t.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})
+      +' '+new Date(t.updated_at||t.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    if(last) last.textContent=`Última produção: ${dataFmt} · ${t.resp}`;
+    if(resumo) resumo.textContent='';
+    let inner='';
+    if(t.setor==='Cozinha'){
+      inner=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);padding:8px 4px 4px;text-transform:uppercase;letter-spacing:1px">${massa}</div>
+        ${sabs.map(s=>{const v=d[massa+'_'+s]||0;return`<div class="prow" style="padding:7px 4px;align-items:center">
+          <div class="pdotS" style="background:${v>0?'#1D9E75':'var(--txt3)'};flex-shrink:0"></div>
+          <div class="pi" style="flex:1"><span class="pn">${s}</span></div>
+          <div style="font-size:20px;font-weight:700;color:${v>0?'var(--txt)':'var(--txt3)'}">${v}</div>
+          <div style="font-size:10px;color:var(--txt3);margin-left:4px">unid</div>
+        </div>`}).join('')}`).join('');
+    } else {
+      inner=PRODUCAO_PIZZARIA.map(it=>{const v=d[it.n]||0;return`<div class="prow" style="padding:7px 4px;align-items:center">
+        <div class="pdotS" style="background:${v>0?'#1D9E75':'var(--txt3)'};flex-shrink:0"></div>
+        <div class="pi" style="flex:1"><span class="pn">${it.n}</span></div>
+        <div style="font-size:20px;font-weight:700;color:${v>0?'var(--txt)':'var(--txt3)'}">${v}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-left:4px">${it.un}</div>
+      </div>`}).join('');
+    }
+    if(html) html.innerHTML=inner;
+  }
+
   a.innerHTML=`
-  <div class="stabs">${Object.keys(ESTOQUE).map(s=>`<button class="stab${s===sel?' active':''}" onclick="selSet('${s}',this)">${s}</button>`).join('')}</div>
+  <div class="stabs">${Object.keys(ESTOQUE).map(s=>`<button class="stab${s===sel?' active':''}" onclick="selSet('${s}',this)">${s}</button>`).join('')}<button class="stab" onclick="selSet('Produção',this)">🍝 Produção</button></div>
   <div style="font-size:11px;color:var(--txt3);padding:0 2px 4px" id="est-last"></div>
   <div style="font-size:12px;font-weight:600;padding:0 2px 10px" id="est-resumo"></div>
   <div class="card"><div class="cb" id="est-lista"></div></div>
   <button class="btn-p" style="background:linear-gradient(135deg,#25D366,#1aad53);margin-top:8px" onclick="envWpp()">📱 Enviar resumo por WhatsApp</button>`;
-  window.selSet=(s,el)=>{sel=s;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');rEst()};
+  window.selSet=(s,el)=>{sel=s;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');sel==='Produção'?rProd():rEst()};
   window.envWpp=()=>{
     const p=ESTOQUE[sel];
     const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
