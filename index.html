@@ -1217,20 +1217,23 @@ tarefas(a) {
   window.excluirContagem=async(id)=>{
     if(!confirm('Excluir esta contagem? O estoque voltará ao estado anterior.')) return;
     const t=tarefas.find(x=>String(x.id)===String(id)); if(!t) return;
-    // 1. Marca como cancelada no array local ANTES de reaplicar
+    const setor = t.setor;
+    const tipo  = t.tipo;
+    // 1. Salva no banco PRIMEIRO para garantir consistência após reload
+    const { error } = await db.from('tarefas').update({status:'cancelada', dados:{}}).eq('id', id);
+    if(error){ showT('⚠️ Erro ao excluir contagem: '+error.message); return; }
+    // 2. Atualiza array local
     t.status='cancelada';
     t.dados={};
-    if(t.tipo==='estoque'){
-      // 2. Zera os itens do setor para que aplicarEstoqueDosTasks parta do zero
-      (ESTOQUE[t.setor]||[]).forEach(it=>{ it.q=0; it.prev_q=null; it.last_count=null; });
-      // 3. Reaplica a contagem anterior mais recente (se houver)
+    // 3. Se for estoque, zera o setor e reaplica tarefas anteriores
+    if(tipo==='estoque'){
+      (ESTOQUE[setor]||[]).forEach(it=>{ it.q=0; it.prev_q=null; it.last_count=null; });
       aplicarEstoqueDosTasks();
-      saveEstoqueState();
     }
-    await updateTarefa(id,{status:'cancelada',dados:{}});
     fecharModal();
     rList();
     showT('Contagem excluída. Estoque revertido.');
+    goTo('estoque');
   };
 
   window.calcTM=(manual=true)=>{
