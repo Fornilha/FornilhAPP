@@ -3066,17 +3066,7 @@ async taxa(a) {
       return;
     }
 
-    // Diagnóstico: verificar se ausentes estão sendo gravados
-    const semAusentes = lancs.filter(l => !l.ausentes || !Array.isArray(l.ausentes) || l.ausentes.length === 0);
-    const comAusentes = lancs.filter(l => Array.isArray(l.ausentes) && l.ausentes.length > 0);
-    const diagHtml = perfil==='admin' ? `
-    <div style="background:#fff3cd;border:1px solid #e0a800;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#856404">
-      <strong>🔍 Diagnóstico ausentes (${mesRef}):</strong><br>
-      ${comAusentes.length} dia(s) com ausentes gravados · ${semAusentes.length} dia(s) sem ausentes registrados<br>
-      ${comAusentes.length > 0 ? comAusentes.map(l=>`<span style="display:block;margin-top:3px">📅 ${l.data.slice(8)}: ${(l.ausentes).map(n=>n.split(' ')[0]).join(', ')}</span>`).join('') : '<em>Nenhuma ausência registrada — todos aparecem como presentes em todos os dias.</em>'}
-    </div>` : '';
-
-    const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=15; });
+const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=15; });
     const q2 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d>15; });
 
     function calcQuinzena(dias) {
@@ -3100,7 +3090,6 @@ async taxa(a) {
     const totalCasa = totalTaxa * 0.25;
 
     document.getElementById('tx-content').innerHTML = `
-    ${diagHtml}
     <div class="kgrid" style="margin-bottom:12px">
       <div class="kpi"><div class="kpi-l">Total taxa mês</div><div class="kpi-v">${fmtR(totalTaxa)}</div></div>
       <div class="kpi"><div class="kpi-l">Casa (25%)</div><div class="kpi-v" style="color:var(--av)">${fmtR(totalCasa)}</div></div>
