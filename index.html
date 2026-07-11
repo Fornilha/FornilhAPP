@@ -3150,14 +3150,13 @@ async taxa(a) {
         const val=tot[n]||0;
         return `· ${n.split(' ')[0]} ${n.split(' ').slice(1,3).join(' ')}: ${fmtR(val)}`;
       }).join('\n');
-      const body = `Prezados,\n\nSegue taxa de serviço referente à ${qi==='1'?'1ª':'2ª'} quinzena de ${mesNome}/${yy}:\n\n· Taxa equipe (75%): ${fmtR(taxaFunc)}\n\nDivisão individual:\n${linhas}\n\nAtenciosamente,\nFornilha Restaurante & Pizzaria`;
-      const mailto = `mailto:${DEST}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+      const ASSINATURA_TAXA = `\n\n--\nVinicius Querino Alves Santos\nAssistente Financeiro — Fornilha Pizzaria\n📞 (21) 99140-9144\n✉️ financeiro.fornilha@gmail.com\n📍 Rua Santana nº 75 - Ilha Grande - RJ\n📸 @fornilha.oficial`;
+      const body = `Olá, bom dia.\n\nSegue taxa de serviço referente à ${qi==='1'?'1ª':'2ª'} quinzena de ${mesNome}/${yy}:\n\n· Taxa equipe (75%): ${fmtR(taxaFunc)}\n\nDivisão individual:\n${linhas}\n\nAtenciosamente,` + ASSINATURA_TAXA;
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST)}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
       return `<div class="card"><div class="cb">
         <div style="font-size:13px;font-weight:700;margin-bottom:6px">${qi==='1'?'1ª':'2ª'} Quinzena · ${fmtR(taxaFunc)}</div>
         <pre style="font-size:11px;color:var(--txt2);white-space:pre-wrap;line-height:1.5;background:var(--surf2);padding:10px;border-radius:8px;border:1px solid var(--bord)">${body}</pre>
-        <a href="${mailto}" style="display:block;margin-top:10px">
-          <button class="btn-p" style="background:linear-gradient(135deg,var(--ok),#0F6E56)">✉️ Enviar email ${qi==='1'?'1ª':'2ª'} quinzena</button>
-        </a>
+        <button class="btn-p" style="background:linear-gradient(135deg,var(--ok),#0F6E56);margin-top:10px;width:100%" onclick="window.open('${gmailUrl}','_blank')">✉️ Enviar email ${qi==='1'?'1ª':'2ª'} quinzena</button>
       </div></div>`;
     }).join('')}`;
   }
