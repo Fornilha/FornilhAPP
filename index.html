@@ -2044,6 +2044,7 @@ async financeiro(a) {
   const hoje = new Date();
   const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
   const hojeISO = hoje.toISOString().slice(0,10);
+  const mesIdxFin = hoje.getMonth();
 
   function fmtDataBr(iso) {
     if (!iso) return '—';
@@ -2114,10 +2115,12 @@ async financeiro(a) {
   }
 
   a.innerHTML = `
-  <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button id="fin-tab-novo" class="btn-p" style="flex:1;font-size:13px" onclick="window._finTab('novo')">➕ Novo pagamento</button>
-    <button id="fin-tab-hist" class="btn-p" style="flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)" onclick="window._finTab('hist')">📋 Histórico</button>
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    <button id="fin-tab-novo" class="btn-p" style="flex:1;font-size:12px" onclick="window._finTab('novo')">➕ Pagamento</button>
+    <button id="fin-tab-proj" class="btn-p" style="flex:1;font-size:12px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)" onclick="window._finTab('proj')">📊 Cenário</button>
+    <button id="fin-tab-hist" class="btn-p" style="flex:1;font-size:12px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)" onclick="window._finTab('hist')">📋 Histórico</button>
   </div>
+  <div id="fin-painel-proj" style="display:none"></div>
   <div id="fin-painel-novo">
     <div class="card"><div class="cb">
       <div class="fld"><label>Tipo de pagamento</label>
@@ -2160,14 +2163,137 @@ async financeiro(a) {
   </div>`;
 
   window._finTab = (t) => {
-    document.getElementById('fin-painel-novo').style.display = t==='novo' ? '' : 'none';
-    document.getElementById('fin-painel-hist').style.display = t==='hist' ? '' : 'none';
-    document.getElementById('fin-tab-novo').style.cssText = t==='novo' ? 'flex:1;font-size:13px' : 'flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)';
-    document.getElementById('fin-tab-hist').style.cssText = t==='hist' ? 'flex:1;font-size:13px' : 'flex:1;font-size:13px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)';
+    ['novo','proj','hist'].forEach(id => {
+      document.getElementById('fin-painel-'+id).style.display = t===id ? '' : 'none';
+      const btn = document.getElementById('fin-tab-'+id);
+      if (btn) btn.style.cssText = t===id ? 'flex:1;font-size:12px' : 'flex:1;font-size:12px;background:var(--surf);color:var(--txt);border:1px solid var(--bord)';
+    });
     if (t==='hist') {
       const mes = document.getElementById('fin-hist-mes')?.value || hojeISO.slice(0,7);
       document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mes);
     }
+    if (t==='proj') window._finRenderProj();
+  };
+
+  window._finRenderProj = () => {
+    const el = document.getElementById('fin-painel-proj');
+    if (!el) return;
+    const dadosMes = DADOS_2026[mesIdxFin];
+    const fat_ref = dadosMes?.fat25 || 0;
+    const mesNomeCen = MESES_PT[mesIdxFin] + '/' + String(hoje.getFullYear()).slice(2);
+    const mesAnoRef = MESES_PT[mesIdxFin] + '/' + String(hoje.getFullYear()-1).slice(2);
+    const diasRef = new Date(hoje.getFullYear()-1, mesIdxFin+1, 0).getDate();
+    const defaultColab = dadosMes?.pax || 10;
+    const nColab = parseInt(document.getElementById('proj-ncolab')?.value || defaultColab);
+
+    const DESP_FIXAS = 21230;
+    const IMP_PCT = 0.10;
+    const META_FOLHA_PCT = 0.20;
+    const META_VAR_PCT = 0.30;
+    const CUSTO_COLAB = 2500;
+    const TAXA_FUNC_PCT = 0.075; // 75% de 10% de taxa de serviço
+
+    const taxa_func = fat_ref * TAXA_FUNC_PCT;
+    const folha_fixa = nColab * CUSTO_COLAB;
+    const folha_total = folha_fixa + taxa_func;
+    const folha_pct = fat_ref > 0 ? folha_total / fat_ref : 0;
+
+    const imposto = fat_ref * IMP_PCT;
+    const budget_var = fat_ref * META_VAR_PCT;
+    const lucro_proj = fat_ref - folha_total - imposto - DESP_FIXAS - budget_var;
+    const lucro_pct = fat_ref > 0 ? lucro_proj / fat_ref : 0;
+
+    const max_colab = fat_ref > 0 ? Math.floor((fat_ref * META_FOLHA_PCT - taxa_func) / CUSTO_COLAB) : 0;
+
+    // pagamentos do mês corrente (despesas variáveis reais)
+    const mesRefAtual = hojeISO.slice(0,7);
+    const despVarReal = pagamentos
+      .filter(p => { const d = p.data_pagamento || p.vencimento || (p.created_at||'').slice(0,10); return d.slice(0,7)===mesRefAtual && p.tipo !== 'Salário'; })
+      .reduce((s,p) => s+Number(p.valor||0), 0);
+    const despVarPct = fat_ref > 0 ? despVarReal / fat_ref : 0;
+    const despVarSobra = budget_var - despVarReal;
+
+    const cor = (pct, meta) => pct <= meta ? 'var(--ok)' : pct <= meta*1.15 ? 'var(--av)' : 'var(--er)';
+    const bar = (pct, meta) => {
+      const c = cor(pct, meta);
+      return `<div style="height:6px;background:var(--bord);border-radius:4px;margin-top:6px"><div style="height:6px;border-radius:4px;background:${c};width:${Math.min(100,Math.round(pct*100/meta*100))}%"></div></div>`;
+    };
+
+    el.innerHTML = `
+    <div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:2px">Resultado Projetado — ${mesNomeCen}</div>
+      <div style="font-size:11px;color:var(--txt3)">Baseado no faturamento de ${mesAnoRef} (mesmo período ano anterior)</div>
+    </div></div>
+
+    <div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📅 Referência ${mesAnoRef}</div>
+      <div style="font-size:28px;font-weight:800;color:var(--acc)">${fmtVal(fat_ref)}</div>
+      <div style="font-size:11px;color:var(--txt3);margin-top:2px">${diasRef} dias · mesmo mês do ano anterior</div>
+    </div></div>
+
+    <div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👥 Folha ${mesNomeCen}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <label style="font-size:13px;color:var(--txt);white-space:nowrap">Colaboradores:</label>
+        <input id="proj-ncolab" type="number" min="1" max="30" value="${nColab}" oninput="window._finRenderProj()"
+          style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--bord);background:var(--surf2);color:var(--txt);font-size:15px;font-weight:700;text-align:center">
+        <span style="font-size:11px;color:var(--txt3)">máx ${max_colab} p/ meta ≤20%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord)">
+        <span style="color:var(--txt2)">${nColab} × R$ 2.500 (salários)</span>
+        <strong>${fmtVal(folha_fixa)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord)">
+        <span style="color:var(--txt2)">+ Taxa de serviço (7,5% fat.)</span>
+        <strong>${fmtVal(taxa_func)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding:8px 0 4px">
+        <span>Total folha</span>
+        <span style="color:${cor(folha_pct,META_FOLHA_PCT)}">${fmtVal(folha_total)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:${cor(folha_pct,META_FOLHA_PCT)}">
+        <span>Meta ≤ 20%</span><span>${(folha_pct*100).toFixed(1)}% do fat.</span>
+      </div>
+      ${bar(folha_pct, META_FOLHA_PCT)}
+    </div></div>
+
+    <div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">💸 Despesas Variáveis ${mesNomeCen}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord)">
+        <span style="color:var(--txt2)">Budget disponível (meta 30%)</span>
+        <strong>${fmtVal(budget_var)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord)">
+        <span style="color:var(--txt2)">Lançado até agora</span>
+        <strong style="color:${cor(despVarPct,META_VAR_PCT)}">${fmtVal(despVarReal)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0 4px">
+        <span style="color:var(--txt2)">Saldo disponível</span>
+        <strong style="color:${despVarSobra>=0?'var(--ok)':'var(--er)'}">${fmtVal(despVarSobra)}</strong>
+      </div>
+      <div style="font-size:11px;color:${cor(despVarPct,META_VAR_PCT)};text-align:right">${(despVarPct*100).toFixed(1)}% do fat. ref. · meta ≤ 30%</div>
+      ${bar(despVarPct, META_VAR_PCT)}
+    </div></div>
+
+    <div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 DRE Projetado — ${mesNomeCen}</div>
+      ${[
+        ['Faturamento (ref. '+mesAnoRef+')', fat_ref, '', 'var(--acc)'],
+        ['(−) Imposto (~10%)', -imposto, (IMP_PCT*100).toFixed(0)+'%', ''],
+        ['(−) Despesas Fixas', -DESP_FIXAS, (DESP_FIXAS/fat_ref*100).toFixed(1)+'%', ''],
+        ['(−) Folha projetada', -folha_total, (folha_pct*100).toFixed(1)+'%', cor(folha_pct,META_FOLHA_PCT)],
+        ['(−) Desp. Variáveis (meta 30%)', -budget_var, '30%', cor(META_VAR_PCT,META_VAR_PCT)],
+      ].map(([label,val,pct,c])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bord);font-size:12px">
+          <span style="color:var(--txt2)">${label}${pct?` <span style="color:var(--txt3)">(${pct})</span>`:''}</span>
+          <strong style="color:${c||'var(--txt)'}">${fmtVal(Math.abs(val))}</strong>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:10px 0 4px">
+        <span>= Lucro projetado</span>
+        <span style="color:${lucro_proj>=0?'var(--ok)':'var(--er)'}">${fmtVal(lucro_proj)}</span>
+      </div>
+      <div style="font-size:11px;color:${lucro_proj>=0?'var(--ok)':'var(--er)'};text-align:right">${(lucro_pct*100).toFixed(1)}% de margem</div>
+    </div></div>`;
   };
 
   window._finAnexoChange = (input) => {
