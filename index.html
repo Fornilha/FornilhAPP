@@ -2174,12 +2174,13 @@ async financeiro(a) {
       <div id="fin-campos-comuns"></div>
       <div id="fin-btns" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
 <div class="fld" style="margin:0">
-          <label>Anexo (foto ou arquivo)</label>
+          <label>Anexos (boletos / comprovantes)</label>
           <label id="fin-anexo-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--surf2);border:1px dashed var(--bord);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--txt2)">
-            <span style="font-size:18px">📎</span>
-            <span id="fin-anexo-nome">Toque para selecionar ou tirar foto</span>
-            <input type="file" id="fin-anexo" accept="image/*,application/pdf" capture="environment" style="display:none" onchange="window._finAnexoChange(this)">
+            <span style="font-size:18px">📷</span>
+            <span id="fin-anexo-nome">Toque para tirar foto ou selecionar arquivo</span>
+            <input type="file" id="fin-anexo" accept="image/*,application/pdf" multiple style="display:none" onchange="window._finAnexoChange(this)">
           </label>
+          <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
         </div>
         <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
         <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
@@ -2338,9 +2339,42 @@ async financeiro(a) {
     </div></div>`;
   };
 
-  window._finAnexoChange = (input) => {
-    const f = input.files?.[0];
-    document.getElementById('fin-anexo-nome').textContent = f ? f.name : 'Toque para selecionar ou tirar foto';
+  window._finAnexoChange = async (input) => {
+    const files = [...(input.files || [])];
+    if (!files.length) return;
+    const nomeEl = document.getElementById('fin-anexo-nome');
+    const listaEl = document.getElementById('fin-anexos-lista');
+    nomeEl.textContent = `⏳ Enviando ${files.length} arquivo(s)...`;
+    if (!input._anexoUrls) input._anexoUrls = [];
+    for (const f of files) {
+      const ext = f.name.split('.').pop() || 'jpg';
+      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data: upData, error: upErr } = await db.storage.from('fin-anexos').upload(path, f);
+      if (upErr) { showT('⚠️ Erro no upload: ' + f.name); continue; }
+      const { data: urlData } = db.storage.from('fin-anexos').getPublicUrl(upData.path);
+      input._anexoUrls.push({ nome: f.name, url: urlData.publicUrl });
+    }
+    nomeEl.textContent = '➕ Adicionar mais arquivos';
+    listaEl.innerHTML = input._anexoUrls.map((a,i) => `
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surf2);border:1px solid var(--bord);border-radius:6px;font-size:12px">
+        <span style="color:var(--ok)">✅</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nome}</span>
+        <button onclick="window._finRemoverAnexo(${i})" style="border:none;background:none;color:var(--er);cursor:pointer;font-size:14px;padding:0">✕</button>
+      </div>`).join('');
+  };
+
+  window._finRemoverAnexo = (i) => {
+    const input = document.getElementById('fin-anexo');
+    if (input._anexoUrls) { input._anexoUrls.splice(i, 1); window._finAnexoChange({ files: [], _anexoUrls: input._anexoUrls }); }
+    const listaEl = document.getElementById('fin-anexos-lista');
+    const nomeEl = document.getElementById('fin-anexo-nome');
+    if (input._anexoUrls && input._anexoUrls.length === 0) { listaEl.innerHTML=''; nomeEl.textContent='Toque para tirar foto ou selecionar arquivo'; }
+    else listaEl.innerHTML = (input._anexoUrls||[]).map((a,j) => `
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surf2);border:1px solid var(--bord);border-radius:6px;font-size:12px">
+        <span style="color:var(--ok)">✅</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nome}</span>
+        <button onclick="window._finRemoverAnexo(${j})" style="border:none;background:none;color:var(--er);cursor:pointer;font-size:14px;padding:0">✕</button>
+      </div>`).join('');
   };
 
   window._finAtualizaHist = () => {
@@ -2470,6 +2504,10 @@ async financeiro(a) {
 
   window._finGerarEmail = () => {
     const tipo = document.getElementById('fin-tipo').value;
+    const anexoUrls = document.getElementById('fin-anexo')?._anexoUrls || [];
+    const linkAnexo = anexoUrls.length
+      ? `\n\n📎 Anexo(s):\n` + anexoUrls.map((a,i)=>`${i+1}. ${a.nome}: ${a.url}`).join('\n')
+      : '';
     let assunto = '', corpo = '';
 
     if (tipo === 'Boleto') {
@@ -2488,7 +2526,7 @@ async financeiro(a) {
       const linhasParcelas = parcelas.map(p =>
         `Valor do Boleto: R$ ${p.val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\nVencimento dia ${p.venc ? fmtDataBr(p.venc).slice(0,5) : 'DD/MM'}`
       ).join('\n\n');
-      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}\n\nAtenciosamente,` + ASSINATURA + ``;
+      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
 
     } else if (tipo === 'Salário') {
       const mesRef = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
@@ -2500,7 +2538,7 @@ async financeiro(a) {
         if (!val) return '';
         return `${c.nome} - ${c.cargo}\nChave Pix: (${c.pixTipo}) - ${c.pixChave}${c.banco?`\nBanco: ${c.banco}`:''}\nNome: ${c.nome}\nValor de R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n`;
       }).filter(Boolean);
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}\nAtenciosamente,` + ASSINATURA + ``;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
 
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
@@ -2517,7 +2555,7 @@ async financeiro(a) {
         if (f?.pixChave) dadosPix = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
       }
       assunto = `Lançar e Agendar - ${(item||forn).toUpperCase()} - FORNILHA - VENC. ${vencFmt}`;
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}\n\nAtenciosamente,` + ASSINATURA + ``;
+      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
     }
 
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
@@ -2526,18 +2564,9 @@ async financeiro(a) {
   window._finSalvar = async () => {
     const tipo = document.getElementById('fin-tipo').value;
 
-    // Upload de anexo (comum a todos os tipos)
-    let anexo_url = null;
-    const file = document.getElementById('fin-anexo')?.files?.[0];
-    if (file) {
-      showT('⏳ Enviando anexo...');
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { data: upData, error: upErr } = await db.storage.from('fin-anexos').upload(path, file);
-      if (upErr) { showT('⚠️ Erro no anexo: ' + upErr.message); return; }
-      const { data: urlData } = db.storage.from('fin-anexos').getPublicUrl(upData.path);
-      anexo_url = urlData.publicUrl;
-    }
+    // Usar URL já gerado no _finAnexoChange (upload já feito ao anexar)
+    const inputAnexo = document.getElementById('fin-anexo');
+    const anexo_url = (inputAnexo?._anexoUrls?.[0]?.url) || null;
 
     if (tipo === 'Boleto') {
       const forn = document.getElementById('fin-forn')?.value || '';
