@@ -914,12 +914,15 @@ async inicio(a) {
   const temDadosParciais = acumuladoMes > 0;
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
+  const calcDespFixaAcum = () => pagamentos
+    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo==='Boleto'; })
+    .reduce((s,p) => s+Number(p.valor||0), 0);
   const calcDespVarAcum = () => pagamentos
-    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef; })
+    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo!=='Boleto' && p.tipo!=='Salário'; })
     .reduce((s,p) => s+Number(p.valor||0), 0);
   const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
   const calcMargemParcPct = () => temDadosParciais
-    ? ((acumuladoMes - taxaFuncAcum - calcDespVarAcum() - DESP_FIXAS_MES - calcImpostosAcum()) / acumuladoMes * 100)
+    ? ((acumuladoMes - taxaFuncAcum - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
     : null;
   const margemParcPct = calcMargemParcPct();
 
@@ -1057,9 +1060,9 @@ async inicio(a) {
       <span class="ind-val" id="ini-despvar-ind" style="color:var(--txt3)">— aguardando</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Despesas fixas</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.fix_pct/META_FIX*100,100)}%;background:${corFix}"></div></div>
-      <span class="ind-val" style="color:${corFix}">${ref.fix_pct}% ${indIcon(ref.fix_pct,META_FIX,true)}</span>
+      <span class="ind-lbl">Despesas fixas ${nomeMes}</span>
+      <div class="ind-bar-w"><div class="ind-bar" id="ini-despfix-bar" style="width:0%;background:var(--bord)"></div></div>
+      <span class="ind-val" id="ini-despfix-ind" style="color:var(--txt3)">— aguardando</span>
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Impostos</span>
@@ -1103,30 +1106,36 @@ async inicio(a) {
 
   // Atualiza Desp. Variáveis — chamado imediatamente e também pelo loadPagamentos quando terminar
   window._atualizarDespVarInicio = () => {
-    const elV   = document.getElementById('ini-despvar-v');
-    const elS   = document.getElementById('ini-despvar-s');
-    const elBar = document.getElementById('ini-despvar-bar');
-    const elInd = document.getElementById('ini-despvar-ind');
-    const elMBar = document.getElementById('ini-margem-bar');
-    const elMInd = document.getElementById('ini-margem-ind');
-    if (!elV || !elS) { window._atualizarDespVarInicio = null; return; }
+    const elBar    = document.getElementById('ini-despvar-bar');
+    const elInd    = document.getElementById('ini-despvar-ind');
+    const elFBar   = document.getElementById('ini-despfix-bar');
+    const elFInd   = document.getElementById('ini-despfix-ind');
+    const elMBar   = document.getElementById('ini-margem-bar');
+    const elMInd   = document.getElementById('ini-margem-ind');
+    if (!elInd) { window._atualizarDespVarInicio = null; return; }
 
-    // Desp. Variáveis
+    // Desp. Variáveis (PIX, Extra, Reembolso, etc.)
     const despVar = calcDespVarAcum();
-    if (despVar > 0 && acumuladoMes > 0) {
+    if (acumuladoMes > 0) {
       const pct = despVar / acumuladoMes * 100;
       const cor = pct <= META_VAR ? '#1D9E75' : pct <= META_VAR * 1.5 ? '#BA7517' : '#E24B4A';
-      elV.textContent = pct.toFixed(1) + '%';
-      elV.style.color = '#E24B4A';
-      elS.textContent = fmt(despVar) + ' em pagamentos';
       if (elBar) { elBar.style.width = Math.min(pct/META_VAR*100,100)+'%'; elBar.style.background = cor; }
-      if (elInd) { elInd.textContent = pct.toFixed(1)+'% '+(pct<=META_VAR?'🟢':pct<=META_VAR*1.5?'🟡':'🔴'); elInd.style.color = cor; }
-    } else {
-      elV.textContent = '—'; elV.style.color = 'var(--txt3)';
-      elS.textContent = 'Sem lançamentos no mês';
+      elInd.textContent = despVar > 0 ? pct.toFixed(1)+'% '+(pct<=META_VAR?'🟢':pct<=META_VAR*1.5?'🟡':'🔴') : '— aguardando';
+      elInd.style.color = despVar > 0 ? cor : 'var(--txt3)';
     }
 
-    // Margem Líquida parcial (recalcula com todas as despesas)
+    // Desp. Fixas (Boletos)
+    const despFix = calcDespFixaAcum();
+    if (elFBar && elFInd && acumuladoMes > 0) {
+      const pct = despFix / acumuladoMes * 100;
+      const cor = pct <= META_FIX ? '#1D9E75' : pct <= META_FIX * 1.5 ? '#EF9F27' : '#E24B4A';
+      elFBar.style.width = Math.min(pct/META_FIX*100,100)+'%';
+      elFBar.style.background = cor;
+      elFInd.textContent = despFix > 0 ? pct.toFixed(1)+'% '+(pct<=META_FIX?'🟢':pct<=META_FIX*1.5?'🟡':'🔴') : '— aguardando';
+      elFInd.style.color = despFix > 0 ? cor : 'var(--txt3)';
+    }
+
+    // Margem Líquida parcial
     const mPct = calcMargemParcPct();
     if (mPct !== null && (elMBar || elMInd)) {
       const corM = mPct >= META_MARGEM*0.9 ? '#1D9E75' : mPct >= META_MARGEM*0.7 ? '#EF9F27' : '#E24B4A';
@@ -2182,8 +2191,8 @@ async financeiro(a) {
           </label>
           <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
         </div>
-        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finGerarEmail()">✉️ Gerar e-mail para Flaviane</button>
-        <button class="btn-p" onclick="window._finSalvar()">💾 Salvar no histórico</button>
+        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">✉️ Salvar e Gerar email para Flaviane</button>
+        <button class="btn-p" style="background:var(--surf2);color:var(--txt);border:1.5px solid var(--bord)" onclick="window._finSalvar()">💾 Salvar sem email</button>
       </div>
     </div></div>
   </div>
@@ -2561,10 +2570,9 @@ async financeiro(a) {
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
   };
 
-  window._finSalvar = async () => {
+  // Retorna true se salvou com sucesso, false se falhou validação
+  const _finExecutarSave = async () => {
     const tipo = document.getElementById('fin-tipo').value;
-
-    // Usar URL já gerado no _finAnexoChange (upload já feito ao anexar)
     const inputAnexo = document.getElementById('fin-anexo');
     const anexo_url = (inputAnexo?._anexoUrls?.[0]?.url) || null;
 
@@ -2573,31 +2581,44 @@ async financeiro(a) {
       const item = document.getElementById('fin-item')?.value || '';
       const cc   = document.getElementById('fin-cc')?.value || '';
       const n    = parseInt(document.getElementById('fin-num-parc')?.value||1);
-      let totalGeral = 0;
-      let primeiroVenc = '';
+      let totalGeral = 0, primeiroVenc = '';
       for (let i=0; i<n; i++) {
         totalGeral += parseFloat(document.getElementById('fin-parc-val-'+i)?.value||0);
         if (i===0) primeiroVenc = document.getElementById('fin-parc-venc-0')?.value || '';
       }
-      if (!forn) { showT('⚠️ Informe o fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, anexo_url});
+      if (!forn) { showT('⚠️ Informe o fornecedor'); return false; }
+      const r = await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, anexo_url});
+      return !!r;
     } else if (tipo === 'Salário') {
-      const mesRef = document.getElementById('fin-mes-ref')?.value || mesAtual;
-      const venc   = document.getElementById('fin-venc')?.value || '';
-      const total  = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
-      await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRef}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, anexo_url});
+      const mesRefSal = document.getElementById('fin-mes-ref')?.value || mesAtual;
+      const venc = document.getElementById('fin-venc')?.value || '';
+      const total = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
+      const r = await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRefSal}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, anexo_url});
+      return !!r;
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
-      const fornEl = document.getElementById('fin-forn');
-      const forn  = typeof fornEl?.value === 'string' ? fornEl.value : '';
+      const forn  = document.getElementById('fin-forn')?.value || '';
       const val   = parseFloat(document.getElementById('fin-valor')?.value||0);
       const cc    = document.getElementById('fin-cc')?.value || '';
       const venc  = document.getElementById('fin-venc')?.value || '';
-      if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return; }
-      await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, anexo_url});
+      if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return false; }
+      const r = await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, anexo_url});
+      return !!r;
     }
+  };
+
+  window._finSalvar = async () => {
+    const ok = await _finExecutarSave();
+    if (!ok) return;
     showT('✅ Pagamento salvo no histórico!');
     window._finTab('hist');
+  };
+
+  window._finSalvarEEmail = async () => {
+    const ok = await _finExecutarSave();
+    if (!ok) return;
+    showT('✅ Salvo! Abrindo email para Flaviane...');
+    window._finGerarEmail();
   };
 
   window._finAtualizaForm();
