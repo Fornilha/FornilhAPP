@@ -3218,7 +3218,7 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
         acum[n] += diasCols[n];
       });
       const dia = l.data.split('-')[2];
-      const ausNomes = aus.map(n => n.split(' ')[0]).join(', ') || '—';
+      const ausNomes = aus.filter(n => COLS.includes(n)).map(n => n.split(' ')[0]).join(', ') || '—';
       return { dia, taxa: l.valor_taxa, taxa75, share, presLen: pres.length, ausNomes, diasCols };
     });
 
