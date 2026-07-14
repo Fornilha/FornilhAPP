@@ -3277,11 +3277,22 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
     </div>`;
   }
 
+  const _runTab = async (fn, id) => {
+    setTab(id);
+    const el = document.getElementById('tx-content');
+    if (el) el.innerHTML = `<p style="color:var(--txt3);padding:16px;font-size:13px;text-align:center">Carregando...</p>`;
+    try { await fn(); }
+    catch(e) {
+      console.error('Taxa tab error:', e);
+      if (el) el.innerHTML = `<p style="color:var(--er);padding:16px;font-size:13px">Erro ao carregar aba: ${e.message}</p>`;
+    }
+  };
+
   window._txTab = id => {
-    if (id==='lanc') renderLanc();
-    else if (id==='resumo') renderResumo();
-    else if (id==='audit') renderAuditoria();
-    else renderFecha();
+    if (id==='lanc') _runTab(renderLanc, id);
+    else if (id==='resumo') _runTab(renderResumo, id);
+    else if (id==='audit') _runTab(renderAuditoria, id);
+    else _runTab(renderFecha, id);
   };
 
   renderLanc();
