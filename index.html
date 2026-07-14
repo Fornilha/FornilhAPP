@@ -3019,7 +3019,10 @@ async taxa(a) {
   const tabs = [
     {id:'lanc', ico:'📝', lbl:'Lançamento'},
     {id:'resumo', ico:'📊', lbl:'Resumo'},
-    ...(perfil === 'admin' ? [{id:'fecha', ico:'✉️', lbl:'Fechamento'}] : []),
+    ...(perfil === 'admin' ? [
+      {id:'audit', ico:'🔍', lbl:'Auditoria'},
+      {id:'fecha', ico:'✉️', lbl:'Fechamento'},
+    ] : []),
   ];
 
   a.innerHTML = `
@@ -3190,9 +3193,94 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
     }).join('')}`;
   }
 
+  async function renderAuditoria() {
+    setTab('audit');
+    const {data:lancs} = await db.from('lancamentos_diarios')
+      .select('*').eq('mes_ref', mesRef).order('data');
+
+    if (!lancs||!lancs.length) {
+      document.getElementById('tx-content').innerHTML = `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para ${mesRef}.</p>`;
+      return;
+    }
+
+    // Build day-by-day breakdown
+    const acum = {};
+    COLS.forEach(n => acum[n] = 0);
+
+    const rows = lancs.map(l => {
+      const aus = l.ausentes || [];
+      const pres = COLS.filter(n => !aus.includes(n));
+      const taxa75 = l.valor_taxa * 0.75;
+      const share = pres.length ? taxa75 / pres.length : 0;
+      const diasCols = {};
+      COLS.forEach(n => {
+        diasCols[n] = pres.includes(n) ? share : 0;
+        acum[n] += diasCols[n];
+      });
+      const dia = l.data.split('-')[2];
+      const ausNomes = aus.map(n => n.split(' ')[0]).join(', ') || '—';
+      return { dia, taxa: l.valor_taxa, taxa75, share, presLen: pres.length, ausNomes, diasCols };
+    });
+
+    const totalTaxa = lancs.reduce((s,l)=>s+l.valor_taxa,0);
+
+    const firstNameStyle = 'font-size:10px;font-weight:700;color:var(--txt2);text-align:right;padding:4px 6px;min-width:52px';
+    const cellStyle = (val) => `font-size:11px;text-align:right;padding:4px 6px;color:${val>0?'var(--txt)':'var(--txt3)'}`;
+
+    document.getElementById('tx-content').innerHTML = `
+    <div class="slbl" style="margin-top:4px">Auditoria dia a dia · ${mesRef} · ${fmtR(totalTaxa)} total</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:520px">
+      <thead>
+        <tr style="background:var(--surf2);border-bottom:2px solid var(--bord)">
+          <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--txt3)">Dia</th>
+          <th style="padding:6px 6px;text-align:right;font-size:10px;color:var(--txt3)">Taxa</th>
+          <th style="padding:6px 6px;text-align:right;font-size:10px;color:var(--txt3)">75%</th>
+          <th style="padding:6px 6px;text-align:right;font-size:10px;color:var(--txt3)">÷</th>
+          <th style="padding:6px 6px;text-align:right;font-size:10px;color:var(--txt3)">$/pessoa</th>
+          <th style="padding:6px 6px;text-align:left;font-size:10px;color:var(--txt3)">Ausentes</th>
+          ${COLS.map(n=>`<th style="${firstNameStyle}">${n.split(' ')[0]}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r,i)=>`
+        <tr style="border-bottom:1px solid var(--bord);background:${i%2===0?'transparent':'var(--surf2)'}">
+          <td style="padding:5px 8px;font-weight:700;font-size:12px">${r.dia}</td>
+          <td style="padding:5px 6px;text-align:right">${fmtR(r.taxa)}</td>
+          <td style="padding:5px 6px;text-align:right;color:var(--ok)">${fmtR(r.taxa75)}</td>
+          <td style="padding:5px 6px;text-align:right;color:var(--txt3)">${r.presLen}</td>
+          <td style="padding:5px 6px;text-align:right;font-weight:600">${r.share>0?fmtR(r.share):'—'}</td>
+          <td style="padding:5px 6px;font-size:10px;color:var(--av)">${r.ausNomes}</td>
+          ${COLS.map(n=>`<td style="${cellStyle(r.diasCols[n])}">${r.diasCols[n]>0?fmtR(r.diasCols[n]):'—'}</td>`).join('')}
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--surf2);border-top:2px solid var(--bord);font-weight:700">
+          <td style="padding:7px 8px;font-size:12px" colspan="4">TOTAL</td>
+          <td style="padding:7px 6px;text-align:right">${fmtR(totalTaxa*0.75)}</td>
+          <td style="padding:7px 6px;font-size:10px;color:var(--txt3)">equipe (75%)</td>
+          ${COLS.map(n=>`<td style="padding:7px 6px;text-align:right;color:var(--ok);font-size:12px">${fmtR(acum[n])}</td>`).join('')}
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+    <div class="slbl" style="margin-top:16px">Totais por colaborador</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      ${COLS.map(n=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surf2);border-radius:8px;padding:10px 13px;border:1px solid var(--bord)">
+        <div>
+          <div style="font-size:12px;font-weight:700">${n.split(' ')[0]}</div>
+          <div style="font-size:10px;color:var(--txt3)">${n.split(' ').slice(1,3).join(' ')}</div>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:${acum[n]>0?'var(--ok)':'var(--txt3)'}">${fmtR(acum[n])}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
   window._txTab = id => {
     if (id==='lanc') renderLanc();
     else if (id==='resumo') renderResumo();
+    else if (id==='audit') renderAuditoria();
     else renderFecha();
   };
 
