@@ -1106,22 +1106,29 @@ async inicio(a) {
 
   // Atualiza Desp. Variáveis — chamado imediatamente e também pelo loadPagamentos quando terminar
   window._atualizarDespVarInicio = () => {
+    const elV      = document.getElementById('ini-despvar-v');
+    const elS      = document.getElementById('ini-despvar-s');
     const elBar    = document.getElementById('ini-despvar-bar');
     const elInd    = document.getElementById('ini-despvar-ind');
     const elFBar   = document.getElementById('ini-despfix-bar');
     const elFInd   = document.getElementById('ini-despfix-ind');
     const elMBar   = document.getElementById('ini-margem-bar');
     const elMInd   = document.getElementById('ini-margem-ind');
-    if (!elInd) { window._atualizarDespVarInicio = null; return; }
+    if (!elV) { window._atualizarDespVarInicio = null; return; }
 
     // Desp. Variáveis (PIX, Extra, Reembolso, etc.)
     const despVar = calcDespVarAcum();
     if (acumuladoMes > 0) {
       const pct = despVar / acumuladoMes * 100;
       const cor = pct <= META_VAR ? '#1D9E75' : pct <= META_VAR * 1.5 ? '#BA7517' : '#E24B4A';
+      elV.textContent = despVar > 0 ? pct.toFixed(1)+'%' : '—';
+      elV.style.color = despVar > 0 ? cor : 'var(--txt3)';
+      if (elS) elS.textContent = despVar > 0 ? fmt(despVar)+' · Meta: ≤'+META_VAR+'%' : 'Sem pagamentos variáveis';
       if (elBar) { elBar.style.width = Math.min(pct/META_VAR*100,100)+'%'; elBar.style.background = cor; }
-      elInd.textContent = despVar > 0 ? pct.toFixed(1)+'% '+(pct<=META_VAR?'🟢':pct<=META_VAR*1.5?'🟡':'🔴') : '— aguardando';
-      elInd.style.color = despVar > 0 ? cor : 'var(--txt3)';
+      if (elInd) { elInd.textContent = despVar > 0 ? pct.toFixed(1)+'% '+(pct<=META_VAR?'🟢':pct<=META_VAR*1.5?'🟡':'🔴') : '— aguardando'; elInd.style.color = despVar > 0 ? cor : 'var(--txt3)'; }
+    } else {
+      elV.textContent = '—'; elV.style.color = 'var(--txt3)';
+      if (elS) elS.textContent = 'Sem faturamento lançado';
     }
 
     // Desp. Fixas (Boletos)
