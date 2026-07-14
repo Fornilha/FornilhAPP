@@ -3018,7 +3018,6 @@ async taxa(a) {
 
   const tabs = [
     {id:'lanc', ico:'📝', lbl:'Lançamento'},
-    {id:'resumo', ico:'📊', lbl:'Resumo'},
     ...(perfil === 'admin' ? [
       {id:'audit', ico:'🔍', lbl:'Auditoria'},
       {id:'fecha', ico:'✉️', lbl:'Fechamento'},
@@ -3088,65 +3087,7 @@ async taxa(a) {
     }`;
   }
 
-  async function renderResumo() {
-    setTab('resumo');
-    const {data:lancs} = await db.from('lancamentos_diarios')
-      .select('*').eq('mes_ref', mesRef).order('data');
 
-    if (!lancs||!lancs.length) {
-      document.getElementById('tx-content').innerHTML = `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para ${mesRef}.</p>`;
-      return;
-    }
-
-const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=15; });
-    const q2 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d>15; });
-
-    function calcQuinzena(dias) {
-      const totais = {};
-      COLS.forEach(n => totais[n] = 0);
-      dias.forEach(l => {
-        const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
-        const pres = COLS.filter(n=>!aus.includes(n));
-        if (!pres.length) return;
-        const share = (l.valor_taxa * 0.75) / pres.length;
-        pres.forEach(n => totais[n] += share);
-      });
-      return totais;
-    }
-
-    const t1 = calcQuinzena(q1);
-    const t2 = calcQuinzena(q2);
-
-    const totalTaxa = lancs.reduce((s,l)=>s+l.valor_taxa,0);
-    const totalFuncBruto = totalTaxa * 0.75;
-    const totalCasa = totalTaxa * 0.25;
-
-    document.getElementById('tx-content').innerHTML = `
-    <div class="kgrid" style="margin-bottom:12px">
-      <div class="kpi"><div class="kpi-l">Total taxa mês</div><div class="kpi-v">${fmtR(totalTaxa)}</div></div>
-      <div class="kpi"><div class="kpi-l">Casa (25%)</div><div class="kpi-v" style="color:var(--av)">${fmtR(totalCasa)}</div></div>
-      <div class="kpi"><div class="kpi-l">Equipe (75%)</div><div class="kpi-v" style="color:var(--ok)">${fmtR(totalFuncBruto)}</div></div>
-      <div class="kpi"><div class="kpi-l">Dias registrados</div><div class="kpi-v">${lancs.length}</div></div>
-    </div>
-
-    ${['1ª Quinzena','2ª Quinzena'].map((qNome,qi)=>{
-      const tot = qi===0 ? t1 : t2;
-      const dias = qi===0 ? q1 : q2;
-      if (!dias.length) return `<div class="slbl">${qNome} — sem dados</div>`;
-      const totalQ = dias.reduce((s,l)=>s+l.valor_taxa*0.75,0);
-      return `
-      <div class="slbl">${qNome} · ${fmtR(totalQ)}</div>
-      <div class="card"><div class="cb" style="padding:0">
-        ${COLS.map(n=>{
-          const val = tot[n]||0;
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--bord)">
-            <div style="font-size:13px;font-weight:600">${n.split(' ')[0]}</div>
-            <div style="font-size:14px;font-weight:700;color:${val>0?'var(--ok)':'var(--txt3)'}">${fmtR(val)}</div>
-          </div>`;
-        }).join('')}
-      </div></div>`;
-    }).join('')}`;
-  }
 
   async function renderFecha() {
     setTab('fecha');
@@ -3203,7 +3144,23 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
       return;
     }
 
-    // Build day-by-day breakdown
+    const q1 = lancs.filter(l => parseInt(l.data.split('-')[2]) <= 15);
+    const q2 = lancs.filter(l => parseInt(l.data.split('-')[2]) > 15);
+
+    function calcQ(dias) {
+      const t = {}; COLS.forEach(n => t[n] = 0);
+      dias.forEach(l => {
+        const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
+        const pres = COLS.filter(n => !aus.includes(n));
+        if (!pres.length) return;
+        const s = (l.valor_taxa * 0.75) / pres.length;
+        pres.forEach(n => t[n] += s);
+      });
+      return t;
+    }
+    const tq1 = calcQ(q1);
+    const tq2 = calcQ(q2);
+
     const acum = {};
     COLS.forEach(n => acum[n] = 0);
 
@@ -3222,13 +3179,24 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
       return { dia, taxa: l.valor_taxa, taxa75, share, presLen: pres.length, ausNomes, diasCols };
     });
 
-    const totalTaxa = lancs.reduce((s,l)=>s+l.valor_taxa,0);
+    const totalTaxa = lancs.reduce((s,l) => s + l.valor_taxa, 0);
+    const totalCasa = totalTaxa * 0.25;
+    const totalEquipe = totalTaxa * 0.75;
+    const totalQ1 = q1.reduce((s,l) => s + l.valor_taxa * 0.75, 0);
+    const totalQ2 = q2.reduce((s,l) => s + l.valor_taxa * 0.75, 0);
 
     const firstNameStyle = 'font-size:10px;font-weight:700;color:var(--txt2);text-align:right;padding:4px 6px;min-width:52px';
     const cellStyle = (val) => `font-size:11px;text-align:right;padding:4px 6px;color:${val>0?'var(--txt)':'var(--txt3)'}`;
 
     document.getElementById('tx-content').innerHTML = `
-    <div class="slbl" style="margin-top:4px">Auditoria dia a dia · ${mesRef} · ${fmtR(totalTaxa)} total</div>
+    <div class="kgrid" style="margin-bottom:12px">
+      <div class="kpi"><div class="kpi-l">Total taxa mês</div><div class="kpi-v">${fmtR(totalTaxa)}</div></div>
+      <div class="kpi"><div class="kpi-l">Casa (25%)</div><div class="kpi-v" style="color:var(--av)">${fmtR(totalCasa)}</div></div>
+      <div class="kpi"><div class="kpi-l">Equipe (75%)</div><div class="kpi-v" style="color:var(--ok)">${fmtR(totalEquipe)}</div></div>
+      <div class="kpi"><div class="kpi-l">Dias registrados</div><div class="kpi-v">${lancs.length}</div></div>
+    </div>
+
+    <div class="slbl" style="margin-top:4px">Auditoria dia a dia · ${mesRef}</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:520px">
       <thead>
@@ -3256,25 +3224,29 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
       </tbody>
       <tfoot>
         <tr style="background:var(--surf2);border-top:2px solid var(--bord);font-weight:700">
-          <td style="padding:7px 8px;font-size:12px" colspan="4">TOTAL</td>
-          <td style="padding:7px 6px;text-align:right">${fmtR(totalTaxa*0.75)}</td>
+          <td style="padding:7px 8px;font-size:12px" colspan="4">TOTAL MÊS</td>
+          <td style="padding:7px 6px;text-align:right">${fmtR(totalEquipe)}</td>
           <td style="padding:7px 6px;font-size:10px;color:var(--txt3)">equipe (75%)</td>
           ${COLS.map(n=>`<td style="padding:7px 6px;text-align:right;color:var(--ok);font-size:12px">${fmtR(acum[n])}</td>`).join('')}
         </tr>
       </tfoot>
     </table>
     </div>
-    <div class="slbl" style="margin-top:16px">Totais por colaborador</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-      ${COLS.map(n=>`
-      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surf2);border-radius:8px;padding:10px 13px;border:1px solid var(--bord)">
-        <div>
-          <div style="font-size:12px;font-weight:700">${n.split(' ')[0]}</div>
-          <div style="font-size:10px;color:var(--txt3)">${n.split(' ').slice(1,3).join(' ')}</div>
-        </div>
-        <div style="font-size:14px;font-weight:800;color:${acum[n]>0?'var(--ok)':'var(--txt3)'}">${fmtR(acum[n])}</div>
-      </div>`).join('')}
-    </div>`;
+
+    ${[['1ª Quinzena', q1, tq1, totalQ1], ['2ª Quinzena', q2, tq2, totalQ2]].map(([qNome, dias, tot, totalQ]) => {
+      if (!dias.length) return `<div class="slbl" style="margin-top:16px">${qNome} — sem dados</div>`;
+      return `
+      <div class="slbl" style="margin-top:16px">${qNome} · ${fmtR(totalQ)}</div>
+      <div class="card"><div class="cb" style="padding:0">
+        ${COLS.map(n => {
+          const val = tot[n] || 0;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--bord)">
+            <div style="font-size:13px;font-weight:600">${n.split(' ')[0]}</div>
+            <div style="font-size:14px;font-weight:700;color:${val>0?'var(--ok)':'var(--txt3)'}">${fmtR(val)}</div>
+          </div>`;
+        }).join('')}
+      </div></div>`;
+    }).join('')}`;
   }
 
   const _runTab = async (fn, id) => {
@@ -3290,7 +3262,6 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
 
   window._txTab = id => {
     if (id==='lanc') _runTab(renderLanc, id);
-    else if (id==='resumo') _runTab(renderResumo, id);
     else if (id==='audit') _runTab(renderAuditoria, id);
     else _runTab(renderFecha, id);
   };
