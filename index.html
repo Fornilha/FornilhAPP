@@ -3060,7 +3060,7 @@ async taxa(a) {
     <div class="slbl" style="margin-top:4px">Últimos lançamentos — ${mesRef.split('-')[1]}/${mesRef.split('-')[0]}</div>
     ${!lancs||!lancs.length ? `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:18px">Nenhum lançamento ainda.</p>` :
       lancs.map(l=>{
-        const aus = l.ausentes||[];
+        const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
         const presentes = COLS.length - aus.length;
         const taxaFunc = l.valor_taxa * 0.75;
         const porPessoa = presentes > 0 ? taxaFunc/presentes : 0;
@@ -3105,7 +3105,7 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
       const totais = {};
       COLS.forEach(n => totais[n] = 0);
       dias.forEach(l => {
-        const aus = l.ausentes||[];
+        const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
         const pres = COLS.filter(n=>!aus.includes(n));
         if (!pres.length) return;
         const share = (l.valor_taxa * 0.75) / pres.length;
@@ -3159,7 +3159,7 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
 
     function calcQ(dias) {
       const t={}; COLS.forEach(n=>t[n]=0);
-      dias.forEach(l=>{ const aus=l.ausentes||[]; const pres=COLS.filter(n=>!aus.includes(n)); if(!pres.length)return; const s=(l.valor_taxa*0.75)/pres.length; pres.forEach(n=>t[n]+=s); });
+      dias.forEach(l=>{ const aus=Array.isArray(l.ausentes)?l.ausentes:[]; const pres=COLS.filter(n=>!aus.includes(n)); if(!pres.length)return; const s=(l.valor_taxa*0.75)/pres.length; pres.forEach(n=>t[n]+=s); });
       return t;
     }
     const q1=lancs.filter(l=>parseInt(l.data.split('-')[2])<=15);
@@ -3208,7 +3208,7 @@ const q1 = lancs.filter(l=>{ const d=parseInt(l.data.split('-')[2]); return d<=1
     COLS.forEach(n => acum[n] = 0);
 
     const rows = lancs.map(l => {
-      const aus = l.ausentes || [];
+      const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
       const pres = COLS.filter(n => !aus.includes(n));
       const taxa75 = l.valor_taxa * 0.75;
       const share = pres.length ? taxa75 / pres.length : 0;
