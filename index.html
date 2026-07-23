@@ -2596,13 +2596,14 @@ async financeiro(a) {
         if (i===0) primeiroVenc = document.getElementById('fin-parc-venc-0')?.value || '';
       }
       if (!forn) { showT('⚠️ Informe o fornecedor'); return false; }
-      const r = await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc, cc, parcelas:n, anexo_url});
+      if (!primeiroVenc) { showT('⚠️ Informe o vencimento da 1ª parcela'); return false; }
+      const r = await savePagamento({tipo, fornecedor:forn, item, valor:totalGeral, vencimento:primeiroVenc||null, cc, parcelas:n, anexo_url});
       return !!r;
     } else if (tipo === 'Salário') {
       const mesRefSal = document.getElementById('fin-mes-ref')?.value || mesAtual;
       const venc = document.getElementById('fin-venc')?.value || '';
       const total = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
-      const r = await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRefSal}`, valor:total, vencimento:venc, cc:'Fornilha', parcelas:1, anexo_url});
+      const r = await savePagamento({tipo, fornecedor:'Colaboradores do FORNILHA', item:`Salário ${mesRefSal}`, valor:total, vencimento:venc||null, cc:'Fornilha', parcelas:1, anexo_url});
       return !!r;
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
@@ -2611,7 +2612,7 @@ async financeiro(a) {
       const cc    = document.getElementById('fin-cc')?.value || '';
       const venc  = document.getElementById('fin-venc')?.value || '';
       if (!item && !forn) { showT('⚠️ Informe o item ou fornecedor'); return false; }
-      const r = await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc, cc, parcelas:1, anexo_url});
+      const r = await savePagamento({tipo, fornecedor:forn, item, valor:val, vencimento:venc||null, cc, parcelas:1, anexo_url});
       return !!r;
     }
   };
