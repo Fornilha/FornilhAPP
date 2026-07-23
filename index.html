@@ -1028,9 +1028,9 @@ async inicio(a) {
       <div class="kpi-s" id="ini-despvar-s">Carregando...</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Desp. Fixas ${mesLabel}</div>
-      <div class="kpi-v" style="color:${corFix}">${ref.fix_pct}%</div>
-      <div class="kpi-s">${fmt(ref.fix_pct/100*ref.fat)} · Meta: ≤${META_FIX}%</div>
+      <div class="kpi-l">Desp. Fixas ${nomeMes.slice(0,3).charAt(0).toUpperCase()+nomeMes.slice(1,3)}/26</div>
+      <div class="kpi-v" style="color:var(--txt3)" id="ini-despfix-v">—</div>
+      <div class="kpi-s" id="ini-despfix-s">Aguardando boletos</div>
     </div>
   </div>
 
@@ -1135,13 +1135,15 @@ async inicio(a) {
 
     // Desp. Fixas (Boletos)
     const despFix = calcDespFixaAcum();
-    if (elFBar && elFInd && acumuladoMes > 0) {
+    const elFV = document.getElementById('ini-despfix-v');
+    const elFS = document.getElementById('ini-despfix-s');
+    if (acumuladoMes > 0) {
       const pct = despFix / acumuladoMes * 100;
       const cor = pct <= META_FIX ? '#1D9E75' : pct <= META_FIX * 1.5 ? '#EF9F27' : '#E24B4A';
-      elFBar.style.width = Math.min(pct/META_FIX*100,100)+'%';
-      elFBar.style.background = cor;
-      elFInd.textContent = despFix > 0 ? pct.toFixed(1)+'% '+(pct<=META_FIX?'🟢':pct<=META_FIX*1.5?'🟡':'🔴') : '— aguardando';
-      elFInd.style.color = despFix > 0 ? cor : 'var(--txt3)';
+      if (elFV) { elFV.textContent = despFix > 0 ? pct.toFixed(1)+'%' : '—'; elFV.style.color = despFix > 0 ? cor : 'var(--txt3)'; }
+      if (elFS) { elFS.textContent = despFix > 0 ? fmt(despFix)+' · Meta: ≤'+META_FIX+'%' : 'Sem boletos lançados'; }
+      if (elFBar) { elFBar.style.width = Math.min(pct/META_FIX*100,100)+'%'; elFBar.style.background = despFix > 0 ? cor : 'var(--bord)'; }
+      if (elFInd) { elFInd.textContent = despFix > 0 ? pct.toFixed(1)+'% '+(pct<=META_FIX?'🟢':pct<=META_FIX*1.5?'🟡':'🔴') : '— aguardando'; elFInd.style.color = despFix > 0 ? cor : 'var(--txt3)'; }
     }
 
     // Margem Líquida parcial
