@@ -1072,7 +1072,7 @@ async inicio(a) {
     </div>
   </div></div>
 
-  <div class="slbl">Resultado ${mesLabel} vs metas</div>
+  <div class="slbl">Resultado ${mesAtualLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
       <span class="ind-lbl">Margem Líquida ${nomeMes}</span>
@@ -1093,9 +1093,9 @@ async inicio(a) {
 
   <div class="slbl">Alertas operacionais</div>
   <div class="card"><div class="cb" style="padding-top:13px">
-    ${ref.cmv_pct > META_CMV ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">CMV em ${ref.cmv_pct}% em ${mesLabel} — limite crítico: ${META_CMV}%</span><span class="tag tag-r">Crítico</span></div>` : ''}
-    ${ref.fix_pct > META_FIX ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas fixas em ${ref.fix_pct}% em ${mesLabel} — acima da meta de ${META_FIX}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
-    ${ref.folha_pct > META_FOLHA ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha em ${ref.folha_pct}% em ${mesLabel} — limite crítico: ${META_FOLHA}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
+    ${(()=>{ const pct = acumuladoMes>0?DESP_FIXAS_MES/acumuladoMes*100:0; return pct>META_FIX?`<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Despesas fixas em ${pct.toFixed(1)}% em ${mesAtualLabel} — acima da meta de ${META_FIX}%</span><span class="tag tag-r">Urgente</span></div>`:''; })()}
+    ${(()=>{ const pct = acumuladoMes>0?calcDespVarAcum()/acumuladoMes*100:0; return pct>META_VAR?`<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Desp. variáveis em ${pct.toFixed(1)}% em ${mesAtualLabel} — acima da meta de ${META_VAR}%</span><span class="tag tag-r">Urgente</span></div>`:''; })()}
+    ${temDadosParciais && folhaParcPct > META_FOLHA ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Folha em ${folhaParcPct.toFixed(1)}% em ${mesAtualLabel} — acima da meta de ${META_FOLHA}%</span><span class="tag tag-r">Urgente</span></div>` : ''}
     ${margemParcPct !== null && margemParcPct < 20 ? `<div class="alrt"><span class="alrt-ico">🔴</span><span class="alrt-txt">Margem parcial em ${margemParcPct.toFixed(1)}% em ${nomeMes} — abaixo do mínimo de 20%</span><span class="tag tag-r">Crítico</span></div>` : ''}
     <div class="alrt"><span class="alrt-ico">📈</span><span class="alrt-txt">Acumulado 2026: ${fmt(acumuladoAno)} — ${varSinal}${varAno}% vs mesmo período 2025</span><span class="tag tag-i">Info</span></div>
   </div></div>`;
