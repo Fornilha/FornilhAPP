@@ -936,7 +936,7 @@ async inicio(a) {
     return ok?'🟢':warn?'🟡':'🔴';
   }
 
-  const META_CMV=28, META_FIX=10, META_FOLHA=19, META_MARGEM=42, META_IMP=10, META_VAR=5;
+  const META_CMV=28, META_FIX=10, META_FOLHA=19, META_MARGEM=42, META_IMP=10, META_VAR=30;
   const corMargem = indCor(ref.margem,META_MARGEM);
   const corFolha  = indCor(ref.folha_pct,META_FOLHA,true);
   const corCMV    = indCor(ref.cmv_pct,META_CMV,true);
@@ -1012,8 +1012,8 @@ async inicio(a) {
   <div class="kgrid">
     <div class="kpi dest">
       <div class="kpi-l">Acumulado ${nomeMes}</div>
-      <div class="kpi-v">${acumuladoMes > 0 ? fmt(acumuladoMes) : '—'}</div>
-      <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''}</div>
+      <div class="kpi-v" style="color:${acumuladoMes<=0?'var(--txt)':(()=>{const p=acumuladoMes/ref.fat25*100;return p>=90?'#1D9E75':p>=70?'#EF9F27':'#E24B4A';})()}">${acumuladoMes > 0 ? fmt(acumuladoMes) : '—'}</div>
+      <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''} · Meta: ${fmt(ref.fat25)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Folha ${mesLabel} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
