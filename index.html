@@ -1116,7 +1116,7 @@ async inicio(a) {
     const elFInd   = document.getElementById('ini-despfix-ind');
     const elMBar   = document.getElementById('ini-margem-bar');
     const elMInd   = document.getElementById('ini-margem-ind');
-    if (!elV) { window._atualizarDespVarInicio = null; return; }
+    if (!elV) return;
 
     // Desp. Variáveis (PIX, Extra, Reembolso, etc.)
     const despVar = calcDespVarAcum();
