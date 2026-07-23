@@ -916,11 +916,9 @@ async inicio(a) {
   const temDadosParciais = acumuladoMes > 0;
   const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
-  const calcDespFixaAcum = () => pagamentos
-    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo==='Boleto'; })
-    .reduce((s,p) => s+Number(p.valor||0), 0);
+  const calcDespFixaAcum = () => DESP_FIXAS_MES;
   const calcDespVarAcum = () => pagamentos
-    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo!=='Boleto' && p.tipo!=='Salário'; })
+    .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo!=='Salário'; })
     .reduce((s,p) => s+Number(p.valor||0), 0);
   const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
   const calcMargemParcPct = () => temDadosParciais
