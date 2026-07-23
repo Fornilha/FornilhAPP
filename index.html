@@ -925,8 +925,9 @@ async inicio(a) {
     .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo!=='Salário'; })
     .reduce((s,p) => s+Number(p.valor||0), 0);
   const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
+  const salariosTotalMes = COLABORADORES_FIN.reduce((s,c) => s + c.salario, 0);
   const calcMargemParcPct = () => temDadosParciais
-    ? ((acumuladoMes - taxaFuncAcum - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
+    ? ((acumuladoMes - taxaFuncAcum - salariosTotalMes - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
     : null;
   const margemParcPct = calcMargemParcPct();
 
