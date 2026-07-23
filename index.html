@@ -901,6 +901,10 @@ async inicio(a) {
   const acumuladoAno = mesesFechados.reduce((s,d) => s + d.fat, 0) + acumuladoMes;
   const ref = mesesFechados.slice(-1)[0];
   const mesLabel = ref.mes + '/26';
+  const dadosAtual = DADOS_2026[hoje.getMonth()];
+  const mesAtualLabel = dadosAtual.mes + '/26';
+  const fatMetaAtual = dadosAtual.fat25;
+  const impPctAtual = dadosAtual.imp_pct;
   const var25 = mesesFechados.reduce((s,d) => s + d.fat25, 0);
   const varAno = Math.round((acumuladoAno/var25-1)*100);
   const varSinal = varAno >= 0 ? '+' : '';
@@ -1012,8 +1016,8 @@ async inicio(a) {
   <div class="kgrid">
     <div class="kpi dest">
       <div class="kpi-l">Acumulado ${nomeMes}</div>
-      <div class="kpi-v" style="color:${acumuladoMes<=0?'var(--txt)':(()=>{const p=acumuladoMes/ref.fat25*100;return p>=90?'#1D9E75':p>=70?'#EF9F27':'#E24B4A';})()}">${acumuladoMes > 0 ? fmt(acumuladoMes) : '—'}</div>
-      <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''} · Meta: ${fmt(ref.fat25)}</div>
+      <div class="kpi-v">${acumuladoMes > 0 ? fmt(acumuladoMes) : '—'}</div>
+      <div class="kpi-s">${dias.length} dia${dias.length!==1?'s':''} lançado${dias.length!==1?'s':''} · Meta: ${fmt(DADOS_2026[hoje.getMonth()].fat25)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Folha ${mesLabel} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
@@ -1042,17 +1046,15 @@ async inicio(a) {
     <div class="ai-loading" id="ai-load"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Analisando...</span></div>
   </div>
 
-  <div class="slbl">Indicadores ${mesLabel} vs metas</div>
+  <div class="slbl">Indicadores ${mesAtualLabel} vs metas</div>
   <div class="card"><div class="cb" style="padding-top:13px">
     <div class="ind-row">
       <span class="ind-lbl">Acumulado ${nomeMes}</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(Math.round((acumuladoMes||ref.fat)/ref.fat25*100),100)}%;background:${corMargem}"></div></div>
-      <span class="ind-val" style="color:${corMargem}">${acumuladoMes > 0 ? fmt(acumuladoMes) : fmt(ref.fat)}</span>
+      ${(()=>{const p=acumuladoMes>0?Math.min(acumuladoMes/fatMetaAtual*100,100):0;const cor=p>=90?'#1D9E75':p>=70?'#EF9F27':p>0?'#E24B4A':'var(--bord)';return`<div class="ind-bar-w"><div class="ind-bar" style="width:${p}%;background:${cor}"></div></div><span class="ind-val" style="color:${p>0?cor:'var(--txt3)'}"> ${acumuladoMes>0?fmt(acumuladoMes):'—'}</span>`;})()}
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Folha</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.folha_pct/META_FOLHA*100,100)}%;background:${corFolha}"></div></div>
-      <span class="ind-val" style="color:${corFolha}">${ref.folha_pct}% ${indIcon(ref.folha_pct,META_FOLHA,true)}</span>
+      <span class="ind-lbl">Folha ${nomeMes}</span>
+      ${temDadosParciais?(()=>{const cor=indCor(folhaParcPct,META_FOLHA,true);return`<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(folhaParcPct/META_FOLHA*100,100)}%;background:${cor}"></div></div><span class="ind-val" style="color:${cor}">${folhaParcPct.toFixed(1)}% ${indIcon(folhaParcPct,META_FOLHA,true)}</span>`;})():`<div class="ind-bar-w"><div class="ind-bar" style="width:0%;background:var(--bord)"></div></div><span class="ind-val" style="color:var(--txt3)">— aguardando taxa</span>`}
     </div>
     <div class="ind-row">
       <span class="ind-lbl">Desp. Variáveis ${nomeMes}</span>
@@ -1065,14 +1067,8 @@ async inicio(a) {
       <span class="ind-val" id="ini-despfix-ind" style="color:var(--txt3)">— aguardando</span>
     </div>
     <div class="ind-row">
-      <span class="ind-lbl">Impostos</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.imp_pct/META_IMP*100,100)}%;background:${corImp}"></div></div>
-      <span class="ind-val" style="color:${corImp}">${ref.imp_pct}% ${indIcon(ref.imp_pct,META_IMP,true)}</span>
-    </div>
-    <div class="ind-row">
-      <span class="ind-lbl">CMV ${mesLabel}</span>
-      <div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(ref.cmv_pct/META_CMV*100,100)}%;background:${corCMV}"></div></div>
-      <span class="ind-val" style="color:${corCMV}">${ref.cmv_pct}% ${indIcon(ref.cmv_pct,META_CMV,true)}</span>
+      <span class="ind-lbl">Impostos ${nomeMes}</span>
+      ${(()=>{const cor=indCor(impPctAtual,META_IMP,true);return`<div class="ind-bar-w"><div class="ind-bar" style="width:${Math.min(impPctAtual/META_IMP*100,100)}%;background:${cor}"></div></div><span class="ind-val" style="color:${cor}">${impPctAtual}% ${indIcon(impPctAtual,META_IMP,true)}</span>`;})()}
     </div>
   </div></div>
 
