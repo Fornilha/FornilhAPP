@@ -2381,38 +2381,50 @@ async financeiro(a) {
   window._mercadoFotoChange = async (input) => {
     const file = input.files?.[0];
     if (!file) return;
-    const nomeEl = document.getElementById('merc-foto-nome');
-    const preview = document.getElementById('merc-preview');
-    nomeEl.textContent = '⏳ Enviando foto...';
-    // mostra preview local imediatamente
-    const localUrl = URL.createObjectURL(file);
-    preview.innerHTML = `<img src="${localUrl}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--bord)">`;
-    // faz upload para Supabase
-    const ext = file.name.split('.').pop() || 'jpg';
+    const labelEl  = document.getElementById('merc-foto-label');
+    const preview  = document.getElementById('merc-preview');
+    const mercado  = document.getElementById('fin-forn')?.value || 'Mercado';
+    const valor    = parseFloat(document.getElementById('fin-valor')?.value || 0);
+    const hoje     = new Date().toLocaleDateString('pt-BR');
+
+    if (!valor) { showT('⚠️ Informe o valor antes de fotografar'); return; }
+
+    // preview local imediato
+    preview.innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--bord)">`;
+    labelEl.textContent = '⏳ Processando...';
+
+    // 1. upload da foto
+    const ext  = file.name.split('.').pop() || 'jpg';
     const path = `mercado_${Date.now()}.${ext}`;
     const { data: upData, error: upErr } = await db.storage.from('fin-anexos').upload(path, file);
-    if (upErr) { showT('⚠️ Erro no upload da foto'); nomeEl.textContent = 'Erro — tente novamente'; return; }
+    if (upErr) { showT('⚠️ Erro no upload da foto'); labelEl.textContent = 'Tirar foto da nota e enviar'; return; }
     const { data: urlData } = db.storage.from('fin-anexos').getPublicUrl(upData.path);
-    input._fotoUrl = urlData.publicUrl;
-    nomeEl.textContent = '✅ Foto enviada — pronta para WhatsApp';
-  };
+    const fotoUrl = urlData.publicUrl;
 
-  window._mercadoEnviarWhats = () => {
-    const mercado = document.getElementById('fin-forn')?.value || 'Mercado';
-    const item    = document.getElementById('fin-item')?.value || '';
-    const valor   = parseFloat(document.getElementById('fin-valor')?.value || 0);
-    const venc    = document.getElementById('fin-venc')?.value || '';
-    const fotoUrl = document.getElementById('merc-foto')?._fotoUrl || '';
-    const dataFmt = venc ? venc.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR');
-    const valFmt  = valor ? `R$ ${valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—';
+    // 2. salva nas despesas
+    const valFmt = `R$ ${valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    await savePagamento({
+      tipo: 'Mercado',
+      fornecedor: mercado,
+      item: `Compra ${mercado} — ${hoje}`,
+      valor,
+      vencimento: new Date().toISOString().slice(0,10),
+      cc: 'Geral',
+      parcelas: 1,
+      anexo_url: fotoUrl
+    });
+
+    // 3. abre WhatsApp automaticamente
     let msg = `🛒 *Compra no Mercado — Fornilha*\n\n`;
     msg += `📍 Local: ${mercado}\n`;
-    if (item)  msg += `📦 Item: ${item}\n`;
     msg += `💰 Valor: ${valFmt}\n`;
-    msg += `📅 Data: ${dataFmt}\n`;
-    if (fotoUrl) msg += `\n📎 Nota fiscal:\n${fotoUrl}`;
+    msg += `📅 Data: ${hoje}\n`;
+    msg += `\n📎 Nota fiscal:\n${fotoUrl}`;
     msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
     window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`, '_blank');
+
+    labelEl.textContent = '✅ Enviado e salvo!';
+    showT('✅ Compra salva e nota enviada pelo WhatsApp!');
   };
 
   window._finRemoverAnexo = (i) => {
@@ -2530,20 +2542,17 @@ async financeiro(a) {
             <option value="Mercado Armazém Beer">Mercado Armazém Beer</option>
           </select>
         </div>
-        <div class="fld"><label>📸 Foto da nota fiscal</label>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surf2);border:2px dashed var(--bord);border-radius:var(--r);padding:12px;font-size:13px;color:var(--txt2)">
-            <span style="font-size:24px">📷</span>
-            <span id="merc-foto-nome">Tirar foto ou selecionar da galeria</span>
-            <input type="file" id="merc-foto" accept="image/*" capture="environment" style="display:none" onchange="window._mercadoFotoChange(this)">
-          </label>
-          <div id="merc-preview" style="margin-top:8px"></div>
-        </div>`;
-      comuns.innerHTML = `
-        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Compra de insumos — Jul/26"></div>
-        <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
-        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Cozinha"></div>
-        <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>
-        <button type="button" class="btn-p" style="background:#25D366;width:100%;margin-bottom:4px" onclick="window._mercadoEnviarWhats()">📲 Enviar nota pelo WhatsApp</button>`;
+        <div class="fld"><label>Valor total (R$)</label>
+          <input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01">
+        </div>
+        <label id="merc-btn-foto" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:#25D366;border-radius:var(--r);padding:18px;color:#fff;font-weight:700;font-size:15px;margin-top:4px">
+          <span style="font-size:36px">📸</span>
+          <span id="merc-foto-label">Tirar foto da nota e enviar</span>
+          <span style="font-size:11px;font-weight:400;opacity:.85">Ao fotografar, envia pelo WhatsApp e salva nas despesas</span>
+          <input type="file" id="merc-foto" accept="image/*" capture="environment" style="display:none" onchange="window._mercadoFotoChange(this)">
+        </label>
+        <div id="merc-preview" style="margin-top:10px"></div>`;
+      comuns.innerHTML = '';
     } else if (['Extra','Venda Folga','Reembolso'].includes(tipo)) {
       extra.innerHTML = `
         <div class="fld"><label>Colaborador</label>
