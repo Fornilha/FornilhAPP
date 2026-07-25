@@ -2076,7 +2076,7 @@ async financeiro(a) {
   await loadPagamentos();
 
   const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const TIPOS_PAG = ['Boleto','PIX','Salário','Extra','Venda Folga','Reembolso','Outro'];
+  const TIPOS_PAG = ['Boleto','PIX','Mercado','Salário','Extra','Venda Folga','Reembolso','Outro'];
   const DEST_FLAVIANE = 'financeirorestaurantelonier@gmail.com';
   const DEST_CONTAB = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
   const ASSINATURA = `\n\n--\nVinicius Querino Alves Santos\nAssistente Financeiro — Fornilha Pizzaria\n📞 (21) 99140-9144\n✉️ financeiro.fornilha@gmail.com\n📍 Rua Santana nº 75 - Ilha Grande - RJ\n📸 @fornilha.oficial`;
@@ -2115,8 +2115,8 @@ async financeiro(a) {
     return Array.from({length:n}, (_,i) => parseFloat((i===0 ? base+resto : base).toFixed(2)));
   }
 
-  const TIPO_ICO = {Boleto:'📄',PIX:'💸',Salário:'👥',Extra:'💵','Venda Folga':'🏖️',Rescisão:'📝',Reembolso:'🔄',Outro:'💰'};
-  const TIPO_COR = {Boleto:'#185FA5',PIX:'#1D9E75',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
+  const TIPO_ICO = {Boleto:'📄',PIX:'💸',Mercado:'🛒',Salário:'👥',Extra:'💵','Venda Folga':'🏖️',Rescisão:'📝',Reembolso:'🔄',Outro:'💰'};
+  const TIPO_COR = {Boleto:'#185FA5',PIX:'#1D9E75',Mercado:'#6B3FA0',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
 
   function renderHistorico(mes) {
     const filtrados = mes
@@ -2485,6 +2485,19 @@ async financeiro(a) {
         <div class="fld"><label>Data de pagamento (vencimento)</label><input type="date" id="fin-venc" value="${hojeISO}"></div>
         <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:0 12px;margin-bottom:8px">${campos}</div>`;
       comuns.innerHTML = '';
+    } else if (tipo === 'Mercado') {
+      extra.innerHTML = `
+        <div class="fld"><label>Local de compra</label>
+          <select id="fin-forn">
+            <option value="Mercado Objetiva">Mercado Objetiva</option>
+            <option value="Mercado Armazém Beer">Mercado Armazém Beer</option>
+          </select>
+        </div>`;
+      comuns.innerHTML = `
+        <div class="fld"><label>Item / Descrição</label><input id="fin-item" placeholder="Ex: Compra de insumos — Jul/26"></div>
+        <div class="fld"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="fld"><label>Centro de Custo</label><input id="fin-cc" placeholder="Ex: Cozinha"></div>
+        <div class="fld"><label>Vencimento</label><input type="date" id="fin-venc" value="${hojeISO}"></div>`;
     } else if (['Extra','Venda Folga','Reembolso'].includes(tipo)) {
       extra.innerHTML = `
         <div class="fld"><label>Colaborador</label>
