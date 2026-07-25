@@ -2421,7 +2421,7 @@ async financeiro(a) {
     msg += `📅 Data: ${hoje}\n`;
     msg += `\n📎 Nota fiscal:\n${fotoUrl}`;
     msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
-    window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 
     labelEl.textContent = '✅ Enviado e salvo!';
     showT('✅ Compra salva e nota enviada pelo WhatsApp!');
