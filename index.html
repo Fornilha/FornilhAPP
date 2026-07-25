@@ -2414,20 +2414,25 @@ async financeiro(a) {
       anexo_url: fotoUrl
     });
 
-    // 3. monta link do WhatsApp e exibe botão para o usuário tocar
-    let msg = `🛒 *Compra no Mercado — Fornilha*\n\n`;
-    msg += `📍 Local: ${mercado}\n`;
-    msg += `💰 Valor: ${valFmt}\n`;
-    msg += `📅 Data: ${hoje}\n`;
-    msg += `\n📎 Nota fiscal:\n${fotoUrl}`;
-    msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
-    const waUrl = `https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`;
-
+    // 3. compartilha imagem diretamente via Web Share API (abre WhatsApp com foto)
+    let msg = `🛒 *Compra no Mercado — Fornilha*\n📍 ${mercado}\n💰 ${valFmt}\n📅 ${hoje}\n\n_FornilhApp · Fornilha Pizzaria_`;
     labelEl.textContent = '✅ Salvo!';
-    preview.innerHTML += `<a href="${waUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;font-weight:700;font-size:15px;border-radius:var(--r);padding:14px;margin-top:10px;text-decoration:none">
-      <span style="font-size:22px">📲</span> Enviar nota pelo WhatsApp
-    </a>`;
-    showT('✅ Compra salva! Toque no botão verde para enviar.');
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: msg, title: `Nota ${mercado}` });
+        showT('✅ Compra salva e nota compartilhada!');
+      } catch(e) {
+        if (e.name !== 'AbortError') showT('⚠️ Compartilhamento cancelado');
+      }
+    } else {
+      // fallback: link wa.me com URL da foto
+      const waUrl = `https://wa.me/5521991409144?text=${encodeURIComponent(msg + '\n\n📎 ' + fotoUrl)}`;
+      preview.innerHTML += `<a href="${waUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;font-weight:700;font-size:15px;border-radius:var(--r);padding:14px;margin-top:10px;text-decoration:none">
+        <span style="font-size:22px">📲</span> Enviar nota pelo WhatsApp
+      </a>`;
+      showT('✅ Compra salva! Toque no botão para enviar.');
+    }
   };
 
   window._finRemoverAnexo = (i) => {
