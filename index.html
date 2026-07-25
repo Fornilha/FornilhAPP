@@ -2414,17 +2414,20 @@ async financeiro(a) {
       anexo_url: fotoUrl
     });
 
-    // 3. abre WhatsApp automaticamente
+    // 3. monta link do WhatsApp e exibe botão para o usuário tocar
     let msg = `🛒 *Compra no Mercado — Fornilha*\n\n`;
     msg += `📍 Local: ${mercado}\n`;
     msg += `💰 Valor: ${valFmt}\n`;
     msg += `📅 Data: ${hoje}\n`;
     msg += `\n📎 Nota fiscal:\n${fotoUrl}`;
     msg += `\n\n_FornilhApp · Fornilha Pizzaria_`;
-    window.open(`https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`, '_blank');
+    const waUrl = `https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`;
 
-    labelEl.textContent = '✅ Enviado e salvo!';
-    showT('✅ Compra salva e nota enviada pelo WhatsApp!');
+    labelEl.textContent = '✅ Salvo!';
+    preview.innerHTML += `<a href="${waUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;font-weight:700;font-size:15px;border-radius:var(--r);padding:14px;margin-top:10px;text-decoration:none">
+      <span style="font-size:22px">📲</span> Enviar nota pelo WhatsApp
+    </a>`;
+    showT('✅ Compra salva! Toque no botão verde para enviar.');
   };
 
   window._finRemoverAnexo = (i) => {
