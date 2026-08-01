@@ -298,6 +298,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="ni" id="ni-vendas" onclick="goTo('vendas')"><span class="ni-ico">📊</span><span class="ni-lbl">Vendas</span></button>
     <button class="ni" id="ni-financeiro" onclick="goTo('financeiro')" style="display:none"><span class="ni-ico">💳</span><span class="ni-lbl">Financeiro</span></button>
     <button class="ni" id="ni-rh" onclick="goTo('rh')" style="display:none"><span class="ni-ico">👥</span><span class="ni-lbl">RH</span></button>
+    <button class="ni" id="ni-relatorios" onclick="goTo('relatorios')" style="display:none"><span class="ni-ico">📊</span><span class="ni-lbl">Relatórios</span></button>
   </nav>
 </div>
 </div>
@@ -839,6 +840,8 @@ async function mostrarApp() {
   if (btnFin) btnFin.style.display = perfil === 'admin' ? '' : 'none';
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
+  const btnRel = document.getElementById('ni-relatorios');
+  if (btnRel) btnRel.style.display = perfil === 'admin' ? '' : 'none';
   goTo('inicio');
 }
 
@@ -874,7 +877,7 @@ function goTo(tela) {
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   const nav = document.getElementById('ni-'+tela);
   if (nav) nav.classList.add('active');
-  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',financeiro:'Financeiro',rh:'RH / Contabilidade',taxa:'Taxa de Serviço 10%',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil'};
+  const pgs = {inicio:'Início',feed:'Posts',tarefas:'Tarefas',estoque:'Estoque',vendas:'Vendas',financeiro:'Financeiro',rh:'RH / Contabilidade',taxa:'Taxa de Serviço 10%',msgs:'Mensagens',notif:'Notificações',perfil:'Meu Perfil',relatorios:'Relatórios'};
   document.getElementById('tb-pg').textContent = pgs[tela]||'';
   document.querySelectorAll('.fab').forEach(f=>f.remove());
   renders[tela] && renders[tela](document.getElementById('content'));
@@ -2017,7 +2020,7 @@ async perfil(a) {
     ${perfil==='admin' ? `
     <div class="slbl">Menu do administrador</div>
     <div class="card" style="margin-bottom:14px"><div class="cb" style="padding:0">
-      <div class="mi" onclick="showT('📊 Em breve: relatórios em PDF!')"><div class="mi-ic" style="background:#E6F1FB">📊</div><span class="mi-txt">Relatórios e exportações</span><span style="color:var(--txt3)">›</span></div>
+      <div class="mi" onclick="goTo('relatorios')"><div class="mi-ic" style="background:#E6F1FB">📊</div><span class="mi-txt">Relatórios (DRE mensal)</span><span style="color:var(--txt3)">›</span></div>
       <div class="mi" onclick="sair()"><div class="mi-ic" style="background:#FCEBEB">🚪</div><span class="mi-txt" style="color:var(--verm)">Sair</span><span style="color:var(--verm)">›</span></div>
     </div></div>
     <div class="slbl">Usuários do sistema (${USUARIOS.length})</div>
@@ -3404,6 +3407,131 @@ async taxa(a) {
   };
 
   renderLanc();
+},
+
+async relatorios(a) {
+  if (perfil !== 'admin') { a.innerHTML='<p style="padding:24px;color:var(--txt3)">Acesso restrito.</p>'; return; }
+  a.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--txt3);font-size:13px">Carregando DRE...</div>';
+
+  const anoAtual = 2026;
+  const hoje = new Date();
+  const mesAtualIdx = hoje.getMonth();
+
+  const [{ data: todasLanc }, { data: todosPag }] = await Promise.all([
+    db.from('lancamentos_diarios').select('mes_ref,faturamento_bruto,valor_taxa,data')
+      .gte('mes_ref','2026-01').lte('mes_ref','2026-12').order('data'),
+    db.from('pagamentos').select('valor,vencimento,created_at,tipo')
+      .gte('vencimento','2026-01-01').lte('vencimento','2026-12-31'),
+  ]);
+
+  const lancByMes = {};
+  (todasLanc||[]).forEach(l => { (lancByMes[l.mes_ref]=lancByMes[l.mes_ref]||[]).push(l); });
+  const pagByMes = {};
+  (todosPag||[]).forEach(p => {
+    const mr = (p.vencimento||(p.created_at||'').slice(0,10)).slice(0,7);
+    (pagByMes[mr]=pagByMes[mr]||[]).push(p);
+  });
+
+  const DESP_FIXAS = 21230;
+  const fmtR = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const fmtPct = v => (v!==null&&!isNaN(v)) ? v.toFixed(1)+'%' : '—';
+  const corR = v => v===null?'var(--txt3)':v>=30?'#1D9E75':v>=10?'#EF9F27':'#E24B4A';
+
+  const dreRows = [];
+  for (let i = 0; i <= mesAtualIdx; i++) {
+    const d = DADOS_2026[i];
+    const mr = `${anoAtual}-${String(i+1).padStart(2,'0')}`;
+    const lancs = lancByMes[mr]||[];
+    const pags = pagByMes[mr]||[];
+    const temEstatico = d.fat > 0;
+    const fat = temEstatico ? d.fat : lancs.reduce((s,l)=>s+Number(l.faturamento_bruto),0);
+    if (!temEstatico && fat === 0) continue;
+
+    const q1 = lancs.filter(l=>parseInt(l.data.split('-')[2])<=15);
+    const q2 = lancs.filter(l=>parseInt(l.data.split('-')[2])>15);
+    const taxaQ1 = temEstatico ? d.taxa_q1 : q1.reduce((s,l)=>s+Number(l.valor_taxa),0);
+    const taxaQ2 = temEstatico ? d.taxa_q2 : q2.reduce((s,l)=>s+Number(l.valor_taxa),0);
+    const taxaEquipe = (taxaQ1+taxaQ2)*0.75;
+    const taxaCasa   = (taxaQ1+taxaQ2)*0.25;
+    const salarios   = temEstatico ? Math.max(0, fat*d.folha_pct/100 - taxaEquipe) : COLABORADORES_FIN.length*2500;
+    const despVar    = temEstatico ? fat*d.desp_var_pct/100 : pags.filter(p=>p.tipo!=='Salário').reduce((s,p)=>s+Number(p.valor||0),0);
+    const impostos   = fat*d.imp_pct/100;
+    const resultado  = temEstatico ? d.lucro : fat-taxaEquipe-salarios-despVar-DESP_FIXAS-impostos;
+    const margem     = fat>0 ? resultado/fat*100 : null;
+    const diasLanc   = lancs.length;
+    const totalDias  = new Date(anoAtual, i+1, 0).getDate();
+    dreRows.push({ mes:d.mes, mr, fat, taxaQ1, taxaQ2, taxaEquipe, taxaCasa,
+      salarios, despVar, despFix:DESP_FIXAS, impostos, resultado, margem,
+      imp_pct:d.imp_pct, diasLanc, totalDias, ehAtual:i===mesAtualIdx, temEstatico });
+  }
+
+  const tot = f => dreRows.reduce((s,m)=>s+m[f],0);
+  const totFat=tot('fat'), totRes=tot('resultado'), totTaxaEq=tot('taxaEquipe'),
+        totSal=tot('salarios'), totVar=tot('despVar'), totFix=tot('despFix'), totImp=tot('impostos');
+  const margemAno = totFat>0 ? totRes/totFat*100 : null;
+
+  const row = (lbl, val, cor, sub, bold) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 13px;border-bottom:1px solid var(--bord)">
+      <span style="font-size:12px;color:var(--txt2)${bold?';font-weight:700':''}">${lbl}</span>
+      <div style="text-align:right">
+        <span style="font-size:${bold?14:13}px;font-weight:${bold?700:600};color:${cor||'var(--txt)'}">${val}</span>
+        ${sub?`<div style="font-size:10px;color:var(--txt3)">${sub}</div>`:''}
+      </div>
+    </div>`;
+
+  a.innerHTML = `
+  <div style="padding:16px 0 8px">
+    <p style="font-size:21px;font-weight:700">Relatórios 2026 📊</p>
+    <p style="font-size:13px;color:var(--txt2);margin-top:2px">DRE mensal — Demonstrativo de Resultado do Exercício</p>
+  </div>
+
+  <div class="kgrid" style="margin-bottom:16px">
+    <div class="kpi dest">
+      <div class="kpi-l">Faturamento 2026</div>
+      <div class="kpi-v">${fmtR(totFat)}</div>
+      <div class="kpi-s">${dreRows.length} meses com dados</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Resultado Acum.</div>
+      <div class="kpi-v" style="color:${corR(margemAno)}">${fmtR(totRes)}</div>
+      <div class="kpi-s">${fmtPct(margemAno)} margem média</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Taxa Equipe (ano)</div>
+      <div class="kpi-v">${fmtR(totTaxaEq)}</div>
+      <div class="kpi-s">75% das taxas arrecadadas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Salários (ano)</div>
+      <div class="kpi-v">${fmtR(totSal)}</div>
+      <div class="kpi-s">${fmtPct(totFat>0?totSal/totFat*100:null)} do faturamento</div>
+    </div>
+  </div>
+
+  ${[...dreRows].reverse().map(m => {
+    const cM = corR(m.margem);
+    const parcd = m.ehAtual ? ` <span style="font-size:10px;color:var(--av);background:var(--av-l);padding:2px 6px;border-radius:10px">parcial · ${m.diasLanc}/${m.totalDias} dias</span>` : ` <span style="font-size:10px;color:var(--ok);background:var(--ok-l);padding:2px 6px;border-radius:10px">${m.diasLanc} dias</span>`;
+    return `
+    <div class="slbl" style="margin-top:4px">${m.mes}/26${parcd}</div>
+    <div class="card"><div class="cb" style="padding:0">
+      ${row('(+) Faturamento bruto', fmtR(m.fat), 'var(--txt)', '', true)}
+      ${row('Taxa Q1 — dias 01 a 15', fmtR(m.taxaQ1), '#185FA5', fmtPct(m.fat>0?m.taxaQ1/m.fat*100:null)+' do fat')}
+      ${row('Taxa Q2 — dias 16 ao fim', fmtR(m.taxaQ2), '#185FA5', fmtPct(m.fat>0?m.taxaQ2/m.fat*100:null)+' do fat')}
+      ${row('↳ Casa (25%)', fmtR(m.taxaCasa), '#1D9E75', 'receita da casa')}
+      ${row('(−) Taxa equipe (75%)', fmtR(m.taxaEquipe), '#E24B4A', fmtPct(m.fat>0?m.taxaEquipe/m.fat*100:null)+' do fat')}
+      ${row('(−) Salários', fmtR(m.salarios), '#E24B4A', fmtPct(m.fat>0?m.salarios/m.fat*100:null)+' do fat')}
+      ${row('(−) Desp. variáveis', fmtR(m.despVar), '#E24B4A', fmtPct(m.fat>0?m.despVar/m.fat*100:null)+' do fat')}
+      ${row('(−) Desp. fixas', fmtR(m.despFix), '#E24B4A', fmtPct(m.fat>0?m.despFix/m.fat*100:null)+' do fat')}
+      ${row('(−) Impostos '+m.imp_pct+'%', fmtR(m.impostos), '#E24B4A', '')}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:var(--surf2);border-top:2px solid var(--bord)">
+        <span style="font-size:13px;font-weight:700">(=) Resultado</span>
+        <div style="text-align:right">
+          <span style="font-size:16px;font-weight:700;color:${cM}">${fmtR(m.resultado)}</span>
+          <div style="font-size:11px;color:${cM};font-weight:600">${fmtPct(m.margem)} margem</div>
+        </div>
+      </div>
+    </div></div>`;
+  }).join('')}`;
 },
 
 };
