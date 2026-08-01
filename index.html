@@ -3418,7 +3418,7 @@ async relatorios(a) {
   const mesAtualIdx = hoje.getMonth();
 
   const [{ data: todasLanc }, { data: todosPag }] = await Promise.all([
-    db.from('lancamentos_diarios').select('mes_ref,faturamento_bruto,valor_taxa,data')
+    db.from('lancamentos_diarios').select('mes_ref,faturamento_bruto,valor_taxa,data,ausentes')
       .gte('mes_ref','2026-01').lte('mes_ref','2026-12').order('data'),
     db.from('pagamentos').select('valor,vencimento,created_at,tipo')
       .gte('vencimento','2026-01-01').lte('vencimento','2026-12-31'),
@@ -3432,10 +3432,25 @@ async relatorios(a) {
     (pagByMes[mr]=pagByMes[mr]||[]).push(p);
   });
 
+  const COLS = COLABORADORES_FIN.map(c => c.nome);
   const DESP_FIXAS = 21230;
-  const fmtR = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const fmtR = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtR0 = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
   const fmtPct = v => (v!==null&&!isNaN(v)) ? v.toFixed(1)+'%' : '—';
   const corR = v => v===null?'var(--txt3)':v>=30?'#1D9E75':v>=10?'#EF9F27':'#E24B4A';
+
+  // Calcula taxa individual por conjunto de dias
+  function calcIndiv(dias) {
+    const t = {}; COLS.forEach(n => t[n] = 0);
+    dias.forEach(l => {
+      const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
+      const pres = COLS.filter(n => !aus.includes(n));
+      if (!pres.length) return;
+      const s = (Number(l.valor_taxa) * 0.75) / pres.length;
+      pres.forEach(n => t[n] += s);
+    });
+    return t;
+  }
 
   const dreRows = [];
   for (let i = 0; i <= mesAtualIdx; i++) {
@@ -3460,9 +3475,12 @@ async relatorios(a) {
     const margem     = fat>0 ? resultado/fat*100 : null;
     const diasLanc   = lancs.length;
     const totalDias  = new Date(anoAtual, i+1, 0).getDate();
+    const indivQ1    = calcIndiv(q1);
+    const indivQ2    = calcIndiv(q2);
     dreRows.push({ mes:d.mes, mr, fat, taxaQ1, taxaQ2, taxaEquipe, taxaCasa,
       salarios, despVar, despFix:DESP_FIXAS, impostos, resultado, margem,
-      imp_pct:d.imp_pct, diasLanc, totalDias, ehAtual:i===mesAtualIdx, temEstatico });
+      imp_pct:d.imp_pct, diasLanc, totalDias, ehAtual:i===mesAtualIdx,
+      temEstatico, indivQ1, indivQ2 });
   }
 
   const tot = f => dreRows.reduce((s,m)=>s+m[f],0);
@@ -3488,48 +3506,91 @@ async relatorios(a) {
   <div class="kgrid" style="margin-bottom:16px">
     <div class="kpi dest">
       <div class="kpi-l">Faturamento 2026</div>
-      <div class="kpi-v">${fmtR(totFat)}</div>
+      <div class="kpi-v">${fmtR0(totFat)}</div>
       <div class="kpi-s">${dreRows.length} meses com dados</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Resultado Acum.</div>
-      <div class="kpi-v" style="color:${corR(margemAno)}">${fmtR(totRes)}</div>
+      <div class="kpi-v" style="color:${corR(margemAno)}">${fmtR0(totRes)}</div>
       <div class="kpi-s">${fmtPct(margemAno)} margem média</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Taxa Equipe (ano)</div>
-      <div class="kpi-v">${fmtR(totTaxaEq)}</div>
+      <div class="kpi-v">${fmtR0(totTaxaEq)}</div>
       <div class="kpi-s">75% das taxas arrecadadas</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Salários (ano)</div>
-      <div class="kpi-v">${fmtR(totSal)}</div>
+      <div class="kpi-v">${fmtR0(totSal)}</div>
       <div class="kpi-s">${fmtPct(totFat>0?totSal/totFat*100:null)} do faturamento</div>
     </div>
   </div>
 
   ${[...dreRows].reverse().map(m => {
     const cM = corR(m.margem);
-    const parcd = m.ehAtual ? ` <span style="font-size:10px;color:var(--av);background:var(--av-l);padding:2px 6px;border-radius:10px">parcial · ${m.diasLanc}/${m.totalDias} dias</span>` : ` <span style="font-size:10px;color:var(--ok);background:var(--ok-l);padding:2px 6px;border-radius:10px">${m.diasLanc} dias</span>`;
+    const parcd = m.ehAtual
+      ? ` <span style="font-size:10px;color:var(--av);background:var(--av-l);padding:2px 6px;border-radius:10px">parcial · ${m.diasLanc}/${m.totalDias} dias</span>`
+      : ` <span style="font-size:10px;color:var(--ok);background:var(--ok-l);padding:2px 6px;border-radius:10px">${m.diasLanc} dias</span>`;
+
+    // Tabela individual por quinzena
+    const temIndiv = COLS.some(n => (m.indivQ1[n]||0)+(m.indivQ2[n]||0) > 0);
+    const tabelaIndiv = temIndiv ? `
+      <div style="margin-top:12px;padding:0 13px 12px">
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Taxa individual por quinzena</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:320px">
+          <thead>
+            <tr style="background:var(--surf2)">
+              <th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--txt3);font-weight:600">Colaborador</th>
+              <th style="text-align:right;padding:5px 6px;font-size:10px;color:#185FA5;font-weight:600">Q1 (01–15)</th>
+              <th style="text-align:right;padding:5px 6px;font-size:10px;color:#185FA5;font-weight:600">Q2 (16–fim)</th>
+              <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--ok);font-weight:600">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${COLS.map(n => {
+              const vq1 = m.indivQ1[n]||0;
+              const vq2 = m.indivQ2[n]||0;
+              const vtot = vq1+vq2;
+              const pnome = n.split(' ')[0];
+              return `<tr style="border-top:1px solid var(--bord)">
+                <td style="padding:6px 8px;font-weight:600">${pnome}</td>
+                <td style="padding:6px 6px;text-align:right;color:${vq1>0?'var(--txt)':'var(--txt3)'}">${vq1>0?fmtR(vq1):'—'}</td>
+                <td style="padding:6px 6px;text-align:right;color:${vq2>0?'var(--txt)':'var(--txt3)'}">${vq2>0?fmtR(vq2):'—'}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:700;color:${vtot>0?'var(--ok)':'var(--txt3)'}">${vtot>0?fmtR(vtot):'—'}</td>
+              </tr>`;
+            }).join('')}
+            <tr style="border-top:2px solid var(--bord);background:var(--surf2)">
+              <td style="padding:6px 8px;font-weight:700;font-size:11px">TOTAL EQUIPE</td>
+              <td style="padding:6px 6px;text-align:right;font-weight:700;color:#185FA5">${fmtR(m.taxaQ1*0.75)}</td>
+              <td style="padding:6px 6px;text-align:right;font-weight:700;color:#185FA5">${fmtR(m.taxaQ2*0.75)}</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--ok)">${fmtR(m.taxaEquipe)}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>` : '';
+
     return `
     <div class="slbl" style="margin-top:4px">${m.mes}/26${parcd}</div>
     <div class="card"><div class="cb" style="padding:0">
-      ${row('(+) Faturamento bruto', fmtR(m.fat), 'var(--txt)', '', true)}
-      ${row('Taxa Q1 — dias 01 a 15', fmtR(m.taxaQ1), '#185FA5', fmtPct(m.fat>0?m.taxaQ1/m.fat*100:null)+' do fat')}
-      ${row('Taxa Q2 — dias 16 ao fim', fmtR(m.taxaQ2), '#185FA5', fmtPct(m.fat>0?m.taxaQ2/m.fat*100:null)+' do fat')}
-      ${row('↳ Casa (25%)', fmtR(m.taxaCasa), '#1D9E75', 'receita da casa')}
-      ${row('(−) Taxa equipe (75%)', fmtR(m.taxaEquipe), '#E24B4A', fmtPct(m.fat>0?m.taxaEquipe/m.fat*100:null)+' do fat')}
-      ${row('(−) Salários', fmtR(m.salarios), '#E24B4A', fmtPct(m.fat>0?m.salarios/m.fat*100:null)+' do fat')}
-      ${row('(−) Desp. variáveis', fmtR(m.despVar), '#E24B4A', fmtPct(m.fat>0?m.despVar/m.fat*100:null)+' do fat')}
-      ${row('(−) Desp. fixas', fmtR(m.despFix), '#E24B4A', fmtPct(m.fat>0?m.despFix/m.fat*100:null)+' do fat')}
-      ${row('(−) Impostos '+m.imp_pct+'%', fmtR(m.impostos), '#E24B4A', '')}
+      ${row('(+) Faturamento bruto', fmtR0(m.fat), 'var(--txt)', '', true)}
+      ${row('Taxa Q1 — dias 01 a 15', fmtR0(m.taxaQ1), '#185FA5', fmtPct(m.fat>0?m.taxaQ1/m.fat*100:null)+' do fat')}
+      ${row('Taxa Q2 — dias 16 ao fim', fmtR0(m.taxaQ2), '#185FA5', fmtPct(m.fat>0?m.taxaQ2/m.fat*100:null)+' do fat')}
+      ${row('↳ Casa (25%)', fmtR0(m.taxaCasa), '#1D9E75', 'receita da casa')}
+      ${row('(−) Taxa equipe (75%)', fmtR0(m.taxaEquipe), '#E24B4A', fmtPct(m.fat>0?m.taxaEquipe/m.fat*100:null)+' do fat')}
+      ${row('(−) Salários', fmtR0(m.salarios), '#E24B4A', fmtPct(m.fat>0?m.salarios/m.fat*100:null)+' do fat')}
+      ${row('(−) Desp. variáveis', fmtR0(m.despVar), '#E24B4A', fmtPct(m.fat>0?m.despVar/m.fat*100:null)+' do fat')}
+      ${row('(−) Desp. fixas', fmtR0(m.despFix), '#E24B4A', fmtPct(m.fat>0?m.despFix/m.fat*100:null)+' do fat')}
+      ${row('(−) Impostos '+m.imp_pct+'%', fmtR0(m.impostos), '#E24B4A', '')}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:var(--surf2);border-top:2px solid var(--bord)">
         <span style="font-size:13px;font-weight:700">(=) Resultado</span>
         <div style="text-align:right">
-          <span style="font-size:16px;font-weight:700;color:${cM}">${fmtR(m.resultado)}</span>
+          <span style="font-size:16px;font-weight:700;color:${cM}">${fmtR0(m.resultado)}</span>
           <div style="font-size:11px;color:${cM};font-weight:600">${fmtPct(m.margem)} margem</div>
         </div>
       </div>
+      ${tabelaIndiv}
     </div></div>`;
   }).join('')}`;
 },
