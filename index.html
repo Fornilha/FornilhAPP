@@ -314,6 +314,12 @@ const SUPA_KEY = 'sb_publishable_jQq2cOVWmru4jW6yvb_Yjw_8DjNJR4Z';
 const { createClient } = supabase;
 const db = createClient(SUPA_URL, SUPA_KEY);
 
+// Retorna data local como YYYY-MM-DD (evita bug de fuso com toISOString que usa UTC)
+function localDate(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 // ─── ESTADO DO APP ───────────────────────────────────────
 let userSession = null;
 let userProfile = null;
@@ -580,7 +586,7 @@ function saveLembretes(){ try{localStorage.setItem('fornilh_lembretes',JSON.stri
 function checkLembretes(){
   const hoje=new Date();
   const diaS=hoje.getDay(); // 0=Dom
-  const dataHoje=hoje.toISOString().slice(0,10);
+  const dataHoje=localDate(hoje);
   notifDisparadas=[];
   lembretes.forEach(l=>{
     if(!l.ativo)return;
@@ -883,7 +889,7 @@ async inicio(a) {
   a.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--txt3);font-size:13px">Carregando...</div>';
 
   const hoje = new Date();
-  const hojeStr = hoje.toISOString().split('T')[0];
+  const hojeStr = localDate(hoje);
   const mesRef = hojeStr.slice(0,7);
   const nomeMes = hoje.toLocaleDateString('pt-BR',{month:'long'});
   const dt = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
@@ -1386,7 +1392,7 @@ tarefas(a) {
           ${c.nome.split(' ')[0]}
         </label>`).join('');
       formHtml=`
-        <div class="fld"><label>Data do movimento</label><input type="date" id="cf-data" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="fld"><label>Data do movimento</label><input type="date" id="cf-data" value="${localDate()}"></div>
         <div class="fld"><label>Faturamento do dia (R$)</label><input type="number" id="cf-fat" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Taxa de serviço do dia (R$)</label><input type="number" id="cf-taxa" placeholder="0,00" min="0" step="0.01"></div>
         <div class="fld"><label>Ausentes no dia</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:4px">${ausFields}</div></div>`;
@@ -1424,7 +1430,7 @@ tarefas(a) {
     const t=tarefas.find(x=>String(x.id)===String(id)); if(!t)return;
     const dados={};
     if(t.tipo==='caixa'){
-      dados.data=document.getElementById('cf-data').value||new Date().toISOString().slice(0,10);
+      dados.data=document.getElementById('cf-data').value||localDate();
       dados.fat=parseFloat(document.getElementById('cf-fat').value)||0;
       dados.taxa=parseFloat(document.getElementById('cf-taxa').value)||0;
       dados.ausentes=COLABORADORES_FIN.filter(c=>document.getElementById('aus_'+c.nome.replace(/\s/g,'_'))?.checked).map(c=>c.nome);
@@ -1592,7 +1598,7 @@ async vendas(a) {
   const anoAtual = hoje.getFullYear();
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const mesNome = MESES[mesIdx] + '/' + String(anoAtual).slice(2);
-  const mesRef = hoje.toISOString().slice(0,7);
+  const mesRef = localDate(hoje).slice(0,7);
   const diasNoMes = new Date(anoAtual, mesIdx+1, 0).getDate();
   const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -1909,7 +1915,7 @@ async perfil(a) {
   let taxaQ1 = 0, taxaQ2 = 0, taxaDias = [];
   if (colaborador) {
     const hoje = new Date();
-    const mesRef = hoje.toISOString().slice(0,7);
+    const mesRef = localDate(hoje).slice(0,7);
     const { data: lancamentos } = await db.from('lancamentos_diarios')
       .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
     taxaDias = lancamentos || [];
@@ -2097,7 +2103,7 @@ async financeiro(a) {
   }
   const hoje = new Date();
   const mesAtual = MESES_PT[hoje.getMonth()].toUpperCase() + '/' + String(hoje.getFullYear()).slice(2);
-  const hojeISO = hoje.toISOString().slice(0,10);
+  const hojeISO = localDate(hoje);
   const mesIdxFin = hoje.getMonth();
 
   function fmtDataBr(iso) {
@@ -2408,7 +2414,7 @@ async financeiro(a) {
       fornecedor: mercado,
       item: `Compra ${mercado} — ${hoje}`,
       valor,
-      vencimento: new Date().toISOString().slice(0,10),
+      vencimento: localDate(),
       cc: 'Geral',
       parcelas: 1,
       anexo_url: fotoUrl
@@ -3459,7 +3465,7 @@ function abrirNovaTarefa(){
 }
 
 window.abrirFormTarefa=(tipo)=>{
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=localDate();
   const tp=TIPOS_TAR[tipo];
   let formExtra='', setorFixed='', respFixed='';
   if(tipo==='caixa'){
