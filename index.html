@@ -331,12 +331,14 @@ let nome = '';
 const EQUIPE_LOCAL = [
   {nome:'Vinicius Querino',cargo:'Gerente Geral',perfil:'admin',cor:'#8B1A1A',tel:'5521991409144'},
   {nome:'Patricia Jesus',cargo:'Caixa',perfil:'caixa',cor:'#3C3489',tel:'5575988541932'},
-  {nome:'Amado Alexandre',cargo:'Barman',perfil:'bar',cor:'#0F6E56',tel:'5524993226538'},
+  {nome:'Amado Alexandre',cargo:'Pizzaiolo',perfil:'pizzaria',cor:'#993C1D',tel:'5524993226538'},
   {nome:'Douglas da Silva',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:'5524981150965'},
   {nome:'Antonio Carlos José Franco Junior',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:''},
   {nome:'Joelson Santos',cargo:'Pizzaiolo',perfil:'pizzaria',cor:'#993C1D',tel:'5524999237441'},
   {nome:'Tiago Brito',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524999684094'},
   {nome:'Rosenilda Campos',cargo:'Cozinheiro',perfil:'cozinha',cor:'#BA7517',tel:'5524998722460'},
+  {nome:'Jhonwellithon Carlos Rangel da Silva',cargo:'Barman',perfil:'bar',cor:'#0F6E56',tel:'5521976843297'},
+  {nome:'Diego De Freitas Bevilaqua',cargo:'Garçom',perfil:'garcom',cor:'#185FA5',tel:'5524992285107'},
 ];
 
 const DADOS_2026 = [
@@ -488,15 +490,17 @@ const FORNECEDORES_FIN = [
 const COLABORADORES_FIN = [
   {nome:'Joelson Santos da Silva',         cargo:'PIZZAIOLO',  salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
   {nome:'Antônio Carlos José Franco Junior',cargo:'GARÇOM',    salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394'},
-  {nome:'Amado Alexandre de Souza Júnior', cargo:'BARMAN',     salario:2212.04, pixTipo:'CPF',      pixChave:'07726150556'},
+  {nome:'Amado Alexandre de Souza Júnior', cargo:'PIZZAIOLO',  salario:2212.04, pixTipo:'CPF',      pixChave:'07726150556'},
   {nome:'Vinicius Querino Alves Santos',   cargo:'GERENTE',    salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
   {nome:'Rosenilda Davi Campos',           cargo:'COZINHEIRA', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3'},
   {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
   {nome:'Patricia Jesus dos Santos',       cargo:'CAIXA',      salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516'},
   {nome:'Douglas Silva Santos',            cargo:'GARÇOM',     salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700'},
-  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'AJ.PIZZAIOLO', salario:1908.93, pixTipo:'CPF', pixChave:'716.608.764-19'},
+  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'BARMAN',       salario:1908.93, pixTipo:'CPF', pixChave:'716.608.764-19'},
+  {nome:'Diego De Freitas Bevilaqua', cargo:'GARÇOM', salario:1908.93, pixTipo:'CEL', pixChave:'24992285107'},
   // Bruno Da Silva Felix saiu em 30/06/2026 — removido da equipe ativa a partir de 01/07/2026
   // Jhonwellithon Carlos Rangel da Silva entrou em 15/07/2026
+  // Diego entrou em 01/08/2026
 ];
 let pagamentos = [];
 async function loadPagamentos() {
@@ -1665,20 +1669,41 @@ async vendas(a) {
     const dias = lancMes || [];
     const semDados = dias.length === 0;
 
+    // Busca mês anterior do banco se fat=0 no estático (ex: julho ainda não fechado)
+    const prevIdx = mesIdx - 1;
+    let prevMonthFat = 0, prevMonthTaxaQ1 = 0, prevMonthTaxaQ2 = 0;
+    if (prevIdx >= 0 && DADOS_2026[prevIdx].fat === 0) {
+      const prevRef = `${anoAtual}-${String(prevIdx+1).padStart(2,'0')}`;
+      const { data: lancPrev } = await db.from('lancamentos_diarios')
+        .select('faturamento_bruto,valor_taxa,data').eq('mes_ref', prevRef);
+      if (lancPrev && lancPrev.length > 0) {
+        prevMonthFat = lancPrev.reduce((s,d) => s + Number(d.faturamento_bruto), 0);
+        prevMonthTaxaQ1 = lancPrev.filter(d => parseInt(d.data.split('-')[2]) <= 15)
+          .reduce((s,d) => s + Number(d.valor_taxa), 0) * 0.75;
+        prevMonthTaxaQ2 = lancPrev.filter(d => parseInt(d.data.split('-')[2]) > 15)
+          .reduce((s,d) => s + Number(d.valor_taxa), 0) * 0.75;
+      }
+    }
+
     const dadosMes = DADOS_2026[mesIdx];
     const acumMes = dias.length > 0
       ? dias.reduce((s,d) => s + Number(d.faturamento_bruto), 0)
       : (dadosMes?.fat || 0);
-    const acumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + d.fat, 0) + acumMes;
+    const acumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d) => s + d.fat, 0) + prevMonthFat + acumMes;
 
     const q1dias = dias.filter(d => parseInt(d.data.split('-')[2]) <= 15);
     const q2dias = dias.filter(d => parseInt(d.data.split('-')[2]) > 15);
     const taxaQ1 = semDados ? (dadosMes?.taxa_q1||0)*0.75 : q1dias.reduce((s,d)=>s+Number(d.valor_taxa),0)*0.75;
     const taxaQ2 = semDados ? (dadosMes?.taxa_q2||0)*0.75 : q2dias.reduce((s,d)=>s+Number(d.valor_taxa),0)*0.75;
     const taxaTotal = taxaQ1 + taxaQ2;
-    const taxaAcumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75 + taxaTotal;
+    const taxaAcumAno = DADOS_2026.slice(0, mesIdx).reduce((s,d)=>s+((d.taxa_q1||0)+(d.taxa_q2||0)),0)*0.75
+      + prevMonthTaxaQ1 + prevMonthTaxaQ2 + taxaTotal;
 
-    const dadosHist = DADOS_2026.map((d,i) => i===mesIdx&&dias.length>0 ? {...d,fat:acumMes,margem:null} : d);
+    const dadosHist = DADOS_2026.map((d,i) => {
+      if (i === mesIdx && dias.length > 0) return {...d, fat: acumMes, margem: null};
+      if (i === prevIdx && prevMonthFat > 0) return {...d, fat: prevMonthFat, margem: null};
+      return d;
+    });
     const maxFat = Math.max(...dadosHist.filter(d=>d.fat>0).map(d=>d.fat));
     const mesesRows = dadosHist.map((d,i) => {
       if (d.fat===0) return `<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
@@ -3783,7 +3808,7 @@ DADOS REAIS 2026:
 
 CONTEXTO: 100 lugares, 28 mesas, 365 dias/ano, 17h-23h. Alta temporada: nov-mar. Baixa: abr-out. Atual: baixa temporada (junho/2026). Junho quase fechado — faturamento baixo (R$74k), despesas variáveis críticas em 45% e despesas fixas em 29%. Margem de apenas 13%.
 
-EQUIPE (9 pax): Vinicius(Gestor/Admin), Patricia(Caixa), Amado(Barman), Douglas(Garçom), Antonio(Garçom), Joelson(Pizzaiolo), Rosenilda(Cozinheira), Tiago(Cozinheiro), Jhonwellithon(Aj.Pizzaiolo — entrou 16/07/2026). Bruno saiu em 30/06/2026.
+EQUIPE (10 pax): Vinicius(Gestor/Admin), Patricia(Caixa), Amado(Barman), Douglas(Garçom), Antonio(Garçom), Joelson(Pizzaiolo), Rosenilda(Cozinheira), Tiago(Cozinheiro), Jhonwellithon(Aj.Pizzaiolo — entrou 16/07/2026), Diego(Garçom — entrou 01/08/2026). Bruno saiu em 30/06/2026.
 
 METAS: Margem ideal 42%, Folha ideal 15-17% (crítico >19%), Desp.Variáveis ideal ≤28% (crítico >32%), Despesas Fixas meta ≤10%, Impostos ~10%.
 
