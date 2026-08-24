@@ -2476,25 +2476,12 @@ async financeiro(a) {
       anexo_url: fotoUrl
     });
 
-    // 3. compartilha imagem diretamente via Web Share API (abre WhatsApp com foto)
-    let msg = `🛒 *Compra no Mercado — Fornilha*\n📍 ${mercado}\n💰 ${valFmt}\n📅 ${hoje}\n\n_FornilhApp · Fornilha Pizzaria_`;
-    labelEl.textContent = '✅ Salvo!';
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], text: msg, title: `Nota ${mercado}` });
-        showT('✅ Compra salva e nota compartilhada!');
-      } catch(e) {
-        if (e.name !== 'AbortError') showT('⚠️ Compartilhamento cancelado');
-      }
-    } else {
-      // fallback: link wa.me com URL da foto
-      const waUrl = `https://wa.me/5521991409144?text=${encodeURIComponent(msg + '\n\n📎 ' + fotoUrl)}`;
-      preview.innerHTML += `<a href="${waUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;font-weight:700;font-size:15px;border-radius:var(--r);padding:14px;margin-top:10px;text-decoration:none">
-        <span style="font-size:22px">📲</span> Enviar nota pelo WhatsApp
-      </a>`;
-      showT('✅ Compra salva! Toque no botão para enviar.');
-    }
+    // 3. envia direto para Flaviane via WhatsApp
+    const msg = `🛒 *Compra no Mercado — Fornilha*\n📍 ${mercado}\n💰 ${valFmt}\n📅 ${hoje}\n\n📎 Nota fiscal:\n${fotoUrl}\n\n_FornilhApp · Fornilha Restaurante & Pizzaria_`;
+    labelEl.textContent = '✅ Salvo! Abrindo WhatsApp...';
+    const waUrl = `https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+    showT('✅ Compra salva e nota enviada para Flaviane!');
   };
 
   window._finRemoverAnexo = (i) => {
@@ -2617,8 +2604,8 @@ async financeiro(a) {
         </div>
         <label id="merc-btn-foto" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:#25D366;border-radius:var(--r);padding:18px;color:#fff;font-weight:700;font-size:15px;margin-top:4px">
           <span style="font-size:36px">📸</span>
-          <span id="merc-foto-label">Tirar foto da nota e enviar</span>
-          <span style="font-size:11px;font-weight:400;opacity:.85">Ao fotografar, envia pelo WhatsApp e salva nas despesas</span>
+          <span id="merc-foto-label">📷 Fotografar nota e enviar para Flaviane</span>
+          <span style="font-size:11px;font-weight:400;opacity:.85">Ao fotografar, salva nas despesas e abre WhatsApp da Flaviane automaticamente</span>
           <input type="file" id="merc-foto" accept="image/*" capture="environment" style="display:none" onchange="window._mercadoFotoChange(this)">
         </label>
         <div id="merc-preview" style="margin-top:10px"></div>`;
