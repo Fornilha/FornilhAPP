@@ -2181,7 +2181,7 @@ async financeiro(a) {
   const TIPO_ICO = {Boleto:'📄',PIX:'💸',Mercado:'🛒',Salário:'👥',Extra:'💵','Venda Folga':'🏖️',Rescisão:'📝',Reembolso:'🔄',Outro:'💰'};
   const TIPO_COR = {Boleto:'#185FA5',PIX:'#1D9E75',Mercado:'#6B3FA0',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
 
-  function renderHistorico(mes) {
+  window._renderHistorico = function renderHistorico(mes) {
     const filtrados = mes
       ? pagamentos.filter(p => {
           const d = p.data_pagamento || p.vencimento || (p.created_at||'').slice(0,10);
@@ -2243,7 +2243,7 @@ async financeiro(a) {
     window._atualizarDespVarInicio?.();
     showT('✅ Lançamento excluído.');
     const mesAtual = document.getElementById('fin-mes-hist')?.value || '';
-    document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mesAtual);
+    document.getElementById('fin-hist-lista').innerHTML = window._renderHistorico(mesAtual);
   };
 
   window._finEditarPag = (id) => {
@@ -2277,7 +2277,7 @@ async financeiro(a) {
     fecharModal();
     showT('✅ Lançamento atualizado.');
     const mesAtual = document.getElementById('fin-mes-hist')?.value || '';
-    document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mesAtual);
+    document.getElementById('fin-hist-lista').innerHTML = window._renderHistorico(mesAtual);
   };
 
   a.innerHTML = `
