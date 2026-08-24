@@ -2251,12 +2251,13 @@ async financeiro(a) {
     if (!p) return;
     abrirModal(`
       <h3>✏️ Editar Lançamento</h3>
-      <div class="fld"><label>Item / Descrição</label><input id="ep-item" value="${p.item||''}" placeholder="Item"></div>
-      <div class="fld"><label>Fornecedor</label><input id="ep-forn" value="${p.fornecedor||''}" placeholder="Fornecedor"></div>
+      <div class="fld"><label>Item / Descrição</label><input id="ep-item" value="${(p.item||'').replace(/"/g,'&quot;')}" placeholder="Item"></div>
+      <div class="fld"><label>Fornecedor</label><input id="ep-forn" value="${(p.fornecedor||'').replace(/"/g,'&quot;')}" placeholder="Fornecedor"></div>
       <div class="fld"><label>Valor (R$)</label><input id="ep-val" type="number" step="0.01" value="${p.valor||''}"></div>
       <div class="fld"><label>Vencimento</label><input id="ep-venc" type="date" value="${p.vencimento||''}"></div>
-      <div class="fld"><label>Centro de Custo</label><input id="ep-cc" value="${p.cc||''}" placeholder="C. Custo"></div>
+      <div class="fld"><label>Centro de Custo</label><input id="ep-cc" value="${(p.cc||'').replace(/"/g,'&quot;')}" placeholder="C. Custo"></div>
       <button class="btn-p" style="width:100%;margin-top:8px" onclick="window._finSalvarEdicao('${id}')">💾 Salvar alterações</button>
+      <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="fecharModal()">Cancelar</button>
     `);
   };
 
@@ -3714,6 +3715,7 @@ async relatorios(a) {
 };
 
 // ─── MODALS ──────────────────────────────────────────────
+function abrirModal(html){document.getElementById('modal-inner').innerHTML=html;document.getElementById('modal-bg').classList.add('open')}
 function fecharModal(){document.getElementById('modal-bg').classList.remove('open')}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')fecharModal()});
 function showT(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
