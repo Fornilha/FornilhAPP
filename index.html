@@ -2476,12 +2476,13 @@ async financeiro(a) {
       anexo_url: fotoUrl
     });
 
-    // 3. envia direto para Flaviane via WhatsApp
+    // 3. envia para Flaviane e Vinicius via WhatsApp
     const msg = `🛒 *Compra no Mercado — Fornilha*\n📍 ${mercado}\n💰 ${valFmt}\n📅 ${hoje}\n\n📎 Nota fiscal:\n${fotoUrl}\n\n_FornilhApp · Fornilha Restaurante & Pizzaria_`;
     labelEl.textContent = '✅ Salvo! Abrindo WhatsApp...';
-    const waUrl = `https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
-    showT('✅ Compra salva e nota enviada para Flaviane!');
+    const msgEnc = encodeURIComponent(msg);
+    window.open(`https://wa.me/${TEL_FLAVIANE}?text=${msgEnc}`, '_blank');
+    setTimeout(() => window.open(`https://wa.me/5521991409144?text=${msgEnc}`, '_blank'), 800);
+    showT('✅ Compra salva e nota enviada para Flaviane e Vinicius!');
   };
 
   window._finRemoverAnexo = (i) => {
