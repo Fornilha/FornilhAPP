@@ -2181,7 +2181,7 @@ async financeiro(a) {
   const TIPO_ICO = {Boleto:'📄',PIX:'💸',Mercado:'🛒',Salário:'👥',Extra:'💵','Venda Folga':'🏖️',Rescisão:'📝',Reembolso:'🔄',Outro:'💰'};
   const TIPO_COR = {Boleto:'#185FA5',PIX:'#1D9E75',Mercado:'#6B3FA0',Salário:'#8B1A1A',Extra:'#BA7517','Venda Folga':'#0F6E56',Rescisão:'#993C1D',Reembolso:'#3C3489',Outro:'#555'};
 
-  window._renderHistorico = function renderHistorico(mes) {
+  window._renderHistorico = function(mes) {
     const filtrados = mes
       ? pagamentos.filter(p => {
           const d = p.data_pagamento || p.vencimento || (p.created_at||'').slice(0,10);
@@ -2329,7 +2329,7 @@ async financeiro(a) {
         })()}
       </select>
     </div>
-    <div class="card"><div class="cb" style="padding:0 14px" id="fin-hist-lista">${renderHistorico(hojeISO.slice(0,7))}</div></div>
+    <div class="card"><div class="cb" style="padding:0 14px" id="fin-hist-lista">${window._renderHistorico(hojeISO.slice(0,7))}</div></div>
   </div>`;
 
   window._finTab = (t) => {
@@ -2340,7 +2340,7 @@ async financeiro(a) {
     });
     if (t==='hist') {
       const mes = document.getElementById('fin-hist-mes')?.value || hojeISO.slice(0,7);
-      document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mes);
+      document.getElementById('fin-hist-lista').innerHTML = window._renderHistorico(mes);
     }
     if (t==='proj') window._finRenderProj();
   };
@@ -2551,7 +2551,7 @@ async financeiro(a) {
 
   window._finAtualizaHist = () => {
     const mes = document.getElementById('fin-hist-mes')?.value;
-    document.getElementById('fin-hist-lista').innerHTML = renderHistorico(mes);
+    document.getElementById('fin-hist-lista').innerHTML = window._renderHistorico(mes);
   };
 
   function renderParcelasBoleto(n) {
