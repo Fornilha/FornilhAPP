@@ -2139,6 +2139,7 @@ async financeiro(a) {
   const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const TIPOS_PAG = ['Boleto','PIX','Mercado','Salário','Extra','Venda Folga','Reembolso','Outro'];
   const DEST_FLAVIANE = 'financeirorestaurantelonier@gmail.com';
+  const TEL_FLAVIANE  = '5521998518290'; // WhatsApp escritório financeiro
   const DEST_CONTAB = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
   const ASSINATURA = `\n\n--\nVinicius Querino Alves Santos\nAssistente Financeiro — Fornilha Pizzaria\n📞 (21) 99140-9144\n✉️ financeiro.fornilha@gmail.com\n📍 Rua Santana nº 75 - Ilha Grande - RJ\n📸 @fornilha.oficial`;
   const MESES_NOME = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -2258,7 +2259,7 @@ async financeiro(a) {
           </label>
           <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
         </div>
-        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">✉️ Salvar e Gerar email para Flaviane</button>
+        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">✉️ Salvar e Enviar para Flaviane</button>
         <button class="btn-p" style="background:var(--surf2);color:var(--txt);border:1.5px solid var(--bord)" onclick="window._finSalvar()">💾 Salvar sem email</button>
       </div>
     </div></div>
@@ -2713,6 +2714,58 @@ async financeiro(a) {
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
   };
 
+  window._finEnviarWhatsApp = function() {
+    const tipo = document.getElementById('fin-tipo').value;
+    const fmtBr = v => `R$ ${Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    const fmtD  = s => { if(!s) return 'DD/MM'; const [y,m,d]=s.split('-'); return `${d}/${m}`; };
+    let msg = '';
+
+    if (tipo === 'Boleto') {
+      const forn = document.getElementById('fin-forn')?.value || '';
+      const item = document.getElementById('fin-item')?.value || '';
+      const cc   = document.getElementById('fin-cc')?.value || 'Fornilha';
+      const n    = parseInt(document.getElementById('fin-num-parc')?.value||1);
+      const parcelas = [];
+      for (let i=0; i<n; i++) {
+        const val  = parseFloat(document.getElementById('fin-parc-val-'+i)?.value||0);
+        const venc = document.getElementById('fin-parc-venc-'+i)?.value || '';
+        parcelas.push({val, venc});
+      }
+      const linhas = parcelas.map((p,i) =>
+        `📋 Parcela ${i+1}: *${fmtBr(p.val)}* — venc. ${fmtD(p.venc)}`
+      ).join('\n');
+      msg = `📄 *BOLETO — FORNILHA*\n\n📦 Fornecedor: ${forn}\n🏷️ Item: ${item}\n💳 C. Custo: ${cc}\n\n${linhas}`;
+
+    } else if (tipo === 'Salário') {
+      const mesRef = (document.getElementById('fin-mes-ref')?.value || '').toUpperCase();
+      const venc   = document.getElementById('fin-venc')?.value || '';
+      const linhas = COLABORADORES_FIN.map((c,i) => {
+        const val = parseFloat(document.getElementById('sal_'+i)?.value||0);
+        if (!val) return '';
+        return `· *${c.nome.split(' ')[0]}* (${c.cargo}): ${fmtBr(val)}\n  PIX (${c.pixTipo}): ${c.pixChave}`;
+      }).filter(Boolean).join('\n');
+      const total = COLABORADORES_FIN.reduce((s,c,i)=>s+(parseFloat(document.getElementById('sal_'+i)?.value||0)),0);
+      msg = `💼 *SALÁRIOS — ${mesRef}*\n📅 Vencimento: ${fmtD(venc)}\n💰 Total: *${fmtBr(total)}*\n\n${linhas}`;
+
+    } else {
+      const item = document.getElementById('fin-item')?.value || '';
+      const forn = document.getElementById('fin-forn')?.value || '';
+      const val  = parseFloat(document.getElementById('fin-valor')?.value||0);
+      const cc   = document.getElementById('fin-cc')?.value || 'Fornilha';
+      const venc = document.getElementById('fin-venc')?.value || '';
+      let dadosPix = '';
+      if (tipo === 'PIX') {
+        const f = FORNECEDORES_FIN.find(x=>x.nome===forn);
+        if (f?.pixChave) dadosPix = `\n🔑 PIX (${f.pixTipo}): ${f.pixChave}\n👤 Nome: ${f.pixNome}`;
+      }
+      const ico = tipo==='PIX'?'💸':tipo==='Mercado'?'🛒':tipo==='Extra'?'⭐':'💳';
+      msg = `${ico} *${tipo.toUpperCase()} — FORNILHA*\n\n🏷️ Item: ${item||forn}\n📦 Fornecedor: ${forn}\n💳 C. Custo: ${cc}\n💰 Valor: *${fmtBr(val)}*\n📅 Vencimento: ${fmtD(venc)}${dadosPix}`;
+    }
+
+    msg += `\n\n_FornilhApp · Fornilha Restaurante & Pizzaria_`;
+    window.open(`https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   // Retorna true se salvou com sucesso, false se falhou validação
   const _finExecutarSave = async () => {
     const tipo = document.getElementById('fin-tipo').value;
@@ -2761,8 +2814,9 @@ async financeiro(a) {
   window._finSalvarEEmail = async () => {
     const ok = await _finExecutarSave();
     if (!ok) return;
-    showT('✅ Salvo! Abrindo email para Flaviane...');
+    showT('✅ Salvo! Abrindo email e WhatsApp para Flaviane...');
     window._finGerarEmail();
+    setTimeout(() => window._finEnviarWhatsApp(), 600);
   };
 
   window._finAtualizaForm();
