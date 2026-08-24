@@ -958,7 +958,8 @@ async inicio(a) {
   const taxaAcumMes = dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
   const taxaFuncAcum = taxaAcumMes * 0.75; // 75% da taxa vai para os funcionários
   const temDadosParciais = acumuladoMes > 0;
-  const folhaParcPct = temDadosParciais ? (taxaFuncAcum / acumuladoMes * 100) : null;
+  const folhaTotalMes = salariosTotalMes + taxaFuncAcum;
+  const folhaParcPct = temDadosParciais ? (folhaTotalMes / acumuladoMes * 100) : null;
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
   const calcDespFixaAcum = () => DESP_FIXAS_MES;
   const calcDespVarAcum = () => pagamentos
@@ -967,7 +968,7 @@ async inicio(a) {
   const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
   const salariosTotalMes = COLABORADORES_FIN.reduce((s,c) => s + c.salario, 0);
   const calcMargemParcPct = () => temDadosParciais
-    ? ((acumuladoMes - taxaFuncAcum - salariosTotalMes - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
+    ? ((acumuladoMes - folhaTotalMes - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
     : null;
   const margemParcPct = calcMargemParcPct();
 
@@ -1063,7 +1064,7 @@ async inicio(a) {
     <div class="kpi">
       <div class="kpi-l">Folha ${mesLabel} ${temDadosParciais?'<span style="font-size:9px;color:var(--av);font-weight:500">parcial</span>':''}</div>
       <div class="kpi-v" style="color:${temDadosParciais?indCor(folhaParcPct,META_FOLHA,true):'var(--txt3)'}">${temDadosParciais ? folhaParcPct.toFixed(1)+'%' : '—'}</div>
-      <div class="kpi-s">${temDadosParciais ? fmt(taxaFuncAcum)+' · Meta: ≤'+META_FOLHA+'%' : 'Aguardando taxa'}</div>
+      <div class="kpi-s">${temDadosParciais ? fmt(folhaTotalMes)+' · Meta: ≤'+META_FOLHA+'%' : 'Aguardando taxa'}</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Desp. Variáveis ${nomeMes.slice(0,3).charAt(0).toUpperCase()+nomeMes.slice(1,3)}/26</div>
