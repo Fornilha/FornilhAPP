@@ -958,6 +958,7 @@ async inicio(a) {
   const taxaAcumMes = dias.reduce((s,d) => s + Number(d.valor_taxa), 0);
   const taxaFuncAcum = taxaAcumMes * 0.75; // 75% da taxa vai para os funcionários
   const temDadosParciais = acumuladoMes > 0;
+  const salariosTotalMes = COLABORADORES_FIN.reduce((s,c) => s + c.salario, 0);
   const folhaTotalMes = salariosTotalMes + taxaFuncAcum;
   const folhaParcPct = temDadosParciais ? (folhaTotalMes / acumuladoMes * 100) : null;
   const fixParcPct = temDadosParciais ? (DESP_FIXAS_MES / acumuladoMes * 100) : null;
@@ -966,7 +967,6 @@ async inicio(a) {
     .filter(p => { const d = p.vencimento||(p.created_at||'').slice(0,10); return d.slice(0,7)===mesRef && p.tipo!=='Salário'; })
     .reduce((s,p) => s+Number(p.valor||0), 0);
   const calcImpostosAcum = () => acumuladoMes * (ref.imp_pct / 100);
-  const salariosTotalMes = COLABORADORES_FIN.reduce((s,c) => s + c.salario, 0);
   const calcMargemParcPct = () => temDadosParciais
     ? ((acumuladoMes - folhaTotalMes - calcDespVarAcum() - calcDespFixaAcum() - calcImpostosAcum()) / acumuladoMes * 100)
     : null;
