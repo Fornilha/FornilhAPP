@@ -2501,6 +2501,10 @@ async financeiro(a) {
 
     if (!valor) { showT('⚠️ Informe o valor antes de fotografar'); return; }
 
+    // Abre janelas ANTES do await para não ser bloqueado pelo browser
+    const waWin1 = window.open('', '_blank');
+    const waWin2 = window.open('', '_blank');
+
     // preview local imediato
     preview.innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--bord)">`;
     labelEl.textContent = '⏳ Processando...';
@@ -2509,7 +2513,12 @@ async financeiro(a) {
     const ext  = file.name.split('.').pop() || 'jpg';
     const path = `mercado_${Date.now()}.${ext}`;
     const { data: upData, error: upErr } = await db.storage.from('fin-anexos').upload(path, file);
-    if (upErr) { showT('⚠️ Erro no upload da foto'); labelEl.textContent = 'Tirar foto da nota e enviar'; return; }
+    if (upErr) {
+      showT('⚠️ Erro no upload da foto');
+      labelEl.textContent = 'Tirar foto da nota e enviar';
+      waWin1?.close(); waWin2?.close();
+      return;
+    }
     const { data: urlData } = db.storage.from('fin-anexos').getPublicUrl(upData.path);
     const fotoUrl = urlData.publicUrl;
 
@@ -2526,12 +2535,12 @@ async financeiro(a) {
       anexo_url: fotoUrl
     });
 
-    // 3. envia para Flaviane e Vinicius via WhatsApp
+    // 3. navega as janelas já abertas para o WhatsApp
     const msg = `🛒 *Compra no Mercado — Fornilha*\n📍 ${mercado}\n💰 ${valFmt}\n📅 ${hoje}\n\n📎 Nota fiscal:\n${fotoUrl}\n\n_FornilhApp · Fornilha Restaurante & Pizzaria_`;
-    labelEl.textContent = '✅ Salvo! Abrindo WhatsApp...';
     const msgEnc = encodeURIComponent(msg);
-    window.open(`https://wa.me/${TEL_FLAVIANE}?text=${msgEnc}`, '_blank');
-    setTimeout(() => window.open(`https://wa.me/5521991409144?text=${msgEnc}`, '_blank'), 800);
+    labelEl.textContent = '✅ Salvo! Abrindo WhatsApp...';
+    waWin1.location.href = `https://wa.me/${TEL_FLAVIANE}?text=${msgEnc}`;
+    setTimeout(() => { waWin2.location.href = `https://wa.me/5521991409144?text=${msgEnc}`; }, 800);
     showT('✅ Compra salva e nota enviada para Flaviane e Vinicius!');
   };
 
