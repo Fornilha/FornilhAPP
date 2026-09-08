@@ -3430,6 +3430,33 @@ async taxa(a) {
     const acum = {};
     COLS.forEach(n => acum[n] = 0);
 
+    window._auditDia = (i) => {
+      const r = window._auditRows?.[i];
+      if (!r) return;
+      abrirModal(`
+        <h3 style="margin-bottom:12px">📅 Dia ${r.dia}/${mesRef.slice(0,7)}</h3>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--bord)">
+          <span style="color:var(--txt2)">Taxa bruta</span><strong>${fmtR(r.taxa)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--bord)">
+          <span style="color:var(--txt2)">75% equipe</span><strong style="color:var(--ok)">${fmtR(r.taxa75)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bord)">
+          <span style="color:var(--txt2)">${r.presLen} presentes · valor/pessoa</span><strong style="color:var(--ok)">${r.share>0?fmtR(r.share):'—'}</strong>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:8px;letter-spacing:.5px">DISTRIBUIÇÃO</div>
+        ${window._auditCols.map(n => {
+          const val = r.diasCols[n];
+          const presente = val > 0;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bord)">
+            <div style="font-size:13px">${presente?'✅':'❌'} ${n.split(' ')[0]}</div>
+            <div style="font-size:13px;font-weight:700;color:${presente?'var(--ok)':'var(--txt3)'}">${presente?fmtR(val):'ausente'}</div>
+          </div>`;
+        }).join('')}
+        <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="fecharModal()">Fechar</button>
+      `);
+    };
+
     const rows = lancs.map(l => {
       const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
       const pres = COLS.filter(n => !aus.includes(n));
@@ -3444,6 +3471,8 @@ async taxa(a) {
       const ausNomes = aus.filter(n => COLS.includes(n)).map(n => n.split(' ')[0]).join(', ') || '—';
       return { dia, taxa: l.valor_taxa, taxa75, share, presLen: pres.length, ausNomes, diasCols };
     });
+    window._auditRows = rows;
+    window._auditCols = COLS;
 
     const totalTaxa = lancs.reduce((s,l) => s + l.valor_taxa, 0);
     const totalCasa = totalTaxa * 0.25;
@@ -3478,8 +3507,8 @@ async taxa(a) {
       </thead>
       <tbody>
         ${rows.map((r,i)=>`
-        <tr style="border-bottom:1px solid var(--bord);background:${i%2===0?'transparent':'var(--surf2)'}">
-          <td style="padding:5px 8px;font-weight:700;font-size:12px">${r.dia}</td>
+        <tr style="border-bottom:1px solid var(--bord);background:${i%2===0?'transparent':'var(--surf2)'};cursor:pointer" onclick="window._auditDia(${i})" title="Ver detalhes do dia ${r.dia}">
+          <td style="padding:5px 8px;font-weight:700;font-size:12px">${r.dia} <span style="font-size:9px;color:var(--acc)">👁</span></td>
           <td style="padding:5px 6px;text-align:right">${fmtR(r.taxa)}</td>
           <td style="padding:5px 6px;text-align:right;color:var(--ok)">${fmtR(r.taxa75)}</td>
           <td style="padding:5px 6px;text-align:right;color:var(--txt3)">${r.presLen}</td>
@@ -3498,6 +3527,19 @@ async taxa(a) {
       </tfoot>
     </table>
     </div>
+
+    <div class="slbl" style="margin-top:16px">📅 Divisão por dia — toque para detalhar</div>
+    ${rows.map((r,i) => `
+    <div onclick="window._auditDia(${i})" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);margin-bottom:6px;cursor:pointer">
+      <div>
+        <div style="font-size:14px;font-weight:700">Dia ${r.dia}</div>
+        <div style="font-size:11px;color:var(--txt2)">${r.presLen} presentes${r.ausNomes!=='—'?' · Ausentes: '+r.ausNomes:''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:700;color:var(--ok)">${r.share>0?fmtR(r.share)+'/pessoa':'—'}</div>
+        <div style="font-size:11px;color:var(--txt3)">taxa: ${fmtR(r.taxa)}</div>
+      </div>
+    </div>`).join('')}
 
     ${[['1ª Quinzena', q1, tq1, totalQ1], ['2ª Quinzena', q2, tq2, totalQ2]].map(([qNome, dias, tot, totalQ]) => {
       if (!dias.length) return `<div class="slbl" style="margin-top:16px">${qNome} — sem dados</div>`;
