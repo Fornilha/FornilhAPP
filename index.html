@@ -2321,8 +2321,8 @@ async financeiro(a) {
           </label>
           <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
         </div>
-        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">✉️ Salvar e Enviar para Flaviane</button>
-        <button class="btn-p" style="background:var(--surf2);color:var(--txt);border:1.5px solid var(--bord)" onclick="window._finSalvar()">💾 Salvar sem email</button>
+        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">📲 Salvar e Enviar WhatsApp para Flaviane</button>
+        <button class="btn-p" style="background:var(--surf2);color:var(--txt);border:1.5px solid var(--bord)" onclick="window._finSalvar()">💾 Salvar sem enviar</button>
       </div>
     </div></div>
   </div>
@@ -2773,7 +2773,7 @@ async financeiro(a) {
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
   };
 
-  window._finEnviarWhatsApp = function() {
+  window._finMontarMsgWA = function() {
     const tipo = document.getElementById('fin-tipo').value;
     const fmtBr = v => `R$ ${Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
     const fmtD  = s => { if(!s) return 'DD/MM'; const [y,m,d]=s.split('-'); return `${d}/${m}`; };
@@ -2822,7 +2822,7 @@ async financeiro(a) {
     }
 
     msg += `\n\n_FornilhApp · Fornilha Restaurante & Pizzaria_`;
-    window.open(`https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`, '_blank');
+    return msg;
   };
 
   // Retorna true se salvou com sucesso, false se falhou validação
@@ -2871,11 +2871,12 @@ async financeiro(a) {
   };
 
   window._finSalvarEEmail = async () => {
+    const waWin = window.open('', '_blank');
     const ok = await _finExecutarSave();
-    if (!ok) return;
-    showT('✅ Salvo! Abrindo email e WhatsApp para Flaviane...');
-    window._finGerarEmail();
-    setTimeout(() => window._finEnviarWhatsApp(), 600);
+    if (!ok) { waWin?.close(); return; }
+    showT('✅ Salvo! Abrindo WhatsApp da Flaviane...');
+    const msg = window._finMontarMsgWA();
+    waWin.location.href = `https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`;
   };
 
   window._finAtualizaForm();
