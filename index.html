@@ -488,16 +488,16 @@ const FORNECEDORES_FIN = [
   {nome:'Litoral Costa Verde',   tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gás',       cc:'Cozinha'},
 ];
 const COLABORADORES_FIN = [
-  {nome:'Joelson Santos da Silva',         cargo:'PIZZAIOLO',  salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
-  {nome:'Antônio Carlos José Franco Junior',cargo:'GARÇOM',    salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394'},
-  {nome:'Amado Alexandre de Souza Júnior', cargo:'PIZZAIOLO',  salario:2121.04, pixTipo:'CPF',      pixChave:'07726150556'},
-  {nome:'Vinicius Querino Alves Santos',   cargo:'GERENTE',    salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
-  {nome:'Rosenilda Davi Campos',           cargo:'COZINHEIRA', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3'},
-  {nome:'Tiago dos Santos Souza Brito',    cargo:'COZINHEIRO', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
-  {nome:'Patricia Jesus dos Santos',       cargo:'CAIXA',      salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516'},
-  {nome:'Douglas Silva Santos',            cargo:'GARÇOM',     salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700'},
-  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'BARMAN',       salario:1908.93, pixTipo:'CPF', pixChave:'716.608.764-19'},
-  {nome:'Diego De Freitas Bevilaqua', cargo:'GARÇOM', salario:1908.93, pixTipo:'CEL', pixChave:'24992285107'},
+  {nome:'Joelson Santos da Silva',              cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
+  {nome:'Antônio Carlos José Franco Junior',    cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394'},
+  {nome:'Amado Alexandre de Souza Júnior',      cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'CPF',      pixChave:'07726150556'},
+  {nome:'Vinicius Querino Alves Santos',        cargo:'GERENTE',    sexo:'M', salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
+  {nome:'Rosenilda Davi Campos',                cargo:'COZINHEIRA', sexo:'F', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3'},
+  {nome:'Tiago dos Santos Souza Brito',         cargo:'COZINHEIRO', sexo:'M', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
+  {nome:'Patricia Jesus dos Santos',            cargo:'CAIXA',      sexo:'F', salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516'},
+  {nome:'Douglas Silva Santos',                 cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700'},
+  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'BARMAN',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'716.608.764-19'},
+  {nome:'Diego De Freitas Bevilaqua',           cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'24992285107'},
   // Bruno Da Silva Felix saiu em 30/06/2026 — removido da equipe ativa a partir de 01/07/2026
   // Jhonwellithon Carlos Rangel da Silva entrou em 15/07/2026
   // Diego entrou em 01/08/2026
@@ -2974,11 +2974,12 @@ async rh(a) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
         <div class="fld"><label>Salário Base</label><input id="f-sal-${i}" type="number" step="0.01" value="${c.salario||''}"></div>
         <div class="fld"><label>Feriados</label><input id="f-feriados-${i}" type="number" placeholder="0" min="0" value="0" oninput="window._rhRecalcDias(${i})"></div>
-        <div class="fld"><label>Início (DD/MM/AAAA)</label><input id="f-inicio-${i}" placeholder="01/01/2026"></div>
-        <div class="fld"><label>Último Dia (DD/MM/AAAA)</label><input id="f-ultimo-${i}" placeholder="${hoje}"></div>
-        <div class="fld"><label>H. Noturno (HH:MM)</label><input id="f-hnoturno-${i}" placeholder="00:00"></div>
+        <div class="fld"><label>Início</label><input id="f-inicio-${i}" placeholder="01/01/2026"></div>
+        <div class="fld"><label>Último Dia</label><input id="f-ultimo-${i}" placeholder="${hoje}"></div>
+        <div class="fld"><label>H. Noturno (auto)</label><input id="f-hnoturno-${i}" placeholder="00:00" readonly style="background:var(--surf2);color:var(--txt2)"></div>
         <div class="fld"><label>H. Extra (HH:MM)</label><input id="f-hextra-${i}" placeholder="00:00"></div>
-        <div class="fld" style="grid-column:span 2"><label>Faltas não justificadas</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0" value="0" oninput="window._rhRecalcDias(${i})"></div>
+        <div class="fld"><label>Domingos a compensar</label><input id="f-domingos-${i}" placeholder="—" readonly style="background:var(--surf2);color:var(--ok);font-weight:700"></div>
+        <div class="fld"><label>Faltas não justificadas</label><input id="f-faltas-${i}" type="number" placeholder="0" min="0" value="0" oninput="window._rhRecalcDias(${i})"></div>
       </div>
     </div>`).join('');
 
@@ -3004,54 +3005,88 @@ async rh(a) {
     const feriados   = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
     const faltas     = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
     const trabalhados = Math.max(0, totalDias - domingos - ausencias - feriados - faltas);
-    const elDias = document.getElementById(`f-dias-${i}`);
-    const elFer  = document.getElementById(`f-feriados-display-${i}`);
-    const elFal  = document.getElementById(`f-faltas-display-${i}`);
-    if (elDias) elDias.textContent = trabalhados;
-    if (elFer)  elFer.textContent  = feriados;
-    if (elFal)  elFal.textContent  = faltas;
+    const elDias   = document.getElementById(`f-dias-${i}`);
+    const elFer    = document.getElementById(`f-feriados-display-${i}`);
+    const elFal    = document.getElementById(`f-faltas-display-${i}`);
+    const elHNot   = document.getElementById(`f-hnoturno-${i}`);
+    if (elDias)  elDias.textContent = trabalhados;
+    if (elFer)   elFer.textContent  = feriados;
+    if (elFal)   elFal.textContent  = faltas;
+    if (elHNot)  elHNot.value = `${String(trabalhados * 2).padStart(2,'0')}:00`;
   };
 
   window._rhCarregarAusentes = async () => {
     const mesIdx = parseInt(document.getElementById('f-mes')?.value ?? new Date().getMonth());
     const ano    = new Date().getFullYear();
     const mesRef = `${ano}-${String(mesIdx+1).padStart(2,'0')}`;
-    const totalDias  = new Date(ano, mesIdx+1, 0).getDate();
+    const totalDias = new Date(ano, mesIdx+1, 0).getDate();
 
-    // Conta domingos no mês
-    let domingos = 0;
+    // Primeiro dia do mês formatado DD/MM/AAAA
+    const primeiroDia = `01/${String(mesIdx+1).padStart(2,'0')}/${ano}`;
+    const ultimoDia   = `${String(totalDias).padStart(2,'0')}/${String(mesIdx+1).padStart(2,'0')}/${ano}`;
+
+    // Lista todos os domingos do mês
+    const domingosDates = [];
     for (let d = 1; d <= totalDias; d++) {
-      if (new Date(ano, mesIdx, d).getDay() === 0) domingos++;
+      if (new Date(ano, mesIdx, d).getDay() === 0)
+        domingosDates.push(`${ano}-${String(mesIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
     }
+    const totalDomingos = domingosDates.length;
 
-    // Busca ausências do banco
+    // Busca todos os lançamentos do mês (data + ausentes)
     const { data: lancs } = await db.from('lancamentos_diarios')
-      .select('ausentes').eq('mes_ref', mesRef);
+      .select('data,ausentes').eq('mes_ref', mesRef);
 
-    // Conta ausências por colaborador
-    const ausCount = {};
-    colaboradores.forEach(c => ausCount[c.nome] = 0);
+    // Para cada colaborador: ausências totais e ausências em domingos
+    const ausTotal   = {};
+    const ausDomingo = {};
+    colaboradores.forEach(c => { ausTotal[c.nome] = 0; ausDomingo[c.nome] = 0; });
+
     (lancs || []).forEach(l => {
+      const isDomingo = domingosDates.includes(l.data);
       (Array.isArray(l.ausentes) ? l.ausentes : []).forEach(nome => {
-        if (ausCount[nome] !== undefined) ausCount[nome]++;
+        if (ausTotal[nome] !== undefined) {
+          ausTotal[nome]++;
+          if (isDomingo) ausDomingo[nome]++;
+        }
       });
     });
 
     const elLoad = document.getElementById('f-carregando');
     if (elLoad) elLoad.style.display = 'none';
 
-    // Atualiza cada card
     colaboradores.forEach((c, i) => {
-      const aus = ausCount[c.nome] || 0;
-      const feriados = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
-      const faltas   = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
-      const trabalhados = Math.max(0, totalDias - domingos - aus - feriados - faltas);
+      const aus        = ausTotal[c.nome] || 0;
+      const ausDom     = ausDomingo[c.nome] || 0;
+      const domTrab    = totalDomingos - ausDom;
+      const feriados   = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
+      const faltas     = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
+      const trabalhados = Math.max(0, totalDias - totalDomingos - aus + ausDom - feriados - faltas);
 
-      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      // Domingos a compensar
+      let domComp;
+      if (c.sexo === 'F') {
+        domComp = Math.floor(domTrab / 2);
+      } else {
+        domComp = (domTrab === totalDomingos) ? 1 : 0;
+      }
+
+      // H. Noturno = dias_trabalhados × 2h → HH:MM
+      const hNoturnoTotal = trabalhados * 2;
+      const hNoturnoStr = `${String(hNoturnoTotal).padStart(2,'0')}:00`;
+
+      const set    = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
       set(`f-total-dias-${i}`, totalDias);
-      set(`f-domingos-auto-${i}`, domingos);
+      set(`f-domingos-auto-${i}`, totalDomingos);
       set(`f-ausencias-auto-${i}`, aus > 0 ? aus : '0');
       set(`f-dias-${i}`, trabalhados);
+
+      setVal(`f-inicio-${i}`,    primeiroDia);
+      setVal(`f-ultimo-${i}`,    ultimoDia);
+      setVal(`f-hnoturno-${i}`,  hNoturnoStr);
+      setVal(`f-domingos-${i}`,  domComp);
 
       const elAus = document.getElementById(`f-ausencias-auto-${i}`);
       if (elAus) elAus.style.color = aus > 0 ? 'var(--er)' : 'var(--txt3)';
