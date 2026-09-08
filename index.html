@@ -1721,8 +1721,8 @@ async vendas(a) {
       if (d.fat===0) return `<div class="mes-row"><span class="mes-nome" style="color:var(--txt3)">${d.mes}</span><div class="mes-bar-wrap"></div><span class="mes-val" style="color:var(--txt3)">—</span><span class="mes-var" style="color:var(--txt3)">—</span></div>`;
       const pct=Math.round(d.fat/maxFat*100);
       const isV=i===mesIdx&&dias.length>0;
-      const varVs25 = d.fat25 > 0 ? (d.fat - d.fat25) / d.fat25 : 0;
-      const cor=isV?'#185FA5':(varVs25>=0?'#1D9E75':varVs25>=-0.10?'#EF9F27':'#E24B4A');
+      const META_MES = 3000000 / 12;
+      const cor=isV?'#185FA5':(d.fat>=META_MES?'#1D9E75':d.fat>=175000?'#EF9F27':'#E24B4A');
       const varStr=isV?`<span class="mes-var" style="color:var(--acc)">${dias.length}d</span>`:
         (()=>{const vr=Math.round((d.fat/d.fat25-1)*100);return`<span class="mes-var" style="color:${vr>0?'var(--ok)':'var(--er)'}">${vr>0?'▲':'▼'}${Math.abs(vr)}%</span>`;})();
       return `<div class="mes-row"><span class="mes-nome" style="font-weight:600;${isV?'color:var(--acc)':''}">${d.mes}${isV?' ●':''}</span><div class="mes-bar-wrap"><div class="mes-bar" style="width:${pct}%;background:${cor}"></div></div><span class="mes-val">${fmt(d.fat)}</span>${varStr}</div>`;
