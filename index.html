@@ -2321,7 +2321,7 @@ async financeiro(a) {
           </label>
           <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
         </div>
-        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">📲 Salvar e Enviar WhatsApp para Flaviane</button>
+        <button id="fin-btn-email" class="btn-p" style="background:#1D9E75" onclick="window._finSalvarEEmail()">📲 Salvar e Enviar WhatsApp para Omie</button>
         <button class="btn-p" style="background:var(--surf2);color:var(--txt);border:1.5px solid var(--bord)" onclick="window._finSalvar()">💾 Salvar sem enviar</button>
       </div>
     </div></div>
@@ -2553,7 +2553,7 @@ async financeiro(a) {
     labelEl.textContent = '✅ Salvo! Abrindo WhatsApp...';
     waWin1.location.href = `https://wa.me/${TEL_FLAVIANE}?text=${msgEnc}`;
     setTimeout(() => { waWin2.location.href = `https://wa.me/5521991409144?text=${msgEnc}`; }, 800);
-    showT('✅ Compra salva e nota enviada para Flaviane e Vinicius!');
+    showT('✅ Compra salva e nota enviada para Omie e Vinicius!');
   };
 
   window._finRemoverAnexo = (i) => {
@@ -2676,8 +2676,8 @@ async financeiro(a) {
         </div>
         <label id="merc-btn-foto" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:#25D366;border-radius:var(--r);padding:18px;color:#fff;font-weight:700;font-size:15px;margin-top:4px">
           <span style="font-size:36px">📸</span>
-          <span id="merc-foto-label">📷 Fotografar nota e enviar para Flaviane</span>
-          <span style="font-size:11px;font-weight:400;opacity:.85">Ao fotografar, salva nas despesas e abre WhatsApp da Flaviane automaticamente</span>
+          <span id="merc-foto-label">📷 Fotografar nota e enviar para Omie</span>
+          <span style="font-size:11px;font-weight:400;opacity:.85">Ao fotografar, salva nas despesas e abre WhatsApp da Omie automaticamente</span>
           <input type="file" id="merc-foto" accept="image/*" capture="environment" style="display:none" onchange="window._mercadoFotoChange(this)">
         </label>
         <div id="merc-preview" style="margin-top:10px"></div>`;
@@ -2738,7 +2738,7 @@ async financeiro(a) {
       const linhasParcelas = parcelas.map(p =>
         `Valor do Boleto: R$ ${p.val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\nVencimento dia ${p.venc ? fmtDataBr(p.venc).slice(0,5) : 'DD/MM'}`
       ).join('\n\n');
-      corpo = `Olá Flaviane!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
+      corpo = `Olá Omie!\n\nSegue abaixo o boleto a ser lançado no sistema e agendado no banco.\n\nItem: ${item}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\n${linhasParcelas}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
 
     } else if (tipo === 'Salário') {
       const mesRef = (document.getElementById('fin-mes-ref')?.value || mesAtual).toUpperCase();
@@ -2750,7 +2750,7 @@ async financeiro(a) {
         if (!val) return '';
         return `${c.nome} - ${c.cargo}\nChave Pix: (${c.pixTipo}) - ${c.pixChave}${c.banco?`\nBanco: ${c.banco}`:''}\nNome: ${c.nome}\nValor de R$ ${val.toLocaleString('pt-BR',{minimumFractionDigits:2})}\n`;
       }).filter(Boolean);
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
+      corpo = `Olá Omie!\n\nSegue abaixo os dados bancários para realização do pagamento dos salários ref. ao mês de ${mesRef}.\n\nItem: Salário ref. ao mês de ${mesRef}.\nCentro de Custo/Lucro: Fornilha\nFornecedor: Colaboradores do FORNILHA\n\nSegue abaixo os colaboradores que DEVERÃO SER PAGOS VIA DEPÓSITO - ${mesRef}.\n\n${linhas.join('\n')}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
 
     } else {
       const item  = document.getElementById('fin-item')?.value || '';
@@ -2767,7 +2767,7 @@ async financeiro(a) {
         if (f?.pixChave) dadosPix = `\nChave Pix: (${f.pixTipo}) - ${f.pixChave}\nNome: ${f.pixNome}${f.banco?`\nBanco: ${f.banco}`:''}`;
       }
       assunto = `Lançar e Agendar - ${(item||forn).toUpperCase()} - FORNILHA - VENC. ${vencFmt}`;
-      corpo = `Olá Flaviane!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
+      corpo = `Olá Omie!\n\nSegue abaixo os dados para realização do pagamento.\n\nItem: ${item||forn}\nCentro de Custo/Lucro: ${cc}\nFornecedor: ${forn}\n\nValor: ${valFmt}\nVencimento dia ${vencFmt}${dadosPix}${linkAnexo}\n\nAtenciosamente,` + ASSINATURA;
     }
 
     window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(DEST_FLAVIANE)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
@@ -2874,7 +2874,7 @@ async financeiro(a) {
     const waWin = window.open('', '_blank');
     const ok = await _finExecutarSave();
     if (!ok) { waWin?.close(); return; }
-    showT('✅ Salvo! Abrindo WhatsApp da Flaviane...');
+    showT('✅ Salvo! Abrindo WhatsApp da Omie...');
     const msg = window._finMontarMsgWA();
     waWin.location.href = `https://wa.me/${TEL_FLAVIANE}?text=${encodeURIComponent(msg)}`;
   };
