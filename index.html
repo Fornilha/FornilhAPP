@@ -1321,22 +1321,14 @@ tarefas(a) {
     }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
   }
 
-  // Ações rápidas disponíveis para o setor do colaborador
-  const temEstoque  = meuSetor && (ESTOQUE[meuSetor]||[]).length > 0;
-  const temProducao = meuSetor === 'Cozinha' || meuSetor === 'Pizzaria';
-  const acoesRapidas = (meuSetor || isAdmin) ? (() => {
-    const setorBtn = isAdmin ? null : meuSetor;
-    const btns = [];
-    if (isAdmin || temEstoque)
-      btns.push(`<button class="btn-p" style="flex:1;min-width:140px" onclick="window._iniciarContagemRapida('estoque'${isAdmin?'':''})">📦 Contagem de Estoque</button>`);
-    if (isAdmin || temProducao)
-      btns.push(`<button class="btn-p" style="flex:1;min-width:140px;background:#993C1D" onclick="window._iniciarContagemRapida('producao')">🍝 Contagem de Produção</button>`);
-    if (!btns.length) return '';
-    return `<div class="card" style="margin-bottom:10px"><div class="cb">
-      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚡ Iniciar agora${setorBtn ? ' — ' + setorBtn : ''}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${btns.join('')}</div>
-    </div></div>`;
-  })() : '';
+  // Ações rápidas — todos os perfis podem iniciar qualquer contagem
+  const acoesRapidas = `<div class="card" style="margin-bottom:10px"><div class="cb">
+    <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚡ Iniciar contagem</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-p" style="flex:1;min-width:140px" onclick="window._iniciarContagemRapida('estoque')">📦 Contagem de Estoque</button>
+      <button class="btn-p" style="flex:1;min-width:140px;background:#993C1D" onclick="window._iniciarContagemRapida('producao')">🍝 Contagem de Produção</button>
+    </div>
+  </div></div>`;
 
   a.innerHTML=`
   ${acoesRapidas}
@@ -1351,24 +1343,20 @@ tarefas(a) {
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
 
   window._iniciarContagemRapida = async (tipo) => {
-    // Para admin: pede o setor; para colaborador: usa o setor do perfil
-    let setor = meuSetor;
-    if (isAdmin) {
-      const setores = Object.keys(ESTOQUE);
-      const opcoes = tipo === 'producao' ? ['Cozinha','Pizzaria'] : setores;
-      abrirModal(`
-        <h3>${TIPOS_TAR[tipo].icon} ${TIPOS_TAR[tipo].label}</h3>
-        <div class="fld"><label>Setor</label>
-          <select id="acao-setor">${opcoes.map(s=>`<option>${s}</option>`).join('')}</select>
-        </div>
-        <div class="mbtns">
-          <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-          <button class="btn-ok" onclick="window._criarEAbrirContagem('${tipo}',document.getElementById('acao-setor').value)">Iniciar</button>
-        </div>`);
-      return;
-    }
-    if (!setor) { showT('⚠️ Setor não identificado.'); return; }
-    await window._criarEAbrirContagem(tipo, setor);
+    const setoresEstoque = Object.keys(ESTOQUE);
+    const setoresProducao = ['Cozinha', 'Pizzaria'];
+    const opcoes = tipo === 'producao' ? setoresProducao : setoresEstoque;
+    // Pré-seleciona o setor do próprio perfil quando disponível
+    const defaultSetor = meuSetor && opcoes.includes(meuSetor) ? meuSetor : opcoes[0];
+    abrirModal(`
+      <h3>${TIPOS_TAR[tipo].icon} ${TIPOS_TAR[tipo].label}</h3>
+      <div class="fld"><label>Setor</label>
+        <select id="acao-setor">${opcoes.map(s=>`<option${s===defaultSetor?' selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="mbtns">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-ok" onclick="window._criarEAbrirContagem('${tipo}',document.getElementById('acao-setor').value)">Iniciar</button>
+      </div>`);
   };
 
   window._criarEAbrirContagem = async (tipo, setor) => {
