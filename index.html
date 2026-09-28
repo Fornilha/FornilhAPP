@@ -1321,7 +1321,25 @@ tarefas(a) {
     }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
   }
 
+  // Ações rápidas disponíveis para o setor do colaborador
+  const temEstoque  = meuSetor && (ESTOQUE[meuSetor]||[]).length > 0;
+  const temProducao = meuSetor === 'Cozinha' || meuSetor === 'Pizzaria';
+  const acoesRapidas = (meuSetor || isAdmin) ? (() => {
+    const setorBtn = isAdmin ? null : meuSetor;
+    const btns = [];
+    if (isAdmin || temEstoque)
+      btns.push(`<button class="btn-p" style="flex:1;min-width:140px" onclick="window._iniciarContagemRapida('estoque'${isAdmin?'':''})">📦 Contagem de Estoque</button>`);
+    if (isAdmin || temProducao)
+      btns.push(`<button class="btn-p" style="flex:1;min-width:140px;background:#993C1D" onclick="window._iniciarContagemRapida('producao')">🍝 Contagem de Produção</button>`);
+    if (!btns.length) return '';
+    return `<div class="card" style="margin-bottom:10px"><div class="cb">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚡ Iniciar agora${setorBtn ? ' — ' + setorBtn : ''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${btns.join('')}</div>
+    </div></div>`;
+  })() : '';
+
   a.innerHTML=`
+  ${acoesRapidas}
   <div class="stabs">
     <button class="stab active" onclick="setF('todas',this)">Todas (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status!=='cancelada').length})</button>
     <button class="stab" onclick="setF('pendente',this)">Pendentes (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status==='pendente').length})</button>
@@ -1331,6 +1349,47 @@ tarefas(a) {
   <div id="tar-list"></div>`;
 
   window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
+
+  window._iniciarContagemRapida = async (tipo) => {
+    // Para admin: pede o setor; para colaborador: usa o setor do perfil
+    let setor = meuSetor;
+    if (isAdmin) {
+      const setores = Object.keys(ESTOQUE);
+      const opcoes = tipo === 'producao' ? ['Cozinha','Pizzaria'] : setores;
+      abrirModal(`
+        <h3>${TIPOS_TAR[tipo].icon} ${TIPOS_TAR[tipo].label}</h3>
+        <div class="fld"><label>Setor</label>
+          <select id="acao-setor">${opcoes.map(s=>`<option>${s}</option>`).join('')}</select>
+        </div>
+        <div class="mbtns">
+          <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+          <button class="btn-ok" onclick="window._criarEAbrirContagem('${tipo}',document.getElementById('acao-setor').value)">Iniciar</button>
+        </div>`);
+      return;
+    }
+    if (!setor) { showT('⚠️ Setor não identificado.'); return; }
+    await window._criarEAbrirContagem(tipo, setor);
+  };
+
+  window._criarEAbrirContagem = async (tipo, setor) => {
+    fecharModal();
+    // Verifica se já existe uma contagem pendente para evitar duplicata
+    const pendente = tarefas.find(t => t.tipo === tipo && t.setor === setor && t.status === 'pendente');
+    if (pendente) {
+      showT('Já existe uma contagem pendente para ' + setor + '. Abrindo...');
+      abrirTarefa(pendente.id);
+      return;
+    }
+    const hoje = localDate();
+    const prazoFmt2 = new Date(hoje+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const tp = TIPOS_TAR[tipo];
+    const titulo = `${tp.label} — ${setor} — ${prazoFmt2}`;
+    const novo = { tipo, titulo, setor, resp: nome, tel: userProfile?.telefone || EQUIPE_LOCAL.find(e=>e.nome===nome)?.tel || '', prazo: hoje, status: 'pendente', dados: {} };
+    tarefas.unshift(novo);
+    await saveTarefa(novo);
+    rList();
+    abrirTarefa(novo.id);
+  };
   window.cancelarTarefa=async(id)=>{
     if(!confirm('Cancelar esta tarefa?')) return;
     const t=tarefas.find(x=>String(x.id)===String(id)); if(!t) return;
@@ -2951,7 +3010,7 @@ async rh(a) {
       <!-- resumo automático -->
       <div id="f-resumo-${i}" style="background:var(--surf);border:1px solid var(--bord);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <span style="color:var(--txt2)">Dias no mês</span><span id="f-total-dias-${i}" style="font-weight:600">—</span>
+          <span id="f-total-dias-lbl-${i}" style="color:var(--txt2)">Dias no mês</span><span id="f-total-dias-${i}" style="font-weight:600">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <span style="color:var(--txt2)">− Domingos</span><span id="f-domingos-auto-${i}" style="color:var(--av)">—</span>
@@ -2966,7 +3025,7 @@ async rh(a) {
           <span style="color:var(--txt2)">− Faltas</span><span id="f-faltas-display-${i}" style="color:var(--er)">0</span>
         </div>
         <div style="display:flex;justify-content:space-between;border-top:1px solid var(--bord);padding-top:6px;margin-top:4px">
-          <span style="font-weight:700">= Dias trabalhados</span>
+          <span id="f-dias-lbl-${i}" style="font-weight:700">= Dias trabalhados</span>
           <span id="f-dias-${i}" style="font-weight:800;font-size:15px;color:var(--ok)">—</span>
         </div>
       </div>
@@ -2999,20 +3058,27 @@ async rh(a) {
   }
 
   window._rhRecalcDias = (i) => {
-    const totalDias  = parseInt(document.getElementById(`f-total-dias-${i}`)?.textContent) || 0;
+    const mesIdx   = parseInt(document.getElementById('f-mes')?.value ?? new Date().getMonth());
+    const ano      = new Date().getFullYear();
+    const hoje     = new Date();
+    const totalDias  = new Date(ano, mesIdx+1, 0).getDate();
+    const isMesAtual = (mesIdx === hoje.getMonth() && ano === hoje.getFullYear());
+    const diaLimite  = isMesAtual ? hoje.getDate() : totalDias;
+
     const domingos   = parseInt(document.getElementById(`f-domingos-auto-${i}`)?.textContent) || 0;
     const ausencias  = parseInt(document.getElementById(`f-ausencias-auto-${i}`)?.textContent) || 0;
     const feriados   = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
     const faltas     = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
-    const trabalhados = Math.max(0, totalDias - domingos - ausencias - feriados - faltas);
-    const elDias   = document.getElementById(`f-dias-${i}`);
-    const elFer    = document.getElementById(`f-feriados-display-${i}`);
-    const elFal    = document.getElementById(`f-faltas-display-${i}`);
-    const elHNot   = document.getElementById(`f-hnoturno-${i}`);
+    const trabalhados = Math.max(0, diaLimite - domingos - ausencias - feriados - faltas);
+
+    const elDias = document.getElementById(`f-dias-${i}`);
+    const elFer  = document.getElementById(`f-feriados-display-${i}`);
+    const elFal  = document.getElementById(`f-faltas-display-${i}`);
+    const elHNot = document.getElementById(`f-hnoturno-${i}`);
     if (elDias)  elDias.textContent = trabalhados;
     if (elFer)   elFer.textContent  = feriados;
     if (elFal)   elFal.textContent  = faltas;
-    if (elHNot)  elHNot.value = `${String(trabalhados * 2).padStart(2,'0')}:00`;
+    if (elHNot)  elHNot.value = `${String(diaLimite * 2).padStart(2,'0')}:00`;
   };
 
   window._rhCarregarAusentes = async () => {
@@ -3021,13 +3087,18 @@ async rh(a) {
     const mesRef = `${ano}-${String(mesIdx+1).padStart(2,'0')}`;
     const totalDias = new Date(ano, mesIdx+1, 0).getDate();
 
+    // Parcial: se mês atual, limita ao dia de hoje
+    const hoje = new Date();
+    const isMesAtual = (mesIdx === hoje.getMonth() && ano === hoje.getFullYear());
+    const diaLimite  = isMesAtual ? hoje.getDate() : totalDias;
+
     // Primeiro dia do mês formatado DD/MM/AAAA
     const primeiroDia = `01/${String(mesIdx+1).padStart(2,'0')}/${ano}`;
-    const ultimoDia   = `${String(totalDias).padStart(2,'0')}/${String(mesIdx+1).padStart(2,'0')}/${ano}`;
+    const ultimoDia   = `${String(diaLimite).padStart(2,'0')}/${String(mesIdx+1).padStart(2,'0')}/${ano}`;
 
-    // Lista todos os domingos do mês
+    // Lista os domingos até diaLimite
     const domingosDates = [];
-    for (let d = 1; d <= totalDias; d++) {
+    for (let d = 1; d <= diaLimite; d++) {
       if (new Date(ano, mesIdx, d).getDay() === 0)
         domingosDates.push(`${ano}-${String(mesIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
     }
@@ -3071,14 +3142,19 @@ async rh(a) {
         domComp = (domTrab === totalDomingos) ? 1 : 0;
       }
 
-      // H. Noturno = dias_trabalhados × 2h → HH:MM
-      const hNoturnoTotal = trabalhados * 2;
-      const hNoturnoStr = `${String(hNoturnoTotal).padStart(2,'0')}:00`;
+      // H. Noturno = dias corridos até hoje × 2h → HH:MM
+      const hNoturnoStr = `${String(diaLimite * 2).padStart(2,'0')}:00`;
 
       const set    = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
 
-      set(`f-total-dias-${i}`, totalDias);
+      // Labels adaptados para mês parcial
+      const elTotalLbl = document.getElementById(`f-total-dias-lbl-${i}`);
+      const elDiasLbl  = document.getElementById(`f-dias-lbl-${i}`);
+      if (elTotalLbl) elTotalLbl.textContent = isMesAtual ? `Dias corridos (até dia ${diaLimite})` : 'Dias no mês';
+      if (elDiasLbl)  elDiasLbl.textContent  = isMesAtual ? '= Dias trabalhados (até hoje)' : '= Dias trabalhados';
+
+      set(`f-total-dias-${i}`, diaLimite);
       set(`f-domingos-auto-${i}`, totalDomingos);
       set(`f-ausencias-auto-${i}`, aus > 0 ? aus : '0');
       set(`f-dias-${i}`, trabalhados);
