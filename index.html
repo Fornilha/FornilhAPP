@@ -3731,15 +3731,16 @@ async taxa(a) {
 
   const MESES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   function mesSel(selMes) {
-    return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-bottom:12px;scrollbar-width:none">
-      <div style="display:flex;gap:6px;width:max-content">
-        ${MESES_NOMES.map((m,i)=>{
-          const ref=\`\${anoAtual}-\${String(i+1).padStart(2,'0')}\`;
-          const act=ref===selMes;
-          return \`<button onclick="window._txAuditMes('\${ref}')" style="flex-shrink:0;padding:5px 13px;border-radius:16px;border:1.5px solid \${act?'var(--verm)':'var(--bord)'};background:\${act?'var(--verm)':'var(--surf)'};color:\${act?'#fff':'var(--txt)'};font-size:12px;font-weight:\${act?700:500};cursor:pointer">\${m}</button>\`;
-        }).join('')}
-      </div>
-    </div>`;
+    const btns = MESES_NOMES.map((m,i) => {
+      const ref = anoAtual + '-' + String(i+1).padStart(2,'0');
+      const act = ref === selMes;
+      const bg  = act ? 'var(--verm)' : 'var(--surf)';
+      const brd = act ? 'var(--verm)' : 'var(--bord)';
+      const clr = act ? '#fff' : 'var(--txt)';
+      const fw  = act ? '700' : '500';
+      return '<button onclick="window._txAuditMes(\'' + ref + '\')" style="flex-shrink:0;padding:5px 13px;border-radius:16px;border:1.5px solid ' + brd + ';background:' + bg + ';color:' + clr + ';font-size:12px;font-weight:' + fw + ';cursor:pointer">' + m + '</button>';
+    }).join('');
+    return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-bottom:12px;scrollbar-width:none"><div style="display:flex;gap:6px;width:max-content">' + btns + '</div></div>';
   }
   window._txAuditMes = (ref) => renderAuditoria(ref);
 
