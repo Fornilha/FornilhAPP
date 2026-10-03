@@ -483,9 +483,10 @@ const FORNECEDORES_FIN = [
   {nome:'JMM Distribuidora', tipo:'Boleto', setor:'Alimentos',   cc:'Cozinha'},
   {nome:'Agivanilson - Sacolão', tipo:'PIX', pixTipo:'telefone', pixChave:'24999537979', pixNome:'Agivanilson Cirino Queiroz', setor:'Hortifruti', cc:'Cozinha'},
   {nome:'André Luis - Frete',    tipo:'PIX', pixTipo:'CPF',      pixChave:'10724270795', pixNome:'Andre Luis Lima Pires',      banco:'Itaú', setor:'Logística', cc:'Geral'},
-  {nome:'Lobo Briquetes',        tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Lenha',     cc:'Pizzaria'},
-  {nome:'Churras do Chef',       tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gelo',      cc:'Bar'},
-  {nome:'Litoral Costa Verde',   tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gás',       cc:'Cozinha'},
+  {nome:'Lobo Briquetes - Lenha',          tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Lenha',     cc:'Pizzaria'},
+  {nome:'Churras do Chefe - Gelo / Carvão',tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gelo',      cc:'Bar'},
+  {nome:'Litoral Costa Verde - Gás / Água',tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Gás',       cc:'Cozinha'},
+  {nome:'Daniel - Frete Lenha',            tipo:'PIX', pixTipo:'',         pixChave:'',            pixNome:'',                          setor:'Logística', cc:'Pizzaria'},
 ];
 const COLABORADORES_FIN = [
   {nome:'Joelson Santos da Silva',              cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
@@ -2755,7 +2756,7 @@ async financeiro(a) {
     if (sub === 'Boleto') {
       const fornsBoleto = FORNECEDORES_FIN.filter(f=>f.tipo==='Boleto');
       wrap.innerHTML = `
-        <div class="fld"><label>Fornecedor</label>
+        <div class="fld"><label>Fornecedor / Produto</label>
           <select id="fin-forn">${fornsBoleto.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}<option value="Outro">Outro...</option></select>
         </div>
         <div id="fin-forn-outro-wrap" style="display:none">
@@ -2785,7 +2786,7 @@ async financeiro(a) {
     } else if (sub === 'PIX') {
       const fornsPix = FORNECEDORES_FIN.filter(f=>f.tipo==='PIX');
       wrap.innerHTML = `
-        <div class="fld"><label>Fornecedor / Prestador</label>
+        <div class="fld"><label>Fornecedor / Produto</label>
           <select id="fin-forn" onchange="window._finPreenchePix()">${fornsPix.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}<option value="Outro">Outro...</option></select>
         </div>
         <div id="fin-pix-dados" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;font-size:13px;margin-bottom:8px"></div>
