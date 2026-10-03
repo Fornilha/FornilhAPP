@@ -3609,7 +3609,8 @@ async taxa(a) {
   const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fmtD = s => { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
   const hoje = new Date();
-  const mesRef = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const anoAtual = hoje.getFullYear();
+  const mesRef = `${anoAtual}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
   const quinzAtual = hoje.getDate() <= 15 ? 1 : 2;
 
   const tabs = [
