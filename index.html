@@ -842,7 +842,7 @@ async function mostrarApp() {
   av.style.background = cor;
   checkLembretes();
   const btnFin = document.getElementById('ni-financeiro');
-  if (btnFin) btnFin.style.display = perfil === 'admin' ? '' : 'none';
+  if (btnFin) btnFin.style.display = (perfil === 'admin' || perfil === 'caixa') ? '' : 'none';
   const btnRH = document.getElementById('ni-rh');
   if (btnRH) btnRH.style.display = perfil === 'admin' ? '' : 'none';
   const btnRel = document.getElementById('ni-relatorios');
@@ -2222,11 +2222,11 @@ async perfil(a) {
 },
 
 async financeiro(a) {
-  if (perfil !== 'admin') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
+  if (perfil !== 'admin' && perfil !== 'caixa') { a.innerHTML='<p>Acesso restrito.</p>'; return; }
   await loadPagamentos();
 
   const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const TIPOS_PAG = ['Mercado','Compras','Pagamentos'];
+  const TIPOS_PAG = perfil === 'caixa' ? ['Mercado'] : ['Mercado','Compras','Pagamentos'];
   const DEST_FLAVIANE = 'financeirorestaurantelonier@gmail.com';
   const TEL_FLAVIANE  = '5521998518290'; // WhatsApp escritório financeiro
   const DEST_CONTAB = 'workingfiscal10@outlook.com,lu_apessoa@yahoo.com.br,danimaronhas@terra.com.br';
@@ -2382,9 +2382,11 @@ async financeiro(a) {
     <div class="card"><div class="cb">
       <div class="fld"><label>Categoria</label>
         <select id="fin-tipo" onchange="window._finAtualizaForm()">
-          <option value="Mercado">🛒 Mercado</option>
-          <option value="Compras">📦 Compras / Serviços</option>
-          <option value="Pagamentos">💵 Pagamentos</option>
+          ${TIPOS_PAG.map(t => {
+            const ico = t==='Mercado'?'🛒':t==='Compras'?'📦':'💵';
+            const lbl = t==='Compras'?'Compras / Serviços':t;
+            return `<option value="${t}">${ico} ${lbl}</option>`;
+          }).join('')}
         </select>
       </div>
       <div id="fin-campos-extra"></div>
