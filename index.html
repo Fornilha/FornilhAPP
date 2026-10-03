@@ -1683,10 +1683,10 @@ async vendas(a) {
   <div style="display:flex;gap:6px;padding:12px 0 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
     <button id="vnd-tab-fat" onclick="window._vndTab('fat')"
       style="flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--verm);background:var(--verm);color:#fff;font-size:12px;font-weight:700;cursor:pointer">
-      📊 Faturamento</button>
+      📊 Faturamento Fornilha</button>
     <button id="vnd-tab-taxa" onclick="window._vndTab('taxa')"
       style="flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--bord);background:var(--surf);color:var(--txt);font-size:12px;font-weight:700;cursor:pointer">
-      🪙 Taxa 10%</button>
+      🪙 Taxa de Serviço Fornilha</button>
   </div>
   <div id="vnd-content"></div>`;
 
@@ -1705,6 +1705,7 @@ async vendas(a) {
     setVndTab('fat');
     const content = document.getElementById('vnd-content');
     if (!content) return;
+    const COLS = COLABORADORES_FIN.map(c => c.nome);
 
     const { data: lancMes } = await db.from('lancamentos_diarios')
       .select('*').eq('mes_ref', mesRef).order('data', {ascending:true});
@@ -1817,7 +1818,40 @@ async vendas(a) {
     </div></div>
 
     <div class="slbl">Histórico mensal 2026 vs 2025</div>
-    <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>`;
+    <div class="card"><div class="cb" style="padding-top:13px">${mesesRows}</div></div>
+
+    <div class="slbl" style="margin-top:16px">Lançamentos — ${mesNome}</div>
+    ${!dias.length ? `<div class="card"><div class="cb" style="text-align:center;padding:18px 8px;color:var(--txt3);font-size:13px">Nenhum lançamento em ${mesNome} ainda.<br><span style="font-size:11px">Use o botão Lançar na tela Início.</span></div></div>` :
+      dias.slice().reverse().map(l => {
+        const aus = Array.isArray(l.ausentes) ? l.ausentes : [];
+        const presentes = COLS.length - aus.length;
+        const taxaFunc = l.valor_taxa * 0.75;
+        const porPessoa = presentes > 0 ? taxaFunc/presentes : 0;
+        const lancJson = encodeURIComponent(JSON.stringify(l));
+        const dtFmt = new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+        return `<div class="card" style="margin-bottom:8px"><div class="cb">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div>
+              <div style="font-size:14px;font-weight:700">${dtFmt}</div>
+              <div style="font-size:11px;color:var(--txt2);margin-top:2px">${presentes} presentes · ${fmtR(porPessoa)}/pessoa</div>
+              ${aus.length ? `<div style="font-size:11px;color:var(--er);margin-top:1px">Ausentes: ${aus.map(n=>n.split(' ')[0]).join(', ')}</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:16px;font-weight:800;color:var(--acc)">${fmtR(Number(l.faturamento_bruto))}</div>
+              <div style="font-size:11px;color:var(--txt3)">fat. bruto</div>
+              <div style="font-size:13px;font-weight:700;color:var(--verm);margin-top:2px">${fmtR(l.valor_taxa)}</div>
+              <div style="font-size:10px;color:var(--txt3)">taxa total</div>
+            </div>
+          </div>
+          ${perfil==='admin' ? `<div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">
+            <button onclick="window._lancarDia(JSON.parse(decodeURIComponent('${lancJson}')))"
+              style="flex:1;padding:6px;border:1.5px solid var(--acc);color:var(--acc);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✏️ Editar</button>
+            <button onclick="window._deletarLancamento('${l.data}')"
+              style="flex:1;padding:6px;border:1.5px solid var(--er);color:var(--er);background:transparent;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">🗑️ Excluir</button>
+          </div>` : ''}
+        </div></div>`;
+      }).join('')
+    }`;
   }
 
   window._vndTab = async (tab) => {
@@ -3579,7 +3613,6 @@ async taxa(a) {
   const quinzAtual = hoje.getDate() <= 15 ? 1 : 2;
 
   const tabs = [
-    {id:'lanc', ico:'📝', lbl:'Lançamento'},
     {id:'audit', ico:'🔍', lbl:'Auditoria'},
     ...(perfil === 'admin' ? [
       {id:'fecha', ico:'✉️', lbl:'Fechamento'},
@@ -3588,7 +3621,7 @@ async taxa(a) {
 
   a.innerHTML = `
   <div style="padding:14px 14px 88px">
-    <div class="slbl">Taxa de Serviço 10%</div>
+    <div class="slbl">Taxa de Serviço Fornilha</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">
       ${tabs.map(t=>`<button id="tx-tab-${t.id}" onclick="window._txTab('${t.id}')"
         style="flex-shrink:0;padding:7px 12px;border-radius:20px;border:1.5px solid var(--bord);background:var(--surf);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s">
@@ -3696,13 +3729,31 @@ async taxa(a) {
     }).join('')}`;
   }
 
-  async function renderAuditoria() {
+  const MESES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function mesSel(selMes) {
+    return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-bottom:12px;scrollbar-width:none">
+      <div style="display:flex;gap:6px;width:max-content">
+        ${MESES_NOMES.map((m,i)=>{
+          const ref=\`\${anoAtual}-\${String(i+1).padStart(2,'0')}\`;
+          const act=ref===selMes;
+          return \`<button onclick="window._txAuditMes('\${ref}')" style="flex-shrink:0;padding:5px 13px;border-radius:16px;border:1.5px solid \${act?'var(--verm)':'var(--bord)'};background:\${act?'var(--verm)':'var(--surf)'};color:\${act?'#fff':'var(--txt)'};font-size:12px;font-weight:\${act?700:500};cursor:pointer">\${m}</button>\`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  window._txAuditMes = (ref) => renderAuditoria(ref);
+
+  async function renderAuditoria(mesRefSel) {
+    const selMes = mesRefSel || mesRef;
     setTab('audit');
+    const el = document.getElementById('tx-content');
+    el.innerHTML = mesSel(selMes) + `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:16px">Carregando...</p>`;
+
     const {data:lancs} = await db.from('lancamentos_diarios')
-      .select('*').eq('mes_ref', mesRef).order('data');
+      .select('*').eq('mes_ref', selMes).order('data');
 
     if (!lancs||!lancs.length) {
-      document.getElementById('tx-content').innerHTML = `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para ${mesRef}.</p>`;
+      el.innerHTML = mesSel(selMes) + `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:24px">Nenhum lançamento para ${selMes.split('-').reverse().join('/')}.</p>`;
       return;
     }
 
@@ -3730,7 +3781,7 @@ async taxa(a) {
       const r = window._auditRows?.[i];
       if (!r) return;
       abrirModal(`
-        <h3 style="margin-bottom:12px">📅 Dia ${r.dia}/${mesRef.slice(0,7)}</h3>
+        <h3 style="margin-bottom:12px">📅 Dia ${r.dia}/${selMes.slice(5,7)}/${selMes.slice(0,4)}</h3>
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--bord)">
           <span style="color:var(--txt2)">Taxa bruta</span><strong>${fmtR(r.taxa)}</strong>
         </div>
@@ -3779,7 +3830,7 @@ async taxa(a) {
     const firstNameStyle = 'font-size:10px;font-weight:700;color:var(--txt2);text-align:right;padding:4px 6px;min-width:52px';
     const cellStyle = (val) => `font-size:11px;text-align:right;padding:4px 6px;color:${val>0?'var(--txt)':'var(--txt3)'}`;
 
-    document.getElementById('tx-content').innerHTML = `
+    el.innerHTML = mesSel(selMes) + `
     <div class="kgrid" style="margin-bottom:12px">
       <div class="kpi"><div class="kpi-l">Total taxa mês</div><div class="kpi-v">${fmtR(totalTaxa)}</div></div>
       <div class="kpi"><div class="kpi-l">Casa (25%)</div><div class="kpi-v" style="color:var(--av)">${fmtR(totalCasa)}</div></div>
@@ -3787,7 +3838,7 @@ async taxa(a) {
       <div class="kpi"><div class="kpi-l">Dias registrados</div><div class="kpi-v">${lancs.length}</div></div>
     </div>
 
-    <div class="slbl" style="margin-top:4px">Auditoria dia a dia · ${mesRef}</div>
+    <div class="slbl" style="margin-top:4px">Auditoria dia a dia · ${selMes.split('-').reverse().join('/')}</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:520px">
       <thead>
@@ -3865,12 +3916,11 @@ async taxa(a) {
   };
 
   window._txTab = id => {
-    if (id==='lanc') _runTab(renderLanc, id);
-    else if (id==='audit') _runTab(renderAuditoria, id);
+    if (id==='audit') _runTab(renderAuditoria, id);
     else _runTab(renderFecha, id);
   };
 
-  renderLanc();
+  renderAuditoria();
 },
 
 async relatorios(a) {
