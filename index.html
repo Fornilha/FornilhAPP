@@ -1318,6 +1318,11 @@ tarefas(a) {
       <button class="btn-p" style="flex:1;min-width:140px" onclick="window._iniciarContagemRapida('estoque')">📦 Contagem de Estoque</button>
       <button class="btn-p" style="flex:1;min-width:140px;background:#993C1D" onclick="window._iniciarContagemRapida('producao')">🍝 Contagem de Produção</button>
     </div>
+    <div style="border-top:1px solid var(--bord);margin-top:12px;padding-top:12px">
+      <button style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid #E24B4A;background:transparent;color:#E24B4A;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" onclick="window._alertaFalta()">
+        🚨 Alerta de Falta
+      </button>
+    </div>
   </div></div>`;
 
   a.innerHTML=`
@@ -1361,6 +1366,36 @@ tarefas(a) {
     rList();
     abrirTarefa(novo.id);
   };
+  window._alertaFalta = () => {
+    const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    abrirModal(`
+      <h3>🚨 Alerta de Falta</h3>
+      <div class="fld"><label>O que está faltando?</label>
+        <input id="alerta-item" placeholder="Ex: Farinha de trigo, Gás, Embalagem..." autofocus>
+      </div>
+      <div class="mbtns">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-ok" style="background:#E24B4A" onclick="window._enviarAlertaFalta('${hoje}')">🚨 Enviar alerta</button>
+      </div>`);
+    setTimeout(() => document.getElementById('alerta-item')?.focus(), 100);
+  };
+
+  window._enviarAlertaFalta = (hoje) => {
+    const item = document.getElementById('alerta-item')?.value?.trim();
+    if (!item) { showT('⚠️ Descreva o que está faltando'); return; }
+    fecharModal();
+    const setor = meuSetor || perfil;
+    const msg = `🚨 *Alerta de Falta — Fornilha*\n\n` +
+                `📦 Item: *${item}*\n` +
+                `📍 Setor: ${setor}\n` +
+                `👤 Notificado por: ${nome}\n` +
+                `📅 Data: ${hoje}\n\n` +
+                `_FornilhApp · Fornilha Restaurante & Pizzaria_`;
+    const w = window.open('', '_blank');
+    w.location.href = `https://wa.me/5521991409144?text=${encodeURIComponent(msg)}`;
+    showT('✅ Alerta enviado para Vinicius!');
+  };
+
   window.cancelarTarefa=async(id)=>{
     if(!confirm('Cancelar esta tarefa?')) return;
     const t=tarefas.find(x=>String(x.id)===String(id)); if(!t) return;
