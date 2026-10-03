@@ -1331,7 +1331,7 @@ tarefas(a) {
   <div id="tar-list"></div>`;
 
   window._iniciarContagemRapida = async (tipo) => {
-    const setoresEstoque = Object.keys(ESTOQUE);
+    const setoresEstoque = ['Cozinha', 'Pizzaria', 'Bar', 'Salão'];
     const setoresProducao = ['Cozinha', 'Pizzaria'];
     const opcoes = tipo === 'producao' ? setoresProducao : setoresEstoque;
     // Pré-seleciona o setor do próprio perfil quando disponível
@@ -1467,7 +1467,8 @@ tarefas(a) {
           resumo=PRODUCAO_PIZZARIA.map(it=>`<div style="display:flex;justify-content:space-between;padding:5px 0"><span>${it.n}</span><strong>${d[it.n]||0} ${it.un}</strong></div>`).join('');
         }
       } else if(t.tipo==='estoque'){
-        resumo=(ESTOQUE[t.setor]||[]).map(it=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${it.n}</span><strong>${d[it.n]!==undefined?d[it.n]:it.q} ${it.un}</strong></div>`).join('');
+        const mkSection=(label,lista)=>lista.filter(it=>d[it.n]!==undefined).length?`<div style="font-size:11px;font-weight:700;color:var(--txt2);padding:8px 0 2px;text-transform:uppercase">${label}</div>`+lista.filter(it=>d[it.n]!==undefined).map(it=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bord)"><span>${it.n}</span><strong>${d[it.n]} ${it.un}</strong></div>`).join(''):'';
+        resumo=mkSection(t.setor,ESTOQUE[t.setor]||[])+mkSection('Embalagens',ESTOQUE['Embalagens']||[])+mkSection('Limpeza',ESTOQUE['Limpeza']||[]);
       } else {
         resumo=`<p style="color:var(--txt2)">${d.obs||'Sem observação.'}</p>`;
       }
@@ -1506,11 +1507,14 @@ tarefas(a) {
           <div class="fld"><label>${it.n} (${it.un})</label><input type="number" id="prod_${it.n.replace(/\s/g,'_')}" placeholder="0" min="0" step="${it.un==='kg'?'0.1':'1'}"></div>`).join('');
       }
     } else if(t.tipo==='estoque'){
-      const itens=ESTOQUE[t.setor]||[];
-      formHtml=itens.map(it=>`
+      const itensSetor=ESTOQUE[t.setor]||[];
+      const embalLimp=[...(ESTOQUE['Embalagens']||[]),...(ESTOQUE['Limpeza']||[])];
+      const itens=[...itensSetor,...embalLimp];
+      const renderGrupo=(label,lista)=>lista.length?`<div style="font-size:11px;font-weight:700;color:var(--txt2);padding:10px 0 4px;text-transform:uppercase;letter-spacing:1px;border-top:1px solid var(--bord);margin-top:4px">${label}</div>`+lista.map(it=>`
         <div class="fld"><label>${it.n} <span style="color:var(--txt3);font-weight:400">(atual: ${it.q} ${it.un})</span></label>
           <input type="number" id="est_${it.n.replace(/[\s\/]/g,'_')}" placeholder="${it.q}" min="0" step="${it.un==='kg'?'0.1':'1'}">
-        </div>`).join('');
+        </div>`).join(''):'';
+      formHtml=renderGrupo(t.setor,itensSetor)+renderGrupo('Embalagens',ESTOQUE['Embalagens']||[])+renderGrupo('Limpeza',ESTOQUE['Limpeza']||[]);
     } else {
       formHtml=`<div class="fld"><label>Observação / resultado</label><textarea id="outro-obs" placeholder="Descreva o que foi feito..." rows="4"></textarea></div>`;
     }
@@ -1552,13 +1556,15 @@ tarefas(a) {
       }
     } else if(t.tipo==='estoque'){
       const agora = new Date().toISOString();
-      (ESTOQUE[t.setor]||[]).forEach(it=>{
+      const todosItens=[...(ESTOQUE[t.setor]||[]),...(ESTOQUE['Embalagens']||[]),...(ESTOQUE['Limpeza']||[])];
+      todosItens.forEach(it=>{
         const v=parseFloat(document.getElementById('est_'+it.n.replace(/[\s\/]/g,'_'))?.value);
-        const novoQ = isNaN(v) ? it.q : v;
-        dados[it.n] = novoQ;
-        it.prev_q = it.q;
-        it.q = novoQ;
-        it.last_count = agora;
+        if(!isNaN(v)){
+          dados[it.n] = v;
+          it.prev_q = it.q;
+          it.q = v;
+          it.last_count = agora;
+        }
       });
       saveEstoqueState();
     } else {
@@ -1587,108 +1593,78 @@ tarefas(a) {
   }
 },
 estoque(a) {
-  let sel='Pizzaria';
   function fmtDate(iso){
     if(!iso)return null;
     const d=new Date(iso);
     return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'  '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }
-  function rEst(){
-    const prods=ESTOQUE[sel];
-    const lastDates=[...new Set(prods.filter(p=>p.last_count).map(p=>p.last_count))].sort().reverse();
-    const lastCount=lastDates.length?fmtDate(lastDates[0]):null;
-    document.getElementById('est-last').textContent=lastCount?`Última contagem: ${lastCount}`:'Nenhuma contagem realizada ainda';
-
-    document.getElementById('est-lista').innerHTML=prods.map(p=>{
-      const cor=p.q===0?'#E24B4A':p.q<=p.min?'#EF9F27':'#1D9E75';
-      const pct=Math.min(100,Math.round(p.q/p.max*100));
-      let deltaHtml='';
-      if(p.prev_q!==null && p.prev_q!==undefined){
-        const diff=p.q-p.prev_q;
-        if(diff!==0){
-          const dCor=diff>0?'#1D9E75':'#E24B4A';
-          const dIcon=diff>0?'↑':'↓';
-          deltaHtml=`<span style="font-size:11px;font-weight:700;color:${dCor};background:${dCor}18;border-radius:6px;padding:1px 5px;margin-left:5px">${diff>0?'+':''}${diff} ${dIcon}</span>`;
-        }
+  function renderItemRow(p, setor){
+    const cor=p.q===0?'#E24B4A':p.q<=p.min?'#EF9F27':'#1D9E75';
+    const pct=Math.min(100,Math.round(p.q/p.max*100));
+    let deltaHtml='';
+    if(p.prev_q!==null && p.prev_q!==undefined){
+      const diff=p.q-p.prev_q;
+      if(diff!==0){
+        const dCor=diff>0?'#1D9E75':'#E24B4A';
+        deltaHtml=`<span style="font-size:11px;font-weight:700;color:${dCor};background:${dCor}18;border-radius:6px;padding:1px 5px;margin-left:5px">${diff>0?'+':''}${diff} ${diff>0?'↑':'↓'}</span>`;
       }
-      return `<div class="prow" style="padding:10px 4px;align-items:center">
-        <div class="pdotS" style="background:${cor};flex-shrink:0"></div>
-        <div class="pi" style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
-            <span class="pn">${p.n}</span>${deltaHtml}
-          </div>
-          <div class="pm2" style="margin:2px 0 4px">Mín: ${p.min} · Máx: ${p.max} ${p.un}</div>
-          <div class="pbar"><div class="pbf" style="width:${pct}%;background:${cor}"></div></div>
+    }
+    return `<div class="prow" style="padding:10px 4px;align-items:center">
+      <div class="pdotS" style="background:${cor};flex-shrink:0"></div>
+      <div class="pi" style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
+          <span class="pn">${p.n}</span>${deltaHtml}
+          <span style="font-size:10px;color:var(--txt3);margin-left:4px;background:var(--bg2);border-radius:4px;padding:1px 5px">${setor}</span>
         </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:10px">
-          <div class="pq${p.q===0?' zero':p.q<=p.min?' baixo':''}" style="font-size:20px">${p.q}</div>
-          <div style="font-size:10px;color:var(--txt3)">${p.un}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    const zero=prods.filter(p=>p.q===0).length;
-    const baixo=prods.filter(p=>p.q>0&&p.q<=p.min).length;
-    const ok=prods.filter(p=>p.q>p.min).length;
-    const semCount=prods.filter(p=>p.last_count===null||p.last_count===undefined).length;
-    document.getElementById('est-resumo').innerHTML=
-      `<span style="color:#1D9E75">✅ ${ok} ok</span>&nbsp;&nbsp;`+
-      (baixo?`<span style="color:#EF9F27">🟡 ${baixo} baixo</span>&nbsp;&nbsp;`:'')+
-      (zero?`<span style="color:#E24B4A">🔴 ${zero} zerado</span>&nbsp;&nbsp;`:'')+
-      (semCount?`<span style="color:var(--txt3)">📋 ${semCount} sem contagem</span>`:'');
+        <div class="pm2" style="margin:2px 0 4px">Mín: ${p.min} · Máx: ${p.max} ${p.un}${p.last_count?` · ${fmtDate(p.last_count)}`:''}</div>
+        <div class="pbar"><div class="pbf" style="width:${pct}%;background:${cor}"></div></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:10px">
+        <div class="pq${p.q===0?' zero':p.q<=p.min?' baixo':''}" style="font-size:20px">${p.q}</div>
+        <div style="font-size:10px;color:var(--txt3)">${p.un}</div>
+      </div>
+    </div>`;
   }
-  function rProd(){
-    const taskProd = [...tarefas]
-      .filter(t=>t.tipo==='producao' && t.status==='concluida')
-      .sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
-    const html = document.getElementById('est-lista');
-    const last = document.getElementById('est-last');
-    const resumo = document.getElementById('est-resumo');
-    if(!taskProd.length){
-      if(last) last.textContent='Nenhuma produção registrada ainda';
-      if(resumo) resumo.textContent='';
-      if(html) html.innerHTML='<div style="text-align:center;padding:24px;color:var(--txt3);font-size:13px">Nenhuma tarefa de produção concluída.</div>';
-      return;
+  function rEst(){
+    const todos=[];
+    Object.entries(ESTOQUE).forEach(([setor,items])=>{
+      items.forEach(it=>todos.push({...it,_setor:setor}));
+    });
+    const zerados=todos.filter(p=>p.q===0);
+    const baixos=todos.filter(p=>p.q>0&&p.q<=p.min);
+    const oks=todos.filter(p=>p.q>p.min);
+    const semCount=todos.filter(p=>!p.last_count).length;
+
+    let html='';
+    if(zerados.length){
+      html+=`<div style="font-size:11px;font-weight:700;color:#E24B4A;padding:10px 4px 4px;text-transform:uppercase;letter-spacing:1px;border-top:2px solid #E24B4A22;margin-top:4px">🔴 Zerado — ${zerados.length} ${zerados.length===1?'item':'itens'}</div>`;
+      html+=zerados.map(p=>renderItemRow(p,p._setor)).join('');
     }
-    const t = taskProd[0];
-    const d = t.dados||{};
-    const dataFmt = new Date(t.updated_at||t.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})
-      +' '+new Date(t.updated_at||t.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(last) last.textContent=`Última produção: ${dataFmt} · ${t.resp}`;
-    if(resumo) resumo.textContent='';
-    let inner='';
-    if(t.setor==='Cozinha'){
-      inner=Object.entries(PRODUCAO_COZINHA).map(([massa,sabs])=>`
-        <div style="font-size:11px;font-weight:700;color:var(--txt2);padding:8px 4px 4px;text-transform:uppercase;letter-spacing:1px">${massa}</div>
-        ${sabs.map(s=>{const v=d[massa+'_'+s]||0;return`<div class="prow" style="padding:7px 4px;align-items:center">
-          <div class="pdotS" style="background:${v>0?'#1D9E75':'var(--txt3)'};flex-shrink:0"></div>
-          <div class="pi" style="flex:1"><span class="pn">${s}</span></div>
-          <div style="font-size:20px;font-weight:700;color:${v>0?'var(--txt)':'var(--txt3)'}">${v}</div>
-          <div style="font-size:10px;color:var(--txt3);margin-left:4px">unid</div>
-        </div>`}).join('')}`).join('');
-    } else {
-      inner=PRODUCAO_PIZZARIA.map(it=>{const v=d[it.n]||0;return`<div class="prow" style="padding:7px 4px;align-items:center">
-        <div class="pdotS" style="background:${v>0?'#1D9E75':'var(--txt3)'};flex-shrink:0"></div>
-        <div class="pi" style="flex:1"><span class="pn">${it.n}</span></div>
-        <div style="font-size:20px;font-weight:700;color:${v>0?'var(--txt)':'var(--txt3)'}">${v}</div>
-        <div style="font-size:10px;color:var(--txt3);margin-left:4px">${it.un}</div>
-      </div>`}).join('');
+    if(baixos.length){
+      html+=`<div style="font-size:11px;font-weight:700;color:#EF9F27;padding:10px 4px 4px;text-transform:uppercase;letter-spacing:1px;border-top:2px solid #EF9F2722;margin-top:4px">🟡 Baixo — ${baixos.length} ${baixos.length===1?'item':'itens'}</div>`;
+      html+=baixos.map(p=>renderItemRow(p,p._setor)).join('');
     }
-    if(html) html.innerHTML=inner;
+    if(oks.length){
+      html+=`<div style="font-size:11px;font-weight:700;color:#1D9E75;padding:10px 4px 4px;text-transform:uppercase;letter-spacing:1px;border-top:2px solid #1D9E7522;margin-top:4px">✅ OK — ${oks.length} ${oks.length===1?'item':'itens'}</div>`;
+      html+=oks.map(p=>renderItemRow(p,p._setor)).join('');
+    }
+    if(!html) html='<div style="text-align:center;padding:24px;color:var(--txt3);font-size:13px">Nenhum item no estoque.</div>';
+
+    const lastAll=todos.filter(p=>p.last_count).map(p=>p.last_count).sort().reverse();
+    const lastCount=lastAll.length?fmtDate(lastAll[0]):null;
+    document.getElementById('est-last').textContent=lastCount?`Última contagem: ${lastCount}`:'Nenhuma contagem realizada ainda';
+    document.getElementById('est-resumo').innerHTML=
+      `<span style="color:#1D9E75">✅ ${oks.length} ok</span>&nbsp;&nbsp;`+
+      (baixos.length?`<span style="color:#EF9F27">🟡 ${baixos.length} baixo</span>&nbsp;&nbsp;`:'')+
+      (zerados.length?`<span style="color:#E24B4A">🔴 ${zerados.length} zerado</span>&nbsp;&nbsp;`:'')+
+      (semCount?`<span style="color:var(--txt3)">📋 ${semCount} sem contagem</span>`:'');
+    document.getElementById('est-lista').innerHTML=html;
   }
 
   a.innerHTML=`
-  <div class="stabs">${Object.keys(ESTOQUE).map(s=>`<button class="stab${s===sel?' active':''}" onclick="selSet('${s}',this)">${s}</button>`).join('')}<button class="stab" onclick="selSet('Produção',this)">🍝 Produção</button></div>
   <div style="font-size:11px;color:var(--txt3);padding:0 2px 4px" id="est-last"></div>
   <div style="font-size:12px;font-weight:600;padding:0 2px 10px" id="est-resumo"></div>
-  <div class="card"><div class="cb" id="est-lista"></div></div>
-  <button class="btn-p" style="background:linear-gradient(135deg,#25D366,#1aad53);margin-top:8px" onclick="envWpp()">📱 Enviar resumo por WhatsApp</button>`;
-  window.selSet=(s,el)=>{sel=s;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');sel==='Produção'?rProd():rEst()};
-  window.envWpp=()=>{
-    const dadosAtuais={};
-    (ESTOQUE[sel]||[]).forEach(it=>{ dadosAtuais[it.n]=it.q; });
-    _wppEstoque(sel, dadosAtuais, nome);
-  };
+  <div class="card"><div class="cb" id="est-lista"></div></div>`;
   rEst();
 },
 
