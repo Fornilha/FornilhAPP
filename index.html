@@ -2722,17 +2722,7 @@ async financeiro(a) {
   };
 
   function _finBtnsComAnexo() {
-    return `
-      <div class="fld" style="margin:0">
-        <label>Anexos (boletos / comprovantes)</label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--surf2);border:1px dashed var(--bord);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--txt2)">
-          <span style="font-size:18px">📷</span>
-          <span id="fin-anexo-nome">Toque para tirar foto ou selecionar arquivo</span>
-          <input type="file" id="fin-anexo" accept="image/*,application/pdf" multiple style="display:none" onchange="window._finAnexoChange(this)">
-        </label>
-        <div id="fin-anexos-lista" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
-      </div>
-      <button class="btn-p" style="background:#25D366;font-size:14px;padding:14px" onclick="window._finEnviar()">📲 Enviar</button>`;
+    return `<button class="btn-p" style="background:#25D366;font-size:14px;padding:14px" onclick="window._finEnviar()">📲 Enviar</button>`;
   }
 
   window._finAtualizaSubCompras = () => {
