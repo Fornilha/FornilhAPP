@@ -1283,42 +1283,32 @@ async inicio(a) {
 tarefas(a) {
   const cs = {pendente:'sp',concluida:'sc',cancelada:'sx'};
   const sl = {pendente:'Pendente',concluida:'Concluída',cancelada:'Cancelada'};
-  let filtro = 'todas';
   const isAdmin = perfil === 'admin';
   const perfilSetor = {caixa:'Caixa',bar:'Bar',garcom:'Salão',pizzaria:'Pizzaria',cozinha:'Cozinha'};
   const meuSetor = perfilSetor[perfil] || null;
 
   function prazoFmt(p){ try{ return new Date(p+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }catch(e){return p;} }
 
-  function tarefasVisiveis() {
-    let lista = isAdmin ? tarefas : tarefas.filter(t => t.setor === meuSetor);
-    if (filtro === 'todas') lista = lista.filter(t => t.status !== 'cancelada');
-    else lista = lista.filter(t => t.status === filtro);
-    return lista;
-  }
-
   function rList(){
-    const lista = tarefasVisiveis();
-    document.getElementById('tar-list').innerHTML = lista.length ? lista.map(t=>{
+    const concluidas = (isAdmin ? tarefas : tarefas.filter(t => t.setor === meuSetor))
+      .filter(t => t.status === 'concluida')
+      .slice(0, 10);
+    document.getElementById('tar-list').innerHTML = concluidas.length ? concluidas.map(t=>{
       const tp = TIPOS_TAR[t.tipo]||TIPOS_TAR.outro;
-      const possoExecutar = isAdmin || t.setor === meuSetor;
-      const pendente = t.status === 'pendente';
-      const btnLabel = t.status==='concluida' ? 'Ver resultado' : (pendente && possoExecutar ? 'Preencher' : '');
       return `<div class="tar">
         <div class="tar-h">
           <div style="font-size:22px;margin-right:4px">${tp.icon}</div>
           <div class="tar-i">
             <div class="tar-t">${t.titulo}</div>
-            <div class="tar-m">${t.setor} · ${t.resp} · Prazo: ${prazoFmt(t.prazo)}</div>
+            <div class="tar-m">${t.setor} · ${t.resp} · ${prazoFmt(t.prazo)}</div>
           </div>
-          <span class="sbadge ${cs[t.status]||'sp'}">${sl[t.status]||t.status}</span>
+          <span class="sbadge sc">Concluída</span>
         </div>
-        <div class="tar-f" style="justify-content:flex-end;gap:8px">
-          ${btnLabel ? `<button class="btn-tar" onclick="abrirTarefa('${t.id}')">${btnLabel}</button>` : ''}
-          ${isAdmin && pendente ? `<button class="btn-tar" style="background:var(--danger,#E24B4A);color:#fff" onclick="cancelarTarefa('${t.id}')">Cancelar</button>` : ''}
+        <div class="tar-f" style="justify-content:flex-end">
+          <button class="btn-tar" onclick="abrirTarefa('${t.id}')">Ver resultado</button>
         </div>
       </div>`;
-    }).join('') : '<div style="text-align:center;padding:32px;color:var(--txt2);font-size:13px">Nenhuma tarefa.</div>';
+    }).join('') : '<div style="text-align:center;padding:24px;color:var(--txt2);font-size:13px">Nenhuma contagem concluída ainda.</div>';
   }
 
   // Ações rápidas — todos os perfis podem iniciar qualquer contagem
@@ -1332,15 +1322,8 @@ tarefas(a) {
 
   a.innerHTML=`
   ${acoesRapidas}
-  <div class="stabs">
-    <button class="stab active" onclick="setF('todas',this)">Todas (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status!=='cancelada').length})</button>
-    <button class="stab" onclick="setF('pendente',this)">Pendentes (${(isAdmin?tarefas:tarefas.filter(t=>t.setor===meuSetor)).filter(t=>t.status==='pendente').length})</button>
-    <button class="stab" onclick="setF('concluida',this)">Concluídas</button>
-    ${isAdmin ? `<button class="stab" onclick="setF('cancelada',this)">Canceladas</button>` : ''}
-  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Últimas concluídas</div>
   <div id="tar-list"></div>`;
-
-  window.setF=(f,el)=>{filtro=f;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));el.classList.add('active');rList()};
 
   window._iniciarContagemRapida = async (tipo) => {
     const setoresEstoque = Object.keys(ESTOQUE);
