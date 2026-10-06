@@ -489,16 +489,16 @@ const FORNECEDORES_FIN = [
   {nome:'Daniel - Frete Lenha',            tipo:'PIX', pixTipo:'CPF',      pixChave:'13543275780', pixNome:'Daniel',                    setor:'Logística', cc:'Pizzaria'},
 ];
 const COLABORADORES_FIN = [
-  {nome:'Joelson Santos da Silva',              cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'telefone', pixChave:'24999237441'},
-  {nome:'Antônio Carlos José Franco Junior',    cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394'},
-  {nome:'Amado Alexandre de Souza Júnior',      cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'CPF',      pixChave:'07726150556'},
-  {nome:'Vinicius Querino Alves Santos',        cargo:'GERENTE',    sexo:'M', salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK'},
-  {nome:'Rosenilda Davi Campos',                cargo:'COZINHEIRA', sexo:'F', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3'},
-  {nome:'Tiago dos Santos Souza Brito',         cargo:'COZINHEIRO', sexo:'M', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com'},
-  {nome:'Patricia Jesus dos Santos',            cargo:'CAIXA',      sexo:'F', salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516'},
-  {nome:'Douglas Silva Santos',                 cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700'},
-  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'BARMAN',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'716.608.764-19'},
-  {nome:'Diego De Freitas Bevilaqua',           cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'24992285107'},
+  {nome:'Joelson Santos da Silva',              cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'telefone', pixChave:'24999237441', folga:3},
+  {nome:'Antônio Carlos José Franco Junior',    cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'21988498394', folga:2},
+  {nome:'Amado Alexandre de Souza Júnior',      cargo:'PIZZAIOLO',  sexo:'M', salario:2121.04, pixTipo:'CPF',      pixChave:'07726150556', folga:1},
+  {nome:'Vinicius Querino Alves Santos',        cargo:'GERENTE',    sexo:'M', salario:2651.30, pixTipo:'Email',    pixChave:'querino.brazilianclean@gmail.com', banco:'NUBANK', folga:0},
+  {nome:'Rosenilda Davi Campos',                cargo:'COZINHEIRA', sexo:'F', salario:2439.19, pixTipo:'CPF',      pixChave:'700.562.952-3', folga:4},
+  {nome:'Tiago dos Santos Souza Brito',         cargo:'COZINHEIRO', sexo:'M', salario:2333.14, pixTipo:'email',    pixChave:'Thiagobrito2021@gmail.com', folga:2},
+  {nome:'Patricia Jesus dos Santos',            cargo:'CAIXA',      sexo:'F', salario:1908.93, pixTipo:'CPF',      pixChave:'86615647516', folga:4},
+  {nome:'Douglas Silva Santos',                 cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'14747157700', folga:3},
+  {nome:'Jhonwellithon Carlos Rangel da Silva', cargo:'BARMAN',     sexo:'M', salario:1908.93, pixTipo:'CPF',      pixChave:'716.608.764-19', folga:4},
+  {nome:'Diego De Freitas Bevilaqua',           cargo:'GARÇOM',     sexo:'M', salario:1908.93, pixTipo:'CEL',      pixChave:'24992285107', folga:1},
   // Bruno Da Silva Felix saiu em 30/06/2026 — removido da equipe ativa a partir de 01/07/2026
   // Jhonwellithon Carlos Rangel da Silva entrou em 15/07/2026
   // Diego entrou em 01/08/2026
@@ -3142,6 +3142,9 @@ async rh(a) {
           <span style="color:var(--txt2)">− Ausências (sistema)</span><span id="f-ausencias-auto-${i}" style="color:var(--av)">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--txt2)">− Folga semanal</span><span id="f-folga-display-${i}" style="color:var(--av)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <span style="color:var(--txt2)">− Feriados</span><span id="f-feriados-display-${i}" style="color:var(--av)">0</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
@@ -3188,11 +3191,18 @@ async rh(a) {
     const isMesAtual = (mesIdx === hoje.getMonth() && ano === hoje.getFullYear());
     const diaLimite  = isMesAtual ? hoje.getDate() : totalDias;
 
+    const c          = colaboradores[i];
     const domingos   = parseInt(document.getElementById(`f-domingos-auto-${i}`)?.textContent) || 0;
     const ausencias  = parseInt(document.getElementById(`f-ausencias-auto-${i}`)?.textContent) || 0;
     const feriados   = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
     const faltas     = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
-    const trabalhados = Math.max(0, diaLimite - domingos - ausencias - feriados - faltas);
+    let diasFolga = 0;
+    if (c?.folga && c.folga !== 0) {
+      for (let d = 1; d <= diaLimite; d++) {
+        if (new Date(ano, mesIdx, d).getDay() === c.folga) diasFolga++;
+      }
+    }
+    const trabalhados = Math.max(0, diaLimite - domingos - ausencias - feriados - faltas - diasFolga);
 
     const elDias = document.getElementById(`f-dias-${i}`);
     const elFer  = document.getElementById(`f-feriados-display-${i}`);
@@ -3255,7 +3265,14 @@ async rh(a) {
       const domTrab    = totalDomingos - ausDom;
       const feriados   = parseInt(document.getElementById(`f-feriados-${i}`)?.value) || 0;
       const faltas     = parseInt(document.getElementById(`f-faltas-${i}`)?.value) || 0;
-      const trabalhados = Math.max(0, totalDias - totalDomingos - aus + ausDom - feriados - faltas);
+      // Conta quantas vezes o dia de folga do colaborador cai no mês (até diaLimite)
+      let diasFolga = 0;
+      if (c.folga && c.folga !== 0) { // 0 = domingo, já contado em totalDomingos
+        for (let d = 1; d <= diaLimite; d++) {
+          if (new Date(ano, mesIdx, d).getDay() === c.folga) diasFolga++;
+        }
+      }
+      const trabalhados = Math.max(0, diaLimite - totalDomingos - aus + ausDom - feriados - faltas - diasFolga);
 
       // Domingos a compensar
       let domComp;
@@ -3277,9 +3294,11 @@ async rh(a) {
       if (elTotalLbl) elTotalLbl.textContent = isMesAtual ? `Dias corridos (até dia ${diaLimite})` : 'Dias no mês';
       if (elDiasLbl)  elDiasLbl.textContent  = isMesAtual ? '= Dias trabalhados (até hoje)' : '= Dias trabalhados';
 
+      const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
       set(`f-total-dias-${i}`, diaLimite);
       set(`f-domingos-auto-${i}`, totalDomingos);
       set(`f-ausencias-auto-${i}`, aus > 0 ? aus : '0');
+      set(`f-folga-display-${i}`, c.folga ? `${diasFolga} (${DIAS_SEMANA[c.folga]})` : '—');
       set(`f-dias-${i}`, trabalhados);
 
       setVal(`f-inicio-${i}`,    primeiroDia);
