@@ -350,7 +350,7 @@ const DADOS_2026 = [
   {mes:'Jun',fat:89036.18,lucro:-2415.53,margem:-2.71,folha_pct:29,cmv_pct:40,fix_pct:24,desp_var_pct:40,imp_pct:10,pax:9,fat25:83409.21,taxa_q1:2902.23,taxa_q2:2050.43,vendas_hist:{douglas:38455.01,antonio:15037.39,patricia:3954.07}},
   {mes:'Jul',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:10,pax:9,fat25:153269.09,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
   {mes:'Ago',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:10,pax:8,fat25:116438.65,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
-  {mes:'Set',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:10,pax:8,fat25:94141.45,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
+  {mes:'Set',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,desp_var:49366,imp_pct:10,pax:8,fat25:94141.45,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
   {mes:'Out',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:10,pax:10,fat25:140046.03,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
   {mes:'Nov',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:10,pax:11,fat25:150853.23,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
   {mes:'Dez',fat:0,lucro:0,margem:0,folha_pct:0,cmv_pct:0,fix_pct:0,desp_var_pct:0,imp_pct:15,pax:14,fat25:224058.76,taxa_q1:0,taxa_q2:0,vendas_hist:{}},
@@ -3988,7 +3988,7 @@ async relatorios(a) {
     const taxaEquipe = (taxaQ1+taxaQ2)*0.75;
     const taxaCasa   = (taxaQ1+taxaQ2)*0.25;
     const salarios   = temEstatico ? Math.max(0, fat*d.folha_pct/100 - taxaEquipe) : COLABORADORES_FIN.length*2500;
-    const despVar    = temEstatico ? fat*d.desp_var_pct/100 : pags.filter(p=>p.tipo!=='Salário').reduce((s,p)=>s+Number(p.valor||0),0);
+    const despVar    = temEstatico ? fat*d.desp_var_pct/100 : (d.desp_var !== undefined ? d.desp_var : pags.filter(p=>p.tipo!=='Salário').reduce((s,p)=>s+Number(p.valor||0),0));
     const impostos   = fat*d.imp_pct/100;
     const resultado  = temEstatico ? d.lucro : fat-taxaEquipe-salarios-despVar-DESP_FIXAS-impostos;
     const margem     = fat>0 ? resultado/fat*100 : null;
